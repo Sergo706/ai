@@ -6,7 +6,7 @@ import { MiniCache } from "@riavzon/utils";
 import { getConfiguration, getStorage } from "../../config/config";
 import { generateHash } from "../../utils/hash";
 import { SpreadsheetOptions } from "../../utils/types/SpreadsheetsManipulation";
-import { createStyledSpreadsheet as generateSpreadsheet } from "../../utils/spreadsheetsManipulation";
+import { generateStyledSpreadsheet as generateSpreadsheet } from "../../utils/spreadsheetsManipulation";
 
 
 

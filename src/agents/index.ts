@@ -14,7 +14,6 @@
  * ```
  */
 export { createAgent } from "./createAgent";
-export { composeMessages } from "./composeMessages";
 export type {
   Agent,
   AgentConfig,
@@ -33,4 +32,3 @@ export type {
   SemanticCacheOptions,
   ToolOptions,
 } from "./types";
-export type { CommonToolEntry, CommonTools } from "../tools/common-tools-handlers/specs";

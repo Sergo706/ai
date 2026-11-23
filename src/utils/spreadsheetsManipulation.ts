@@ -79,7 +79,7 @@ export async function readCsvToMarkdown(buffer: Buffer): Promise<string> {
 }
 
 
-export async function createStyledSpreadsheet<
+export async function generateStyledSpreadsheet<
   T extends Record<string, unknown>,
 >(
   data: T[],
