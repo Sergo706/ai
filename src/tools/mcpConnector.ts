@@ -1,0 +1,177 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
+import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import type {
+  AuthProvider,
+  OAuthClientProvider,
+} from "@modelcontextprotocol/client";
+import { getConfiguration } from "../config/config";
+import type {
+  McpAuth,
+  McpServerConfig,
+  McpToolset,
+} from "../types/mcp";
+import type { ChatCompletionFunctionTool } from "openai/resources/chat/completions";
+
+
+const MAX_NAME_LENGTH = 64;
+const UNSAFE_NAME_CHAR = /[^a-zA-Z0-9_-]/g;
+
+const DEFAULT_CLIENT_INFO = { name: "ai", version: "1.0.0" };
+
+interface Connection {
+  config: McpServerConfig;
+  client: Client;
+}
+
+function toUrl(url: string | URL): URL {
+  return typeof url === "string" ? new URL(url) : url;
+}
+
+
+function authFor(auth: McpAuth = { type: "none" }): {
+  authProvider?: AuthProvider | OAuthClientProvider;
+  requestInit?: RequestInit;
+} {
+  switch (auth.type) {
+    case "none":
+      return {};
+    case "bearer": {
+      const token = auth.token;
+      return {
+        authProvider: {
+          token: async () =>
+            typeof token === "function" ? await token() : token,
+        },
+      };
+    }
+    case "headers":
+      return { requestInit: { headers: auth.headers } };
+    case "oauth":
+      return { authProvider: auth.provider };
+  }
+}
+
+
+function isIncluded(config: McpServerConfig, toolName: string): boolean {
+  const exclude = config.exclude;
+  if (exclude === undefined) return true;
+  if (typeof exclude === "function") return !exclude(toolName);
+  return !exclude.includes(toolName);
+}
+
+
+function functionName(config: McpServerConfig, toolName: string): string {
+  const cleanTool = toolName.replace(UNSAFE_NAME_CHAR, "_");
+  if (config.namespace === undefined || config.namespace === "") {
+    return cleanTool.slice(0, MAX_NAME_LENGTH);
+  }
+  const cleanNamespace = config.namespace.replace(UNSAFE_NAME_CHAR, "_");
+  return `${cleanNamespace}__${cleanTool}`.slice(0, MAX_NAME_LENGTH);
+}
+
+async function readServerTools(
+  config: McpServerConfig,
+  client: Client,
+): Promise<ChatCompletionFunctionTool[]> {
+  const definitions: ChatCompletionFunctionTool[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const page = await client.listTools(cursor ? { cursor } : undefined);
+    cursor = page.nextCursor;
+
+    for (const tool of page.tools) {
+      if (!isIncluded(config, tool.name)) continue;
+
+      definitions.push({
+        type: "function",
+        function: {
+          name: functionName(config, tool.name),
+          description:
+            tool.description ??
+            `${config.namespace ?? "mcp"}: ${tool.name}`,
+          parameters: (tool.inputSchema) ?? {
+            type: "object",
+            properties: {},
+          },
+        },
+      });
+    }
+  } while (cursor !== undefined);
+
+  return definitions;
+}
+
+/**
+ * Connects to one or more MCP servers and collects their tool definitions.
+ *
+ * This module only *describes* tools — it never calls them. The returned
+ * `definitions` are plain OpenAI schemas, so a caller can merge them with its
+ * own and hand the result to whatever executes tool calls. That split is why
+ * nothing here knows about caching, concurrency or streaming: those belong to
+ * the layer that runs the call, not to the one that lists it.
+ *
+ * Every server is connected before any tool list is read, and a failure closes
+ * the ones already open before rethrowing. A partially connected set would leak
+ * transports whose handles the caller never received and therefore cannot close.
+ */
+export async function createMcpToolset(
+  configs: readonly McpServerConfig[],
+): Promise<McpToolset> {
+  if (configs.length === 0) {
+    return {
+      definitions: [],
+      refresh: async () => { /* empty */ },
+      close: async () => { /* empty */ },
+    };
+  }
+
+  const log = getConfiguration().logger;
+  const connections: Connection[] = [];
+  const definitions: ChatCompletionFunctionTool[] = [];
+
+  const loadAll = async (): Promise<void> => {
+    const collected: ChatCompletionFunctionTool[] = [];
+    for (const connection of connections) {
+      const tools = await readServerTools(connection.config, connection.client);
+      log.debug(
+        { namespace: connection.config.namespace, count: tools.length },
+        "[mcp] Read server tool list",
+      );
+      collected.push(...tools);
+    }
+    // Replaced in place so a caller holding the array keeps seeing the truth.
+    definitions.length = 0;
+    definitions.push(...collected);
+  };
+
+  try {
+    for (const config of configs) {
+      const client = new Client(
+        config.clientInfo ?? DEFAULT_CLIENT_INFO,
+        { versionNegotiation: { mode: "auto" } },
+      );
+      const transport = new StreamableHTTPClientTransport(toUrl(config.url), {
+        ...authFor(config.auth),
+      });
+      await client.connect(transport);
+      connections.push({ config, client });
+    }
+
+    await loadAll();
+  } catch (err) {
+    await Promise.allSettled(connections.map(({ client }) => client.close()));
+    log.error({ err }, "[mcp] Failed to connect to an MCP server");
+    throw err;
+  }
+
+  return {
+    definitions,
+    refresh: loadAll,
+    close: async () => {
+      await Promise.allSettled(connections.map(({ client }) => client.close()));
+      connections.length = 0;
+      definitions.length = 0;
+    },
+  };
+}

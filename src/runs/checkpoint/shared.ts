@@ -1,0 +1,1 @@
+export const DEFAULT_CHECKPOINT_VERSION = 1;

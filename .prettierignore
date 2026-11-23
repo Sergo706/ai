@@ -1,0 +1,33 @@
+build
+coverage
+
+# Standalone UI: keep its HTML and inline scripts manually formatted.
+/data-pipeline/public/
+
+# Dependencies, caches, and generated build output in all workspaces.
+**/node_modules/
+**/.pnpm-store/
+**/dist/
+**/.output/
+**/.nitro/
+**/.nuxt/
+**/.cache/
+**/.turbo/
+**/*.tsbuildinfo
+
+# Vendored upstream project: maintain its formatting independently.
+/crawl4ai/
+
+# Package-manager and code-generator owned files.
+pnpm-lock.yaml
+**/package-lock.json
+**/yarn.lock
+/packages/clients/clients/
+/packages/clients/*-openapi.json
+
+# Local runtime data, credentials, and editor-specific configuration.
+**/logs/
+**/*.log
+**/.env
+**/.env.*
+/.vscode/
