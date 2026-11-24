@@ -9,8 +9,12 @@ export interface McpToolFixture {
   name: string;
   description?: string;
   inputSchema?: Record<string, unknown>;
-  /** Returned as the tool result when called. */
+  /** Returned as the text content of the tool result when called. */
   result?: string;
+  /** Returned as `structuredContent` when called. */
+  structured?: unknown;
+  /** Sets `isError` on the result. */
+  isError?: boolean;
 }
 
 export interface McpServerOptions {
@@ -24,6 +28,8 @@ export interface McpServerOptions {
   headers?: Record<string, string>;
   /** Reply 500 to every request, to exercise the connect-failure path. */
   failWith?: number;
+  /** Reply with this status to `tools/call` only, to exercise the call-failure path. */
+  callFailWith?: number;
   /** Omit `mcp-session-id` from the initialize reply. */
   sessionless?: boolean;
 }
@@ -183,11 +189,22 @@ export async function startMcpServer(
         if (request.method === "tools/call") {
           const name = request.params?.name as string;
           const tool = options.tools.find((candidate) => candidate.name === name);
+
+          if (options.callFailWith !== undefined) {
+            res.writeHead(options.callFailWith, { "content-type": "text/plain" });
+            res.end("nope");
+            return;
+          }
+
           reply(res, 200, {
             jsonrpc: "2.0",
             id: request.id,
             result: {
               content: [{ type: "text", text: tool?.result ?? "" }],
+              ...(tool?.structured === undefined
+                ? {}
+                : { structuredContent: tool.structured }),
+              ...(tool?.isError === true ? { isError: true } : {}),
             },
           });
           return;

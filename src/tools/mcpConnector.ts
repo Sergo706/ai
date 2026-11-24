@@ -6,12 +6,20 @@ import type {
 } from "@modelcontextprotocol/client";
 import { getConfiguration } from "../config/config";
 import { loadPeer } from "../utils/loadPeerDepend";
-import type {
-  McpAuth,
-  McpServerConfig,
-  McpToolset,
-} from "../types/mcp";
+import type { McpAuth, McpServerConfig, McpToolset } from "../types/mcp";
 import type { ChatCompletionFunctionTool } from "openai/resources/chat/completions";
+import type { ToolSpec } from "./toolRegistry";
+import { toolError } from "./execution/protocol";
+
+
+interface ServerTools {
+  definitions: ChatCompletionFunctionTool[];
+  specs: ToolSpec<unknown>[];
+}
+interface Connection {
+  config: McpServerConfig;
+  client: Client;
+}
 
 type McpClientPeer = typeof import("@modelcontextprotocol/client");
 
@@ -25,21 +33,15 @@ async function mcpClient(): Promise<McpClientPeer> {
   return mcpClientModule;
 }
 
-
 const MAX_NAME_LENGTH = 64;
 const UNSAFE_NAME_CHAR = /[^a-zA-Z0-9_-]/g;
-
 const DEFAULT_CLIENT_INFO = { name: "ai", version: "1.0.0" };
 
-interface Connection {
-  config: McpServerConfig;
-  client: Client;
-}
+
 
 function toUrl(url: string | URL): URL {
   return typeof url === "string" ? new URL(url) : url;
 }
-
 
 function authFor(auth: McpAuth = { type: "none" }): {
   authProvider?: AuthProvider | OAuthClientProvider;
@@ -64,14 +66,12 @@ function authFor(auth: McpAuth = { type: "none" }): {
   }
 }
 
-
 function isIncluded(config: McpServerConfig, toolName: string): boolean {
   const exclude = config.exclude;
   if (exclude === undefined) return true;
   if (typeof exclude === "function") return !exclude(toolName);
   return !exclude.includes(toolName);
 }
-
 
 function functionName(config: McpServerConfig, toolName: string): string {
   const cleanTool = toolName.replace(UNSAFE_NAME_CHAR, "_");
@@ -82,11 +82,27 @@ function functionName(config: McpServerConfig, toolName: string): string {
   return `${cleanNamespace}__${cleanTool}`.slice(0, MAX_NAME_LENGTH);
 }
 
+function contentToText(content: unknown): string {
+  if (!Array.isArray(content)) return "";
+
+  return content
+    .map((block) =>
+      block !== null && typeof block === "object" && "text" in block
+        ? String((block as { text?: unknown }).text)
+        : "",
+    )
+    .filter((text) => text !== "")
+    .join("\n");
+}
+
+
+
 async function readServerTools(
   config: McpServerConfig,
   client: Client,
-): Promise<ChatCompletionFunctionTool[]> {
+): Promise<ServerTools> {
   const definitions: ChatCompletionFunctionTool[] = [];
+  const specs: ToolSpec<unknown>[] = [];
   let cursor: string | undefined;
 
   do {
@@ -96,43 +112,77 @@ async function readServerTools(
     for (const tool of page.tools) {
       if (!isIncluded(config, tool.name)) continue;
 
-      definitions.push({
+      const definition: ChatCompletionFunctionTool = {
         type: "function",
         function: {
           name: functionName(config, tool.name),
           description:
-            tool.description ??
-            `${config.namespace ?? "mcp"}: ${tool.name}`,
-          parameters: (tool.inputSchema) ?? {
+            tool.description ?? `${config.namespace ?? "mcp"}: ${tool.name}`,
+          parameters: tool.inputSchema ?? {
             type: "object",
             properties: {},
           },
+        },
+      };
+
+      definitions.push(definition);
+      specs.push({
+        name: definition.function.name,
+        definitions: definition,
+        ...config.policy,
+        make: () => async (args, context) => {
+          try {
+            const result = await client.callTool(
+              { name: tool.name, arguments: args },
+              { signal: context.signal, toolDefinition: tool },
+            );
+
+            const text = contentToText(result.content);
+
+            if (result.isError === true) {
+              return toolError(
+                "MCP_TOOL_ERROR",
+                text === "" ? "The MCP tool reported an error." : text,
+              );
+            }
+
+            return result.structuredContent === undefined
+              ? text
+              : result.structuredContent;
+          } catch (err: unknown) {
+            return toolError(
+              "MCP_CALL_FAILED",
+              err instanceof Error ? err.message : String(err),
+            );
+          }
         },
       });
     }
   } while (cursor !== undefined);
 
-  return definitions;
+  return { definitions, specs };
 }
 
 /**
- * Connect to one or more MCP servers and collect their tool definitions.
+ * Connect to one or more MCP servers and expose their tools.
  *
- * The returned `definitions` are plain OpenAI schemas, ready to merge with your
- * own. This function only lists tools; it never calls them, so caching,
- * concurrency and streaming stay with the layer that executes the call.
+ * Each server tool becomes two things from one pass over `tools/list`: an
+ * OpenAI definition, and a `ToolSpec` whose handler calls the tool back on the
+ * live connection. Both arrays are replaced in place by `refresh()`.
+ *
+ * Pass `specs` to an agent's `tools` and the tools are advertised and
+ * executable; cache, call caps and concurrency come from `McpServerConfig.policy`.
  *
  * @param configs - The servers to connect to. An empty list resolves to an empty
  * toolset with no connections.
- * @returns Definitions plus `refresh()` and `close()`.
+ * @returns Definitions, callable specs, plus `refresh()` and `close()`.
  * @throws If a server cannot be connected, after closing the ones already open.
  * @example
  * ```ts
- * const toolset = await createMcpToolset([
- *   { url: "https://mcp.example.com/mcp", namespace: "ex" },
- * ]);
- * await agent.tools.mcp(toolset.definitions);
- * onShutdown(() => toolset.close());
+ * const agent = await createAgent({
+ *   model: { model: "gpt-4o-mini" },
+ *   tools: { mcp: [{ url: "https://mcp.example.com/mcp", namespace: "ex" }] },
+ * });
  * ```
  */
 export async function createMcpToolset(
@@ -141,37 +191,51 @@ export async function createMcpToolset(
   if (configs.length === 0) {
     return {
       definitions: [],
-      refresh: async () => { /* empty */ },
-      close: async () => { /* empty */ },
+      specs: [],
+      refresh: async () => {
+        /* empty */
+      },
+      close: async () => {
+        /* empty */
+      },
     };
   }
 
   const log = getConfiguration().logger;
   const connections: Connection[] = [];
   const definitions: ChatCompletionFunctionTool[] = [];
+  const specs: ToolSpec<unknown>[] = [];
 
   const loadAll = async (): Promise<void> => {
-    const collected: ChatCompletionFunctionTool[] = [];
+    const collectedDefinitions: ChatCompletionFunctionTool[] = [];
+    const collectedSpecs: ToolSpec<unknown>[] = [];
+
     for (const connection of connections) {
       const tools = await readServerTools(connection.config, connection.client);
       log.debug(
-        { namespace: connection.config.namespace, count: tools.length },
+        {
+          namespace: connection.config.namespace,
+          count: tools.definitions.length,
+        },
         "[mcp] Read server tool list",
       );
-      collected.push(...tools);
+      collectedDefinitions.push(...tools.definitions);
+      collectedSpecs.push(...tools.specs);
     }
-    // Replaced in place so a caller holding the array keeps seeing the truth.
+
+    // Replaced in place so a caller holding the arrays keeps seeing the truth.
     definitions.length = 0;
-    definitions.push(...collected);
+    definitions.push(...collectedDefinitions);
+    specs.length = 0;
+    specs.push(...collectedSpecs);
   };
 
   try {
     const { Client, StreamableHTTPClientTransport } = await mcpClient();
     for (const config of configs) {
-      const client = new Client(
-        config.clientInfo ?? DEFAULT_CLIENT_INFO,
-        { versionNegotiation: { mode: "auto" } },
-      );
+      const client = new Client(config.clientInfo ?? DEFAULT_CLIENT_INFO, {
+        versionNegotiation: { mode: "auto" },
+      });
       const transport = new StreamableHTTPClientTransport(toUrl(config.url), {
         ...authFor(config.auth),
       });
@@ -188,11 +252,13 @@ export async function createMcpToolset(
 
   return {
     definitions,
+    specs,
     refresh: loadAll,
     close: async () => {
       await Promise.allSettled(connections.map(({ client }) => client.close()));
       connections.length = 0;
       definitions.length = 0;
+      specs.length = 0;
     },
   };
 }

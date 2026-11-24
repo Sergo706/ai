@@ -41,6 +41,7 @@ describe("createMcpToolset", () => {
     const toolset = await createMcpToolset([]);
 
     expect(toolset.definitions).toEqual([]);
+    expect(toolset.specs).toEqual([]);
     // Both no-ops must be callable without throwing.
     await expect(toolset.refresh()).resolves.toBeUndefined();
     await expect(toolset.close()).resolves.toBeUndefined();
@@ -372,8 +373,10 @@ describe("createMcpToolset", () => {
 
     const toolset = await createMcpToolset([{ url: server.url }]);
     expect(toolset.definitions).toHaveLength(1);
+    expect(toolset.specs).toHaveLength(1);
     await toolset.close();
     expect(toolset.definitions).toEqual([]);
+    expect(toolset.specs).toEqual([]);
 
     // A second close is a no-op rather than an error.
     await expect(toolset.close()).resolves.toBeUndefined();
@@ -411,6 +414,144 @@ describe("createMcpToolset", () => {
 
     const toolset = await createMcpToolset([{ url: new URL(server.url) }]);
     expect(toolset.definitions).toHaveLength(1);
+    await toolset.close();
+  });
+
+  it("generates one callable spec per advertised tool", async () => {
+    const server = track(
+      await startMcpServer({
+        tools: [{ name: "search", description: "Search the web" }, { name: "fetch" }],
+      }),
+    );
+    const { createMcpToolset } = await boot();
+
+    const toolset = await createMcpToolset([
+      { url: server.url, namespace: "web" },
+    ]);
+
+    expect(toolset.specs.map((spec) => spec.name)).toEqual([
+      "web__search",
+      "web__fetch",
+    ]);
+    // Each spec advertises the same definition that was collected.
+    expect(toolset.specs.map((spec) => spec.definitions)).toEqual(
+      toolset.definitions,
+    );
+    await toolset.close();
+  });
+
+  it("carries the server policy onto every generated spec", async () => {
+    const server = track(await startMcpServer({ tools: [{ name: "t" }] }));
+    const { createMcpToolset } = await boot();
+
+    const toolset = await createMcpToolset([
+      {
+        url: server.url,
+        policy: { maxCalls: 2, concurrency: 1, cache: { ttl: 60 } },
+      },
+    ]);
+
+    expect(toolset.specs[0]?.maxCalls).toBe(2);
+    expect(toolset.specs[0]?.concurrency).toBe(1);
+    expect(toolset.specs[0]?.cache?.ttl).toBe(60);
+    await toolset.close();
+  });
+
+  it("calls the server's own tool name, not the exposed one", async () => {
+    const server = track(
+      await startMcpServer({
+        tools: [{ name: "do.thing", result: "done" }],
+      }),
+    );
+    const { createMcpToolset } = await boot();
+
+    const toolset = await createMcpToolset([
+      { url: server.url, namespace: "ns" },
+    ]);
+    const spec = toolset.specs[0];
+    expect(spec.name).toBe("ns__do_thing");
+
+    const handler = spec.make({ userId: "u" });
+    await expect(
+      handler({}, { toolCallId: "c1", callIndex: 1, callTotal: 1 }),
+    ).resolves.toBe("done");
+
+    const call = server.bodies.find((body) => body.method === "tools/call");
+    expect(call).toMatchObject({
+      params: { name: "do.thing", arguments: {} },
+    });
+    await toolset.close();
+  });
+
+  it("returns structured content in preference to text", async () => {
+    const server = track(
+      await startMcpServer({
+        tools: [{ name: "stats", result: "ignored", structured: { total: 3 } }],
+      }),
+    );
+    const { createMcpToolset } = await boot();
+
+    const toolset = await createMcpToolset([{ url: server.url }]);
+    const handler = toolset.specs[0].make({ userId: "u" });
+
+    await expect(
+      handler({}, { toolCallId: "c1", callIndex: 1, callTotal: 1 }),
+    ).resolves.toEqual({ total: 3 });
+    await toolset.close();
+  });
+
+  it("turns an isError result into a tool error payload", async () => {
+    const server = track(
+      await startMcpServer({
+        tools: [{ name: "boom", result: "rate limited", isError: true }],
+      }),
+    );
+    const { createMcpToolset } = await boot();
+
+    const toolset = await createMcpToolset([{ url: server.url }]);
+    const handler = toolset.specs[0].make({ userId: "u" });
+
+    const result = await handler(
+      {},
+      { toolCallId: "c1", callIndex: 1, callTotal: 1 },
+    );
+    expect(typeof result).toBe("string");
+    expect(JSON.parse(result as string)).toEqual({
+      error: { code: "MCP_TOOL_ERROR", message: "rate limited" },
+    });
+    await toolset.close();
+  });
+
+  it("reports a call failure as a tool error instead of throwing", async () => {
+    const server = track(
+      await startMcpServer({ tools: [{ name: "t" }], callFailWith: 500 }),
+    );
+    const { createMcpToolset } = await boot();
+
+    const toolset = await createMcpToolset([{ url: server.url }]);
+    const handler = toolset.specs[0].make({ userId: "u" });
+
+    const result = await handler(
+      {},
+      { toolCallId: "c1", callIndex: 1, callTotal: 1 },
+    );
+    expect(typeof result).toBe("string");
+    expect(JSON.parse(result as string)).toMatchObject({
+      error: { code: "MCP_CALL_FAILED" },
+    });
+    await toolset.close();
+  });
+
+  it("rewrites the specs in place on refresh", async () => {
+    const server = track(await startMcpServer({ tools: [{ name: "first" }] }));
+    const { createMcpToolset } = await boot();
+
+    const toolset = await createMcpToolset([{ url: server.url }]);
+    const live = toolset.specs;
+    expect(live.map((spec) => spec.name)).toEqual(["first"]);
+
+    await toolset.refresh();
+    expect(live.map((spec) => spec.name)).toEqual(["first"]);
     await toolset.close();
   });
 });

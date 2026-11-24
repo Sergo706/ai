@@ -15,15 +15,18 @@ export type McpAuth =
 /**
  * Defaults every tool from one server inherits.
  *
- * `ToolSpec` minus the two fields that cannot be inherited. `name` belongs to
- * the server's own tool list — one policy applies to many differently-named
- * tools, so a shared name would collapse them into one. `make` is the handler,
- * and this module only *describes* tools; whoever executes them supplies it.
+ * `ToolSpec` minus the fields that cannot be shared. `name` and `definitions`
+ * come from the server's own tool list — one policy covers many differently-named
+ * tools, so a shared name or schema would collapse them into one. `make` is
+ * generated per tool, since each one calls back a different endpoint.
  *
- * What remains is exactly the tuning that is per-server rather than per-tool:
- * a cache TTL, a call cap, a concurrency width and a stream policy.
+ * What remains is the tuning that is per-server rather than per-tool: a cache
+ * TTL, a call cap, a concurrency width and a stream policy.
  */
-export type McpToolPolicy = Omit<ToolSpec<unknown>, "name" | "make">;
+export type McpToolPolicy = Omit<
+  ToolSpec<unknown>,
+  "name" | "make" | "definitions"
+>;
 
 /** One MCP server to connect to. */
 export interface McpServerConfig {
@@ -67,7 +70,15 @@ export interface McpToolset {
    * have to re-read the field to see updated tools.
    */
   definitions: ChatCompletionFunctionTool[];
-  /** Re-reads every server's tool list and rewrites `definitions` in place. */
+  /**
+   * One executable spec per advertised tool, calling the server back.
+   *
+   * Already carries the server's `policy`, so passing them to the agent is all
+   * that is needed for caching, call caps and concurrency. Mutated in place by
+   * `refresh()`, like `definitions`.
+   */
+  specs: ToolSpec<unknown>[];
+  /** Re-reads every server's tool list and rewrites both arrays in place. */
   refresh: () => Promise<void>;
   /** Closes every connection. Safe to call more than once. */
   close: () => Promise<void>;
