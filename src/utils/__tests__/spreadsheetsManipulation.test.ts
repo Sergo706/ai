@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  createStyledSpreadsheet,
+  generateStyledSpreadsheet,
   readCsvToMarkdown,
   readXlsxToMarkdown,
 } from "~/utils/spreadsheetsManipulation.js";
@@ -11,9 +11,9 @@ const ROWS = [
   { name: "Grace", role: "admiral" },
 ];
 
-describe("createStyledSpreadsheet", () => {
+describe("generateStyledSpreadsheet", () => {
   it("returns an xlsx buffer by default with a styled header", async () => {
-    const result = await createStyledSpreadsheet(ROWS);
+    const result = await generateStyledSpreadsheet(ROWS);
 
     expect(result.format).toBe("xlsx");
     expect(result.mimeType).toBe(
@@ -27,7 +27,7 @@ describe("createStyledSpreadsheet", () => {
   });
 
   it("renders a csv buffer when asked for one", async () => {
-    const result = await createStyledSpreadsheet(ROWS, {
+    const result = await generateStyledSpreadsheet(ROWS, {
       format: "csv",
       filename: "people.csv",
     });
@@ -41,7 +41,7 @@ describe("createStyledSpreadsheet", () => {
   });
 
   it("uses caller-supplied columns and header casing", async () => {
-    const result = await createStyledSpreadsheet(ROWS, {
+    const result = await generateStyledSpreadsheet(ROWS, {
       format: "csv",
       columns: [
         { header: "Who", key: "name", width: 30 },
@@ -53,7 +53,7 @@ describe("createStyledSpreadsheet", () => {
   });
 
   it("accepts a custom sheet name", async () => {
-    const result = await createStyledSpreadsheet(ROWS, { sheetName: "People" });
+    const result = await generateStyledSpreadsheet(ROWS, { sheetName: "People" });
     const markdown = await readXlsxToMarkdown(result.buffer);
     // A single sheet is rendered without its name, so assert via a second
     // sheet later; here just prove the workbook still parses.
@@ -61,7 +61,7 @@ describe("createStyledSpreadsheet", () => {
   });
 
   it("applies caller-supplied header and data styles", async () => {
-    const result = await createStyledSpreadsheet(ROWS, {
+    const result = await generateStyledSpreadsheet(ROWS, {
       headerStyle: {
         font: { bold: true, size: 20, color: { argb: "FF000000" } },
         fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } },
@@ -94,7 +94,7 @@ describe("createStyledSpreadsheet", () => {
   });
 
   it("applies the default borders to data rows only", async () => {
-    const result = await createStyledSpreadsheet(ROWS);
+    const result = await generateStyledSpreadsheet(ROWS);
     const { default: exceljs } = await import("exceljs");
     const workbook = new exceljs.Workbook();
     await workbook.xlsx.load(result.buffer as never);
@@ -105,7 +105,7 @@ describe("createStyledSpreadsheet", () => {
   });
 
   it("applies a caller-supplied header border", async () => {
-    const result = await createStyledSpreadsheet(ROWS, {
+    const result = await generateStyledSpreadsheet(ROWS, {
       headerStyle: { border: { left: { style: "double" } } },
     });
     const { default: exceljs } = await import("exceljs");
@@ -117,13 +117,13 @@ describe("createStyledSpreadsheet", () => {
   });
 
   it("produces an empty sheet for empty data", async () => {
-    const result = await createStyledSpreadsheet([]);
+    const result = await generateStyledSpreadsheet([]);
     expect(result.buffer.subarray(0, 2).toString("latin1")).toBe("PK");
     expect(await readXlsxToMarkdown(result.buffer)).toBe("");
   });
 
   it("honours defaultColumnWidth for generated columns", async () => {
-    const result = await createStyledSpreadsheet(ROWS, { defaultColumnWidth: 40 });
+    const result = await generateStyledSpreadsheet(ROWS, { defaultColumnWidth: 40 });
     const { default: exceljs } = await import("exceljs");
     const workbook = new exceljs.Workbook();
     await workbook.xlsx.load(result.buffer as never);
@@ -134,7 +134,7 @@ describe("createStyledSpreadsheet", () => {
 
 describe("readXlsxToMarkdown", () => {
   it("renders a single sheet as a table with no sheet heading", async () => {
-    const { buffer } = await createStyledSpreadsheet(ROWS);
+    const { buffer } = await generateStyledSpreadsheet(ROWS);
     expect(await readXlsxToMarkdown(buffer)).toBe(
       [
         "| NAME | ROLE |",

@@ -5,10 +5,11 @@ import {
   ConfigurationInput,
 } from "./configSchema";
 import type Redis from "ioredis";
-import OpenAI from "openai";
+import type OpenAI from "openai";
 import { Kysely, PostgresDialect, SqliteDialect } from "kysely";
 import { createLibMigrator } from "../db/migration";
 import { Database } from "../db/schema";
+import { loadPeer } from "../utils/loadPeerDepend";
 
 const { defineConfiguration, getConfiguration } =
   createConfigManager<Configuration>(configSchema, "@riavzon/ai Package");
@@ -35,8 +36,13 @@ export async function configuration(config: ConfigurationInput): Promise<void> {
     if (isPostgres) {
       dialect = new PostgresDialect({ pool: dbConfig });
     } else {
-      const SQLite = (await import("better-sqlite3")).default;
-      const sqliteVec = await import("sqlite-vec");
+      const { default: SQLite } = await loadPeer<{
+        default: typeof import("better-sqlite3");
+      }>("better-sqlite3", "the sqlite storage backend");
+      const sqliteVec = await loadPeer<typeof import("sqlite-vec")>(
+        "sqlite-vec",
+        "vector search on sqlite",
+      );
       const sqlite = new SQLite(config.db as string);
       sqlite.pragma("journal_mode = WAL");
       sqlite.pragma("synchronous = NORMAL");

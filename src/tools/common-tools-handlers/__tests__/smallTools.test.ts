@@ -275,31 +275,31 @@ describe("checkpoint helpers", () => {
 });
 
 describe("calculator tool", () => {
-  it("evaluates an arithmetic expression", () => {
+  it("evaluates an arithmetic expression", async () => {
     const handler = harness.tools.calculator();
 
-    expect(handler({ expression: "2 + 2" }, ctx)).toBe("4");
+    expect(await handler({ expression: "2 + 2" }, ctx)).toBe("4");
   });
 
-  it("handles precedence and parentheses", () => {
+  it("handles precedence and parentheses", async () => {
     const handler = harness.tools.calculator();
 
-    expect(handler({ expression: "(2 + 3) * 4" }, ctx)).toBe("20");
+    expect(await handler({ expression: "(2 + 3) * 4" }, ctx)).toBe("20");
   });
 
-  it("rejects a non-string expression", () => {
+  it("rejects a non-string expression", async () => {
     const handler = harness.tools.calculator();
 
-    expect(toolErrorOf(handler({ expression: 42 }, ctx))).toEqual({
+    expect(toolErrorOf(await handler({ expression: 42 }, ctx))).toEqual({
       code: "INVALID_EXPRESSION",
       message: "Expression must be a string.",
     });
   });
 
-  it("reports a math failure instead of throwing", () => {
+  it("reports a math failure instead of throwing", async () => {
     const handler = harness.tools.calculator();
 
-    const result = handler({ expression: "2 +* 3" }, ctx);
+    const result = await handler({ expression: "2 +* 3" }, ctx);
 
     expect(toolErrorOf(result).code).toBe("MATH_EVALUATION_FAILED");
     expect(toolErrorOf(result).message).toBe("Value expected (char 4)");

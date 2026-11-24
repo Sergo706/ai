@@ -1,4 +1,3 @@
-import { isAssetLikeHtmlFetchError } from "@steipete/summarize-core/content";
 import {
   ContentTooShortError,
   ExtractionDeadlineError,
@@ -8,6 +7,10 @@ import type { ExtractOptions, SummarizeExtraction } from "./types";
 import { summarizeClient } from "./client";
 import { trimmedOr, trimmedOrNull, usableContent } from "./utils";
 import { getConfiguration } from "../../../../../config/config";
+import { loadPeer } from "../../../../../utils/loadPeerDepend";
+
+
+type ContentPeer = typeof import("@steipete/summarize-core/content");
 
 /**
  * Extract one URL.
@@ -41,7 +44,8 @@ export async function extractWithSummarize(
   } = options;
 
   const started = Date.now();
-  const pending = summarizeClient().fetchLinkContent(url, {
+  const client = await summarizeClient();
+  const pending = client.fetchLinkContent(url, {
     timeoutMs: extractor?.timeoutMs ?? 120_000,
     maxCharacters: extractor?.maxCharacters ?? Number.POSITIVE_INFINITY,
     format: "markdown",
@@ -78,6 +82,10 @@ export async function extractWithSummarize(
       );
       throw error;
     }
+    const { isAssetLikeHtmlFetchError } = await loadPeer<ContentPeer>(
+      "@steipete/summarize-core/content",
+      "the extractor tool",
+    );
     if (isAssetLikeHtmlFetchError(error)) {
       log.debug(
         { url, reason: error.reason },

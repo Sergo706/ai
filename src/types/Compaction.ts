@@ -1,5 +1,5 @@
-import { ChatCompletionMessageParam } from "openai/resources";
-import { MessageTrace } from "../db/schema";
+import type { ChatCompletionMessageParam } from "openai/resources";
+import type { MessageTrace } from "../db/schema";
 
 export interface Compaction {
   temperature: number;

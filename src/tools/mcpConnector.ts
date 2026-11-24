@@ -1,16 +1,29 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
-import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import type {
   AuthProvider,
+  Client,
   OAuthClientProvider,
 } from "@modelcontextprotocol/client";
 import { getConfiguration } from "../config/config";
+import { loadPeer } from "../utils/loadPeerDepend";
 import type {
   McpAuth,
   McpServerConfig,
   McpToolset,
 } from "../types/mcp";
 import type { ChatCompletionFunctionTool } from "openai/resources/chat/completions";
+
+type McpClientPeer = typeof import("@modelcontextprotocol/client");
+
+let mcpClientModule: McpClientPeer | undefined;
+
+async function mcpClient(): Promise<McpClientPeer> {
+  mcpClientModule ??= await loadPeer<McpClientPeer>(
+    "@modelcontextprotocol/client",
+    "MCP servers",
+  );
+  return mcpClientModule;
+}
 
 
 const MAX_NAME_LENGTH = 64;
@@ -146,6 +159,7 @@ export async function createMcpToolset(
   };
 
   try {
+    const { Client, StreamableHTTPClientTransport } = await mcpClient();
     for (const config of configs) {
       const client = new Client(
         config.clientInfo ?? DEFAULT_CLIENT_INFO,

@@ -1,13 +1,13 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
-import Redis from "ioredis";
+import type Redis from "ioredis";
 import OpenAI from "openai";
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import { vi } from "vitest";
 
 import type { ConfigurationInput, Logger } from "../../src/config/configSchema";
+import { loadPeer } from "../../src/utils/loadPeerDepend";
 import { makeSpyLogger } from "./logger";
 
 type ConfigModule = typeof import("../../src/config/config");
@@ -94,7 +94,11 @@ export async function loadConfig(
     if (options.pgUrl === undefined) {
       throw new Error("loadConfig: `pgUrl` is required for the pg dialect.");
     }
-    pool = new Pool({ connectionString: options.pgUrl, max: 4 });
+    const { Pool: PgPool } = await loadPeer<typeof import("pg")>(
+      "pg",
+      "the postgres test dialect",
+    );
+    pool = new PgPool({ connectionString: options.pgUrl, max: 4 });
   } else {
     sqliteDir = mkdtempSync(join(tmpdir(), "ai-test-"));
     tempDirs = [...tempDirs, sqliteDir];
@@ -102,7 +106,11 @@ export async function loadConfig(
   }
 
   if (options.redisUrl !== undefined) {
-    redis = new Redis(options.redisUrl, {
+    const { default: RedisClient } = await loadPeer<typeof import("ioredis")>(
+      "ioredis",
+      "a real Redis in tests",
+    );
+    redis = new RedisClient(options.redisUrl, {
       maxRetriesPerRequest: 3,
       lazyConnect: false,
     });

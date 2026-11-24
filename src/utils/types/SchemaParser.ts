@@ -1,5 +1,8 @@
-import { zodResponseFormat } from "openai/helpers/zod.js";
-import { ChatCompletion, ChatCompletionMessageParam } from "openai/resources";
+import type { zodResponseFormat } from "openai/helpers/zod.js";
+import type {
+  ChatCompletion,
+  ChatCompletionMessageParam,
+} from "openai/resources";
 
 
 export type SchemaFormat = ReturnType<typeof zodResponseFormat>;

@@ -55,8 +55,8 @@ describe("summarizeClient", () => {
   it("memoises the client across calls", async () => {
     const env = await bootClient();
     try {
-      const first = env.client.summarizeClient();
-      const second = env.client.summarizeClient();
+      const first = await env.client.summarizeClient();
+      const second = await env.client.summarizeClient();
 
       expect(h.createLinkPreviewClient).toHaveBeenCalledTimes(1);
       expect(second).toBe(first);
@@ -68,9 +68,9 @@ describe("summarizeClient", () => {
   it("builds a new client after a reset", async () => {
     const env = await bootClient();
     try {
-      env.client.summarizeClient();
+      await env.client.summarizeClient();
       env.client.resetSummarizeClient();
-      env.client.summarizeClient();
+      await env.client.summarizeClient();
 
       expect(h.createLinkPreviewClient).toHaveBeenCalledTimes(2);
     } finally {
@@ -81,7 +81,7 @@ describe("summarizeClient", () => {
   it("passes null for yt-dlp when no path is configured", async () => {
     const env = await bootClient();
     try {
-      env.client.summarizeClient();
+      await env.client.summarizeClient();
 
       expect(optionsOf().ytDlpPath).toBeNull();
     } finally {
@@ -92,7 +92,7 @@ describe("summarizeClient", () => {
   it("passes the configured yt-dlp path through", async () => {
     const env = await bootClient({ ytDlpBin: "/opt/bin/yt-dlp" });
     try {
-      env.client.summarizeClient();
+      await env.client.summarizeClient();
 
       expect(optionsOf().ytDlpPath).toBe("/opt/bin/yt-dlp");
     } finally {
@@ -103,7 +103,7 @@ describe("summarizeClient", () => {
   it("disables Firecrawl so no keyless scrape is attempted", async () => {
     const env = await bootClient();
     try {
-      env.client.summarizeClient();
+      await env.client.summarizeClient();
 
       expect(optionsOf().scrapeWithFirecrawl).toBeNull();
     } finally {
@@ -114,7 +114,7 @@ describe("summarizeClient", () => {
   it("omits whisper keys when nothing is configured", async () => {
     const env = await bootClient();
     try {
-      env.client.summarizeClient();
+      await env.client.summarizeClient();
 
       const procEnv = optionsOf().env as Record<string, string | undefined>;
       // Omitted, not passed as "": an empty value would read as a broken path.
@@ -132,7 +132,7 @@ describe("summarizeClient", () => {
       whisperCppModelPath: "/models/ggml-base.bin",
     });
     try {
-      env.client.summarizeClient();
+      await env.client.summarizeClient();
 
       const procEnv = optionsOf().env as Record<string, string | undefined>;
       expect(procEnv.SUMMARIZE_WHISPER_CPP_BINARY).toBe("/opt/bin/whisper-cli");
@@ -147,7 +147,7 @@ describe("summarizeClient", () => {
   it("sets the disable flag only when explicitly turned on", async () => {
     const env = await bootClient({ disableLocalWhisper: true });
     try {
-      env.client.summarizeClient();
+      await env.client.summarizeClient();
 
       const procEnv = optionsOf().env as Record<string, string | undefined>;
       expect(procEnv.SUMMARIZE_DISABLE_LOCAL_WHISPER_CPP).toBe("1");
@@ -159,7 +159,7 @@ describe("summarizeClient", () => {
   it("keeps the ambient process env visible to the library", async () => {
     const env = await bootClient({ disableLocalWhisper: false });
     try {
-      env.client.summarizeClient();
+      await env.client.summarizeClient();
 
       const procEnv = optionsOf().env as Record<string, string | undefined>;
       // Everything else the library reads (HOME, PATH, provider keys) still
@@ -174,7 +174,7 @@ describe("summarizeClient", () => {
   it("keeps a configured binary when only the model is missing", async () => {
     const env = await bootClient({ whisperCppBin: "/opt/bin/whisper-cli" });
     try {
-      env.client.summarizeClient();
+      await env.client.summarizeClient();
 
       const procEnv = optionsOf().env as Record<string, string | undefined>;
       // Each knob is merged independently; one missing path must not drop the

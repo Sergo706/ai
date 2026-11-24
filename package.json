@@ -2,55 +2,112 @@
   "name": "ai",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/main.cjs",
+  "module": "./dist/main.mjs",
+  "types": "./dist/main.d.mts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/main.d.mts",
+        "default": "./dist/main.mjs"
+      },
+      "require": {
+        "types": "./dist/main.d.cts",
+        "default": "./dist/main.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "format:staged": "prettier $(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g') --write --ignore-unknown && git update-index --again",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test": "pnpm run data:test"
+    "test": "npx vitest"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@arethetypeswrong/core": "^0.18.5",
-    "@huggingface/transformers": "^4.3.2",
-    "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^26.6.6",
-    "@types/pg": "^8.23.1",
-    "@vitest/coverage-v8": "^5.1.1",
-    "eslint": "^10.15.0",
-    "eslint-config-prettier": "^10.1.8",
-    "ioredis": "^6.0.0",
-    "pg": "^8.23.1",
-    "prettier": "^3.10.1",
-    "publint": "^0.3.25",
-    "tsdown": "^0.23.7",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.73.0",
-    "vitest": "^5.1.1"
-  },
+  "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/client": "^2.4.0",
-    "@pdf-lib/fontkit": "^1.1.1",
     "@riavzon/utils": "^1.4.0",
-    "@steipete/summarize-core": "0.26.0",
-    "better-sqlite3": "^13.2.0",
-    "easy-currencies": "^2.2.0",
-    "exceljs": "^4.4.0",
-    "kysely": "^0.29.9",
-    "mathjs": "^15.2.0",
-    "openai": "^7.58.0",
-    "pdf-lib": "^1.17.1",
-    "pdf-parse": "^2.4.5",
-    "sqlite-vec": "^0.1.9",
-    "zod": "^4.6.7"
+    "kysely": "0.29.9",
+    "pdf-parse": "2.4.5",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/core": "0.18.5",
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "26.6.6",
+    "openai": "7.63.0",
+    "@types/pg": "8.23.1",
+    "@vitest/coverage-v8": "5.1.1",
+    "eslint": "10.15.0",
+    "eslint-config-prettier": "10.1.8",
+    "ioredis": "6.0.0",
+    "pg": "8.23.1",
+    "prettier": "3.10.1",
+    "publint": "0.3.25",
+    "tsdown": "0.23.7",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.73.0",
+    "vitest": "5.1.1"
   },
   "peerDependencies": {
+    "openai": ">=7.0.0",
+    "@huggingface/transformers": ">=4.0.0",
+    "@modelcontextprotocol/client": ">=2.0.0",
+    "@pdf-lib/fontkit": ">=1.1.0",
+    "@steipete/summarize-core": ">=0.26.0",
+    "better-sqlite3": ">=13.0.0",
+    "easy-currencies": ">=2.0.0",
+    "exceljs": ">=4.4.0",
     "ioredis": ">=6.0.0",
-    "pg": ">=8.0.0"
+    "mathjs": ">=15.0.0",
+    "pdf-lib": ">=1.17.0",
+    "pg": ">=8.0.0",
+    "sqlite-vec": ">=0.1.9"
+  },
+  "peerDependenciesMeta": {
+    "@huggingface/transformers": {
+      "optional": true
+    },
+    "@modelcontextprotocol/client": {
+      "optional": true
+    },
+    "@pdf-lib/fontkit": {
+      "optional": true
+    },
+    "@steipete/summarize-core": {
+      "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    },
+    "easy-currencies": {
+      "optional": true
+    },
+    "exceljs": {
+      "optional": true
+    },
+    "ioredis": {
+      "optional": true
+    },
+    "mathjs": {
+      "optional": true
+    },
+    "pdf-lib": {
+      "optional": true
+    },
+    "pg": {
+      "optional": true
+    },
+    "sqlite-vec": {
+      "optional": true
+    }
   }
 }

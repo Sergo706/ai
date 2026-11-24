@@ -1,13 +1,36 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 import { PDFParse } from "pdf-parse";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import fontkitModule from "@pdf-lib/fontkit";
 import { readFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CreateOrModifyPdfParams, ReadPdfParams } from "./types/PdfManipulation";
-import { resolvePath } from "@riavzon/utils/server";
-const PACKAGE_ROOT = fileURLToPath(new URL("../..", import.meta.url));
+import { getRoot, resolvePath } from "@riavzon/utils/server";
+import { loadPeer } from "./loadPeerDepend";
+
+
+type PdfLibPeer = typeof import("pdf-lib");
+type FontkitPeer = typeof import("@pdf-lib/fontkit");
+type PDFDocument = import("pdf-lib").PDFDocument;
+
+let pdfLibModule: PdfLibPeer | undefined;
+let fontkitModule: FontkitPeer | undefined;
+
+async function pdfLib(): Promise<PdfLibPeer> {
+  pdfLibModule ??= await loadPeer<PdfLibPeer>("pdf-lib", "PDF creation");
+  return pdfLibModule;
+}
+
+async function fontkit(): Promise<FontkitPeer> {
+  fontkitModule ??= await loadPeer<FontkitPeer>(
+    "@pdf-lib/fontkit",
+    "PDF creation",
+  );
+  return fontkitModule;
+}
+
+
+const PACKAGE_ROOT = getRoot(dirname(fileURLToPath(import.meta.url)));
 
 function toExactBytes(bytes: Buffer): Uint8Array {
   const exact = new Uint8Array(bytes.length);
@@ -60,22 +83,24 @@ export async function createPdf(params: CreateOrModifyPdfParams): Promise<{
   mimeType: string;
   base64Data: string;
 }> {
+  const { PDFDocument: PdfDocument, StandardFonts, rgb } = await pdfLib();
+  const fontkitModule = await fontkit();
+
   let pdfDoc: PDFDocument;
 
   if (params.basePdfBase64) {
-    pdfDoc = await PDFDocument.load(
+    pdfDoc = await PdfDocument.load(
       Buffer.from(params.basePdfBase64, "base64"),
     );
   } else {
-    pdfDoc = await PDFDocument.create();
+    pdfDoc = await PdfDocument.create();
   }
 
-  const fontkit = fontkitModule;
-  pdfDoc.registerFontkit(fontkit);
+  pdfDoc.registerFontkit(fontkitModule);
 
 
   const fontPath = (name: string) =>
-      resolvePath(name, ["assets"], [], PACKAGE_ROOT);
+    resolvePath(name, ["assets", "dist/assets"], [], PACKAGE_ROOT);
   const regular = await pdfDoc.embedFont(
     await readFile(fontPath("DejaVuSans.ttf")),
     { subset: true },

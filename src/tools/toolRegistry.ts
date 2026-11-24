@@ -1,5 +1,5 @@
-import { ChatCompletionTool } from "openai/resources";
-import { ToolHandler, ToolStreamPolicy } from "../types/ToolExecutionTypes";
+import type { ChatCompletionTool } from "openai/resources";
+import type { ToolHandler, ToolStreamPolicy } from "../types/ToolExecutionTypes";
 import { withToolCache } from "./execution/toolCacher";
 import { limitTool, trackTool } from "./toolWrappers";
 

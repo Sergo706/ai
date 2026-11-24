@@ -1,6 +1,6 @@
 import { chunkProcess } from "@riavzon/utils";
 import { chunkByTokens } from "../utils/chunkTextByTokens";
-import { PreTrainedTokenizer } from "@huggingface/transformers";
+import type { PreTrainedTokenizer } from "@huggingface/transformers";
 import { generateEmbedding } from "./embedding";
 import { getConfiguration } from "../config/config";
 import { PreparedChunk, PreparedScrape } from "../types/PrepareScrape";

@@ -1,4 +1,4 @@
-import { Column, Style } from "exceljs";
+import type { Column, Style } from "exceljs";
 
 export interface SpreadsheetOptions {
   sheetName?: string;

@@ -1,12 +1,32 @@
-import exceljs, {
-  type Cell,
-  type Worksheet,
-  type Style,
-} from "exceljs";
 import { Readable } from "stream";
 import { SpreadsheetOptions } from "./types/SpreadsheetsManipulation";
+import { loadPeer } from "./loadPeerDepend";
 
-const { Workbook } = exceljs;
+
+type Cell = import("exceljs").Cell;
+type Worksheet = import("exceljs").Worksheet;
+type Style = import("exceljs").Style;
+type Workbook = import("exceljs").Workbook;
+
+/**
+ * The ambient `exceljs` declarations advertise a named `Workbook` export, but
+ * the shipped build is CommonJS and only puts it on `default`. Declaring the
+ * real shape keeps the accessor honest about what Node returns.
+ */
+interface ExceljsPeer {
+  default: { Workbook: new () => Workbook };
+}
+
+let exceljsModule: ExceljsPeer | undefined;
+
+
+async function loadExceljs(): Promise<ExceljsPeer> {
+  exceljsModule ??= await loadPeer<ExceljsPeer>(
+    "exceljs",
+    "the spreadsheet tools",
+  );
+  return exceljsModule;
+}
 
 function cellToText(cell: Cell): string {
   const value = cell.value;
@@ -49,32 +69,33 @@ function worksheetToMarkdown(worksheet: Worksheet): string {
 }
 
 export async function readXlsxToMarkdown(buffer: Buffer): Promise<string> {
-  const workbook = new Workbook();
-  // @ts-expect-error Convert the buffer to the lib old typescript definition
-  await workbook.xlsx.load(buffer);
+  const { default: exceljs } = await loadExceljs();
+  const workbook: Workbook = new exceljs.Workbook();
+  await workbook.xlsx.load(buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]);
 
   const sheets = workbook.worksheets
-    .map((worksheet) => ({
+    .map((worksheet: Worksheet) => ({
       name: worksheet.name,
       markdown: worksheetToMarkdown(worksheet),
     }))
-    .filter((sheet) => sheet.markdown.length > 0);
+    .filter((sheet: { markdown: string }) => sheet.markdown.length > 0);
 
   if (sheets.length === 0) return "";
   if (sheets.length === 1) return sheets[0].markdown;
 
   return sheets
-    .map((sheet) => `## ${sheet.name}\n\n${sheet.markdown}`)
+    .map((sheet: { name: string; markdown: string }) => `## ${sheet.name}\n\n${sheet.markdown}`)
     .join("\n");
 }
 
 export async function readCsvToMarkdown(buffer: Buffer): Promise<string> {
-  const workbook = new Workbook();
+  const { default: exceljs } = await loadExceljs();
+  const workbook: Workbook = new exceljs.Workbook();
 
   const stream = Readable.from(buffer);
   await workbook.csv.read(stream);
 
-  const worksheet = workbook.worksheets[0];
+  const worksheet: Worksheet = workbook.worksheets[0];
   return worksheetToMarkdown(worksheet);
 }
 
@@ -99,8 +120,9 @@ export async function generateStyledSpreadsheet<
     dataStyle,
   } = options;
 
-  const workbook = new Workbook();
-  const worksheet = workbook.addWorksheet(sheetName);
+  const { default: exceljs } = await loadExceljs();
+  const workbook: Workbook = new exceljs.Workbook();
+  const worksheet: Worksheet = workbook.addWorksheet(sheetName);
 
   if (options.columns && options.columns.length > 0) {
     worksheet.columns = options.columns;

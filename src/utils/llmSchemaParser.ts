@@ -3,10 +3,22 @@ import type {
   ChatCompletion,
   ChatCompletionMessageParam,
 } from "openai/resources/chat/completions";
-import { zodResponseFormat } from "openai/helpers/zod";
 import { removeCodeFence, removeThinking } from "./removeThink";
 import { ParserConfig, SchemaFormat } from "./types/SchemaParser";
 import { Logger } from "../config/configSchema";
+import { loadPeer } from "./loadPeerDepend";
+
+type OpenAiZodPeer = typeof import("openai/helpers/zod");
+
+let openAiZodModule: OpenAiZodPeer | undefined;
+
+async function openAiZod(): Promise<OpenAiZodPeer> {
+  openAiZodModule ??= await loadPeer<OpenAiZodPeer>(
+    "openai/helpers/zod",
+    "schema-constrained LLM output",
+  );
+  return openAiZodModule;
+}
 
 
 export async function llmSchemaParser<S extends z.ZodType>(
@@ -30,11 +42,12 @@ export async function llmSchemaParser<S extends z.ZodType>(
 
   let schemaFormat: SchemaFormat | undefined;
   let schemaRendered = false;
-  const renderSchema = (): SchemaFormat | undefined => {
+  const renderSchema = async (): Promise<SchemaFormat | undefined> => {
     if (schemaRendered) return schemaFormat;
 
     schemaRendered = true;
     try {
+      const { zodResponseFormat } = await openAiZod();
       schemaFormat = zodResponseFormat(schema, schemaName);
     } catch (error: unknown) {
       log.warn(
@@ -159,7 +172,7 @@ export async function llmSchemaParser<S extends z.ZodType>(
       correction.push({ role: "assistant", content: cleanedReply });
     }
 
-    const schemaFormatForRetry = renderSchema();
+    const schemaFormatForRetry = await renderSchema();
     const correctionParts = [
       "Your previous response failed JSON/schema validation.",
       `Validation errors: ${feedback}`,

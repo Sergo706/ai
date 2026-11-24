@@ -1,9 +1,5 @@
-import {
-  buildLinkSummaryPrompt,
-  SUMMARY_LENGTH_TO_TOKENS,
-  SUMMARY_SYSTEM_PROMPT,
-} from "@steipete/summarize-core/prompts";
 import { aiClients, getConfiguration } from "../../../../../config/config";
+import { loadPeer } from "../../../../../utils/loadPeerDepend";
 import type { Logger } from "../../../../../config/configSchema";
 import { ContentTooShortError } from "./summarizeErrors";
 import type {
@@ -12,6 +8,15 @@ import type {
   SummarizeWithLlmOptions,
 } from "./types";
 import { resolveLength } from "./utils";
+
+type PromptsPeer = typeof import("@steipete/summarize-core/prompts");
+
+async function summarizePrompts(): Promise<PromptsPeer> {
+  return loadPeer<PromptsPeer>(
+    "@steipete/summarize-core/prompts",
+    "LLM summarization",
+  );
+}
 
 /**
  * Condense an already-extracted page with the configured model.
@@ -51,6 +56,9 @@ export async function summarizeWithLlm(
     );
     return { summary: content, length, passthrough: true, model };
   }
+
+  const { buildLinkSummaryPrompt, SUMMARY_LENGTH_TO_TOKENS, SUMMARY_SYSTEM_PROMPT } =
+    await summarizePrompts();
 
   const prompt = buildLinkSummaryPrompt({
     url: extraction.url,

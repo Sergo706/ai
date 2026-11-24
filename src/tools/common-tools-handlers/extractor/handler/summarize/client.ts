@@ -1,9 +1,19 @@
-import {
-  createLinkPreviewClient,
-  type LinkPreviewClient,
-  type LinkPreviewClientOptions,
+import type {
+  LinkPreviewClient,
+  LinkPreviewClientOptions,
 } from "@steipete/summarize-core/content";
 import { getConfiguration } from "../../../../../config/config";
+import { loadPeer } from "../../../../../utils/loadPeerDepend";
+
+
+type ContentPeer = typeof import("@steipete/summarize-core/content");
+
+async function summarizeContent(): Promise<ContentPeer> {
+  return loadPeer<ContentPeer>(
+    "@steipete/summarize-core/content",
+    "the extractor tool",
+  );
+}
 
 
 function clientEnv(): Record<string, string | undefined> {
@@ -28,7 +38,7 @@ function clientEnv(): Record<string, string | undefined> {
 
 let cachedClient: LinkPreviewClient | undefined;
 
-export function summarizeClient(): LinkPreviewClient {
+export async function summarizeClient(): Promise<LinkPreviewClient> {
   if (cachedClient) return cachedClient;
   const { extractor } = getConfiguration()
 
@@ -39,6 +49,7 @@ export function summarizeClient(): LinkPreviewClient {
     scrapeWithFirecrawl: null,
   };
 
+  const { createLinkPreviewClient } = await summarizeContent();
   cachedClient = createLinkPreviewClient(options);
   return cachedClient;
 }

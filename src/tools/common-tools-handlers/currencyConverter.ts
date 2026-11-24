@@ -1,9 +1,15 @@
-import { Convert } from "easy-currencies";
 import { ToolHandler } from "../../types/ToolExecutionTypes";
 import { getConfiguration } from "../../config/config";
 import { toolError } from "../execution";
+import { loadPeer } from "../../utils/loadPeerDepend";
 import { currencyParams } from "./schemas";
 
+/** The slice of `easy-currencies` this tool uses. */
+interface EasyCurrenciesPeer {
+  Convert: (
+    amount: number,
+  ) => { from: (code: string) => { to: (code: string) => Promise<number> } };
+}
 
 export function currenciesConvertor(): ToolHandler {
   const log = getConfiguration().logger;
@@ -18,6 +24,12 @@ export function currenciesConvertor(): ToolHandler {
     const { amount, from, to } = parse.data;
 
     try {
+      // Loaded per call: rate tables and the fetch they use are only worth
+      // paying for when the host actually enables this tool.
+      const { Convert } = await loadPeer<EasyCurrenciesPeer>(
+        "easy-currencies",
+        "the currency converter tool",
+      );
       const value = await Convert(amount).from(from).to(to);
       return {
         amount,

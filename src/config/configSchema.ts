@@ -1,7 +1,7 @@
 import z from "zod";
 import type Redis from "ioredis";
 import type { Pool } from "pg";
-import OpenAI from "openai";
+import type OpenAI from "openai";
 
 
 
@@ -25,7 +25,17 @@ const pg = z.custom<Pool>(
   { message: "Expected a pg Pool instance" },
 );
 const sqlitePath = z.string().default(process.cwd())
-const openai = z.instanceof(OpenAI)
+
+const openai = z.custom<OpenAI>(
+  (value) =>
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { chat?: unknown }).chat === "object" &&
+    typeof (
+      value as { chat?: { completions?: { create?: unknown } } }
+    ).chat?.completions?.create === "function",
+  { message: "Expected an OpenAI client instance" },
+);
 
 export interface Logger {
   debug(obj: unknown, msg?: string): void;
