@@ -39,6 +39,14 @@ embeddings; everything else is optional.
 npm install openai
 ```
 
+The database drivers are optional peers too, so install the one you configure.
+A SQLite path needs `better-sqlite3` and `sqlite-vec`; a `pg` `Pool` needs `pg`.
+
+```bash [Terminal]
+npm install better-sqlite3 sqlite-vec
+# or: npm install pg
+```
+
 The package ships ESM and CommonJS builds with matching type declarations, so
 either module system resolves the same API.
 
@@ -66,6 +74,12 @@ await configuration({
 and `sqlite-vec` loaded for you. `redis` defaults to `"memory"`, which is enough
 for a single process.
 
+> **Note:** PostgreSQL requires the `pgvector` extension. The first migration
+> runs `CREATE EXTENSION IF NOT EXISTS vector`, and the embedding columns and
+> HNSW indexes depend on it, so the database user needs permission to install
+> extensions. Install `pgvector` beforehand on a managed instance where that
+> permission is not granted.
+
 > **Note:** Configuration is global and required. Modules read it lazily, so
 > `configuration()` must run before any agent, model, or run function is called.
 
@@ -81,10 +95,13 @@ import { createAgent } from "@riavzon/ai";
 const agent = await createAgent({
   model: { model: "gpt-4o-mini" },
   systemInstructions: "You answer in one short paragraph.",
-  tools: { common: ["calculator", "get_current_datetime"] },
+  tools: { common: ["get_current_datetime"] },
 });
 
-const { text, toolsUsed } = await agent.complete({ message: "What is 2 + 2?" });
+const { text, toolsUsed } = await agent.complete({
+  message: "What time is it in Tokyo?",
+  user: { timezone: "Asia/Tokyo" },
+});
 await agent.close();
 ```
 
@@ -96,6 +113,12 @@ a script and an HTTP handler share one code path.
 Tools come from three places: the built-in set, your own `ToolSpec` objects, and
 MCP servers. A spec builds a fresh handler per request, so it can capture the
 user, the conversation, or a connection that only exists for that turn.
+
+Some built-in tools have their own optional peer. `calculator` uses `mathjs`,
+`currencies_convertor` uses `easy-currencies`, `create_styled_spreadsheet` uses
+`exceljs`, and `pdf_creator` uses `pdf-lib` and `@pdf-lib/fontkit`. Install the
+peer of any built-in tool you enable, or the tool returns a tool error explaining
+that the dependency is missing.
 
 ```ts [tools.ts]
 const weather = {
@@ -128,6 +151,7 @@ Point the agent at one or more MCP servers and their tools arrive ready to run.
 ```ts [agent.ts]
 const agent = await createAgent({
   model: { model: "gpt-4o-mini" },
+  systemInstructions: "Use the available tools to answer.",
   tools: {
     mcp: [{ url: "https://mcp.example.com/mcp", namespace: "ex" }],
   },
@@ -177,26 +201,40 @@ local evidence comes from, how a search intent is discovered, which targets to
 execute, and whether the result is good enough.
 
 ```ts [research.ts]
-import { AgenticWorkflowLoop } from "@riavzon/ai";
+import { AgenticWorkflowLoop, type WorkflowBudgets } from "@riavzon/ai";
+
+const budgets: WorkflowBudgets = {
+  maxLocalRounds: 3,
+  maxExternalRounds: 5,
+  localBatchSize: 10,
+  maxIntentsPerRound: 3,
+  maxTargetsPerIntent: 5,
+  maxEvaluatorItems: 40,
+  maxConsecutiveInsufficientLocalBatches: 2,
+  maxSkippedExternalRounds: 2,
+  maxRepeatedIntentRounds: 2,
+  maxDiscoveryFailuresPerIntent: 3,
+};
 
 const loop = new AgenticWorkflowLoop({
   name: "research",
   query,
-  budgets: { maxLocalRounds: 3, maxExternalRounds: 5 },
+  budgets,
   localKnowledge,
   externalDiscovery,
   targetExecutor,
   evaluator,
-  critic,
-  finalAnswer,
 });
 
 const result = await loop.run();
 ```
 
 `WorkflowBudgets` caps every stage, so a run always terminates even if an
-adapter never reports success. Progress is reported through a single `emit`
-callback, and each event carries the stage that produced it, which is enough to
+adapter never reports success. Every budget field is required, so a run cannot
+start with an open-ended cap. Only `targetExecutor` and `evaluator` are required
+adapters; add `localKnowledge`, `externalDiscovery`, `critic`, and `finalAnswer`
+when the workflow needs them. Progress reaches your code through `onProgress` on
+the config, and each event carries the stage that produced it, which is enough to
 drive a progress UI without exposing the loop internals.
 
 ## The run system
@@ -249,15 +287,24 @@ const stopRuns = startRuns();
 process.on("SIGTERM", () => stopRuns());
 ```
 
-Progress is written to an event store that also survives the process. Each run's
-log lives in Redis Streams or in a bounded in-process cache, and `streamFromRun`
-replays the log and then follows it live, so a client that attaches late sees the
-same sequence as one that never left. `streamFromStore` serves a run held by
-another replica.
+Progress is written to an event store, so a run's log outlives the client that
+started it. With Redis configured the log lives in Redis Streams and survives a
+process restart; with the default in-memory cache it is bounded and scoped to the
+process. Either way `streamFromRun` replays the log and then follows it live, so
+a client that attaches late sees the same sequence as one that never left.
+`streamFromStore` serves a run held by another replica, which needs Redis.
 
 > **Tip:** Run leases make the multi-replica path safe without a coordinator.
 > One instance holds the claim on a run, the heartbeat proves it is alive, and a
 > second instance only takes over once the lease expires.
+
+> **Note:** Cross-replica streaming requires Redis. The event store picks its
+> backend from `redis`: a real `ioredis` client uses Redis Streams, while the
+> default `"memory"` uses a bounded per-process cache. With `"memory"`,
+> `streamFromStore` only ever reads this process's own log, so a run owned by
+> another replica replays nothing and the stream ends quietly once the liveness
+> check reports the run is gone. Configure Redis before running more than one
+> instance.
 
 ## Configuration
 
@@ -272,9 +319,7 @@ mirror those settings as `RUNS_*` for deployments that prefer them.
 
 ## Documentation
 
-The full API surface carries hover documentation, so an editor shows signatures,
-defaults, and examples without leaving the file. Start with the exported
-modules: `agents`, `tools`, `rag`, `agentic-loop`, `runs`, and `config`.
+Full documentation at https://ai.riavzon.com
 
 ## License
 
