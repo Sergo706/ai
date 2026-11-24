@@ -1,11 +1,41 @@
 {
-  "name": "ai",
+  "name": "@riavzon/ai",
+  "author": "Sergio contact@riavzon.com",
   "version": "1.0.0",
-  "description": "",
-  "type": "module",
-  "files": [
-    "dist"
+  "license": "MIT",
+  "description": "Zero-magic embeddable TypeScript agent runtime. Full control over your HTTP layer, database state, and raw OpenAI wire payloads. Scales from zero-config SQLite to multi-replica Postgres and Redis Streams with no external daemons and no hidden prompts.",
+  "keywords": [
+    "ai",
+    "agents",
+    "agentic",
+    "agent-runtime",
+    "llm",
+    "openai",
+    "tool-calling",
+    "function-calling",
+    "mcp",
+    "model-context-protocol",
+    "rag",
+    "embeddings",
+    "vector-search",
+    "pgvector",
+    "sqlite",
+    "redis-streams",
+    "workflow",
+    "kysely",
+    "typescript",
+    "backend",
+    "nodejs"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sergo706/ai"
+  },
+  "homepage": "to-do",
+  "bugs": {
+    "url": "https://github.com/Sergo706/ai/issues"
+  },
+  "type": "module",
   "main": "./dist/main.cjs",
   "module": "./dist/main.mjs",
   "types": "./dist/main.d.mts",
@@ -19,20 +49,22 @@
         "types": "./dist/main.d.cts",
         "default": "./dist/main.cjs"
       }
-    },
-    "./package.json": "./package.json"
+    }
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "format:staged": "prettier $(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g') --write --ignore-unknown && git update-index --again",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test": "npx vitest"
+    "test": "npx vitest",
+    "build": "tsdown",
+    "prepublishOnly": "npm run build"
   },
-  "keywords": [],
-  "author": "",
-  "license": "MIT",
   "dependencies": {
     "@riavzon/utils": "^1.4.0",
     "kysely": "0.29.9",
