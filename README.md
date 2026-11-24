@@ -120,8 +120,14 @@ Some built-in tools have their own optional peer. `calculator` uses `mathjs`,
 peer of any built-in tool you enable, or the tool returns a tool error explaining
 that the dependency is missing.
 
+The type argument on `ToolSpec` names the host metadata the factory reads.
+
 ```ts [tools.ts]
-const weather = {
+import type { ToolSpec } from "@riavzon/ai";
+
+type RequestMeta = { tenantId: string; timezone: string };
+
+const weather: ToolSpec<RequestMeta> = {
   name: "get_weather",
   definitions: {
     type: "function",
@@ -132,12 +138,31 @@ const weather = {
     },
   },
   make:
-    () =>
+    (ctx) =>
     async ({ city }) =>
-      fetchWeather(String(city)),
+      fetchWeather(String(city), ctx.meta?.timezone),
   cache: { ttl: 600 },
 };
 ```
+
+Supply that metadata on the agent, then override any field per turn.
+
+```ts [agent.ts]
+const agent = await createAgent<RequestMeta>({
+  model: { model: "gpt-4o-mini" },
+  systemInstructions: "You answer in one short paragraph.",
+  meta: { tenantId: "acme", timezone: "UTC" },
+  tools: { specs: [weather] },
+});
+
+await agent.complete({
+  message: "What is the weather in Tokyo?",
+  meta: { timezone: "Asia/Tokyo" },
+});
+```
+
+A turn's `meta` is spread over `config.meta` before the tool factories run, so
+the call above sees `{ tenantId: "acme", timezone: "Asia/Tokyo" }`.
 
 A turn can also persist its history, compact it when it grows, answer from a
 semantic cache, validate a JSON reply against a Zod schema, and record a trace
