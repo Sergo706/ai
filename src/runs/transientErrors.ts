@@ -40,9 +40,14 @@ function readCause(value: unknown): unknown {
 }
 
 /**
- * Walks the `cause` chain, because `fetch` failures arrive as
- * `TypeError: fetch failed` wrapping the real `ECONNRESET`, and only the inner
- * error carries the code.
+ * `true` when a failure looks temporary, so a run with a checkpoint should be
+ * resumed rather than failed.
+ *
+ * Matches network error codes, retryable HTTP statuses and the common `fetch`
+ * messages, walking the `cause` chain because the useful code is on the inner
+ * error.
+ *
+ * @param err - The thrown value.
  */
 export function isTransientError(err: unknown): boolean {
   const seen = new Set<unknown>();

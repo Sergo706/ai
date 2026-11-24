@@ -6,6 +6,18 @@ import {
 import { saveCachedExchange } from "../models/saveMessages.js";
 import { staticReplyStream } from "./sse.js";
 
+/**
+ * Answer a repeated question from the semantic cache, or fall through.
+ *
+ * A hit is also written back to the transcript, so the reuse is visible in the
+ * conversation exactly like a fresh answer.
+ *
+ * @param skipOnTools - Tools whose earlier use makes a cached answer unsafe.
+ * @param args - The conversation, message and similarity window.
+ * @param skipEvaluator - Per-turn opt-out; returning `true` skips the lookup.
+ * @returns A replay stream when `args.stream` is set, the raw hit otherwise, or
+ * `null` to call the model.
+ */
 export async function tryCachedReply(
   skipOnTools: string[],
   args: {

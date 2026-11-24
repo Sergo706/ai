@@ -2,17 +2,30 @@ import type { Checkpoint } from "../../types/Checkpoint";
 import { DEFAULT_CHECKPOINT_VERSION } from "./shared";
 
 /**
- * Wraps a workflow's progress in a checkpoint envelope.
+ * Wrap a workflow's progress in a checkpoint envelope.
  *
- * Cheap enough to call every round: it copies the reference and nothing else.
- * Stringification happens once, when the caller writes the row.
+ * Cheap enough to call every round; stringification happens once, where the row
+ * is written.
+ *
+ * @param args - The phase, the workflow's own state, and an optional version.
+ * @returns The envelope to hand to `saveCheckpoint`.
+ * @example
+ * ```ts
+ * saveCheckpoint(checkpoint({ phase: "external", state, roundsDone: round }));
+ * ```
  */
 export function checkpoint<TState, TPhase extends string>(args: {
+  /** The phase the run had reached. */
   phase: TPhase;
+  /** Workflow-defined progress. */
   state: TState;
-  /** Defaults to `DEFAULT_CHECKPOINT_VERSION`. Up it when `state` changes. */
+  /**
+   * Envelope version. Raise it when `state` changes shape.
+   *
+   * @default DEFAULT_CHECKPOINT_VERSION
+   */
   version?: number;
-  /** How many rounds or items `phase` had completed, when that is meaningful. */
+  /** How many rounds or items `phase` had completed, when meaningful. */
   roundsDone?: number;
 }): Checkpoint<TState, TPhase> {
   return {

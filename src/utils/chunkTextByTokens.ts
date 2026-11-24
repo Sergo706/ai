@@ -1,6 +1,18 @@
 import type { PreTrainedTokenizer } from "@huggingface/transformers";
 import { estimateTextTokens } from "./messageTokens";
 
+/**
+ * Count the tokens in a string.
+ *
+ * Uses the tokenizer when one is given, and a character-based estimate
+ * otherwise.
+ *
+ * @param text - The text to measure.
+ * @param tokenizer - Optional real tokenizer.
+ * @param CHARS_PER_TOKEN_ESTIMATE - Characters per token for the estimate.
+ * @default CHARS_PER_TOKEN_ESTIMATE 4
+ * @returns The token count.
+ */
 export function countTokens(
   text: string,
   tokenizer?: PreTrainedTokenizer,
@@ -12,6 +24,28 @@ export function countTokens(
   return estimateTextTokens(text, CHARS_PER_TOKEN_ESTIMATE);
 }
 
+/**
+ * Split text into overlapping chunks that each fit a token budget.
+ *
+ * Paragraph and line boundaries are preferred; a single oversized line is split
+ * with a token-sized step and the requested overlap.
+ *
+ * @param text - The text to split.
+ * @param maxTokens - Maximum tokens per chunk.
+ * @default maxTokens 1000
+ * @param overlapTokens - Tokens carried from one chunk into the next.
+ * @default overlapTokens 100
+ * @param tokenizer - Optional real tokenizer.
+ * @param CHARS_PER_TOKEN_ESTIMATE - Characters per token for the estimate.
+ * @default CHARS_PER_TOKEN_ESTIMATE 4
+ * @returns The chunks, in order. Empty when `text` is blank.
+ * @throws If `overlapTokens` is not smaller than `maxTokens` and a single line
+ * must be split.
+ * @example
+ * ```ts
+ * const chunks = chunkByTokens(markdown, 800, 80);
+ * ```
+ */
 export function chunkByTokens(
   text: string,
   maxTokens = 1000,

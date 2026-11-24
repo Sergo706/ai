@@ -41,6 +41,7 @@ const pageSchema = z.object({
   items: z.array(pdfItemSchema).default([]),
 });
 
+/** Arguments accepted by the `pdf_creator` tool. */
 export const pdfCreatorParams = z.object({
   filename: z
     .string()
@@ -63,6 +64,7 @@ export const pdfCreatorParams = z.object({
     .optional(),
 });
 
+/** Arguments accepted by the `currencies_convertor` tool. */
 export const currencyParams = z.object({
   amount: z.number().positive(),
   from: z.string().length(3).toUpperCase(),
@@ -72,10 +74,9 @@ export const currencyParams = z.object({
 /**
  * One document read.
  *
- * Chunk indexes are inclusive and both-or-neither: a model that sends only
- * `chunkStart` would otherwise get an unbounded tail, which is exactly the
- * payload blow-up the cap exists to prevent. The 10-chunk span is enforced by
- * the handler, not here, so the error message can name the limit.
+ * Chunk indexes are inclusive and both-or-neither: sending only `chunkStart`
+ * would request an unbounded tail. The 10-chunk span is enforced by the handler
+ * so the error can name the limit.
  */
 export const documentParams = z.object({
   documentId: z.number().int().positive().describe("The document to read."),
@@ -120,6 +121,7 @@ const styleSchema = z.object({
     .optional(),
 });
 
+/** Arguments accepted by the `create_styled_spreadsheet` tool. */
 export const spreadsheetCreatorParams = z.object({
   data: z
     .array(z.record(z.string(), z.unknown()))

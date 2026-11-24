@@ -18,14 +18,22 @@ interface MemoryLog {
 }
 
 
-/** Wakes every reader parked on this run. */
+/**
+ * Wake every reader parked on a run's log.
+ *
+ * @param runId - The run whose waiters should be woken.
+ */
 export function notifyMemory(runId: string): void {
   const set = waiters.get(runId);
   if (!set) return;
   for (const wake of set) wake();
 }
 
-/** Drops every waiter for a run, used when its log is deleted. */
+/**
+ * Forget every waiter for a run.
+ *
+ * @param runId - The run whose waiters should be dropped.
+ */
 export function clearMemoryWaiters(runId: string): void {
   waiters.delete(runId);
 }
@@ -42,11 +50,14 @@ function memoryOffset(log: MemoryLog, afterId: string): number {
 }
 
 /**
- * Appends one event under the id the caller assigned, trimming the oldest past
- * `MAX_STREAM_LEN`.
+ * Append one event to a run's in-memory log.
  *
- * The id comes from the registry, not from here, so an in-process reader and a
- * store reader hold the same cursor for the same event.
+ * Oldest events are trimmed once the log passes `MAX_STREAM_LEN`, and every
+ * parked reader is woken.
+ *
+ * @param runId - The run to append to.
+ * @param id - The event id, assigned by the caller.
+ * @param event - The event to store.
  */
 export function appendMemory(
   runId: string,
@@ -67,7 +78,14 @@ export function appendMemory(
   notifyMemory(runId);
 }
 
-/** Reads one bounded page strictly after `afterId`. */
+/**
+ * Read one bounded page of a run's log, strictly after `afterId`.
+ *
+ * @param runId - The run to read.
+ * @param afterId - Cursor to resume from; `FIRST_ID` starts at the beginning.
+ * @param count - Maximum events to return.
+ * @returns The events plus the id to pass as `afterId` next time.
+ */
 export function readMemoryPage(
   runId: string,
   afterId: string,
@@ -84,17 +102,21 @@ export function readMemoryPage(
 }
 
 /**
- * The id of the newest event this process holds for the run.
+ * The id of the newest event held for a run.
+ *
+ * @param runId - The run to inspect.
+ * @returns The latest id, or `undefined` when the log is empty or expired.
  */
 export function lastMemoryId(runId: string): string | undefined {
   return readMemory(runId)?.ids.at(-1);
 }
 
 /**
- * Waits for a new event, the block timeout, or the log disappearing.
+ * Wait for the next event, a short timeout, or the log disappearing.
  *
- * Mirrors `XREAD BLOCK`: `null` means "nothing arrived, come back and check
- * whether the reader should stop".
+ * @param runId - The run to follow.
+ * @param afterId - Cursor to resume from.
+ * @returns The new page, or `null` when nothing arrived before the timeout.
  */
 export async function waitForMemoryNext(
   runId: string,
@@ -129,13 +151,21 @@ export async function waitForMemoryNext(
   return page.events.length === 0 ? null : page;
 }
 
-/** Refreshes the TTL while the run is working but silent. */
+/**
+ * Restart the expiry clock on a run's log.
+ *
+ * @param runId - The run to keep alive.
+ */
 export function touchMemory(runId: string): void {
   const log = readMemory(runId);
   if (log) memoryLogs.set(runId, log, STREAM_TTL_SECONDS * 1_000);
 }
 
-/** Deletes a run's log and wakes anyone parked on it. */
+/**
+ * Delete a run's log and release anyone waiting on it.
+ *
+ * @param runId - The run to drop.
+ */
 export function dropMemory(runId: string): void {
   memoryLogs.del(runId);
   notifyMemory(runId);

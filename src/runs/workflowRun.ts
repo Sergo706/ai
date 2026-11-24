@@ -16,6 +16,29 @@ import type {
   WorkflowRunOptions,
 } from "./types";
 
+/**
+ * Run one long workflow through the shared lifecycle.
+ *
+ * Creates (or re-claims) the run row, keeps the lease heartbeated while
+ * `execute` works, records the terminal status, and releases the lease. A
+ * transient failure with a checkpoint is recorded as `interrupted` so the
+ * recovery sweep can resume it.
+ *
+ * @param options - The run's identity, query and progress callback.
+ * @param execute - The work itself, given a context with the lease signal and
+ * checkpoint helpers.
+ * @param log - Logger for lifecycle lines.
+ * @returns The payload envelope for the route, once the run finishes.
+ * @throws The error from `execute`, after the row has been updated.
+ * @example
+ * ```ts
+ * const payload = await runWorkflow(
+ *   { kind: "workflow", name: "research", query },
+ *   async (ctx) => runResearch(ctx),
+ *   logger,
+ * );
+ * ```
+ */
 export async function runWorkflow<TData>(
   options: WorkflowRunOptions,
   execute: (ctx: WorkflowRunContext) => Promise<WorkflowExecution<TData>>,

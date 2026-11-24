@@ -4,18 +4,44 @@ import type { WorkflowProgressUpdate } from "../agentic-loop/types";
 
 const encoder = new TextEncoder();
 
+/** A comment line that keeps an idle SSE connection open. */
 export const SSE_HEARTBEAT = ": heartbeat\n\n";
 
-
+/**
+ * Encode one event as a `text/event-stream` frame.
+ *
+ * @param payload - The event or frame to send; JSON-serialised into `data:`.
+ * @param id - Optional event id, letting a client resume from it.
+ * @returns The wire-ready frame.
+ * @example
+ * ```ts
+ * frame({ type: "chunk", text: "hi" }); // 'data: {"type":"chunk",...}\n\n'
+ * ```
+ */
 export function frame(payload: SseEvent | SseFrame, id?: string): string {
   const data = `data: ${JSON.stringify(payload)}\n\n`;
   return id === undefined ? data : `id: ${id}\n${data}`;
 }
 
+/**
+ * UTF-8 encode a frame for a `ReadableStream` controller.
+ *
+ * @param text - Frame text, usually from {@link frame} or {@link SSE_HEARTBEAT}.
+ */
 export function encode(text: string): Uint8Array {
   return encoder.encode(text);
 }
 
+/**
+ * Build the response headers an SSE endpoint must send.
+ *
+ * @returns Headers for `Content-Type`, `Cache-Control`, `Connection`,
+ * `X-Accel-Buffering` and `Transfer-Encoding`. Spread them into your response.
+ * @example
+ * ```ts
+ * return new Response(workflowStream(args), { headers: setSseHeaders() });
+ * ```
+ */
 export function setSseHeaders() {
   const headers: Record<string, string> = {
     "Content-Type": "text/event-stream",
@@ -27,6 +53,14 @@ export function setSseHeaders() {
   return headers;
 }
 
+/**
+ * A stream that replays a reply already in hand.
+ *
+ * Emits `init`, one `chunk` carrying the whole text, then `done`.
+ *
+ * @param conversationId - Sent in the `init` frame.
+ * @param text - The complete assistant reply.
+ */
 export function staticReplyStream(
   conversationId: number,
   text: string,
@@ -41,6 +75,7 @@ export function staticReplyStream(
   });
 }
 
+/** Arguments for {@link workflowStream}. */
 export interface WorkflowStreamArgs {
   /**
    * Runs the work, reporting progress with `emit`, and resolves with the
@@ -53,22 +88,33 @@ export interface WorkflowStreamArgs {
   execute: (emit: (payload: SseFrame) => void) => Promise<SseFrame>;
   /** Called once when `execute` throws, before the `error` frame is written. */
   onError?: (err: unknown) => void;
+  /**
+   * Milliseconds between keep-alive comments, so proxies do not close the
+   * connection while the task is quiet.
+   *
+   * @default 15000
+   */
   heartbeatMs?: number;
 }
 
 /**
- * Turns a long workflow into a Server-Sent Events body.
+ * Run a long task as a Server-Sent Events body.
  *
- * The four research-family routes emit the same shape of stream, so the
- * mechanics — encoder, heartbeat, close-once bookkeeping, terminal frame — live
- * here instead of being reimplemented per route. What stays in the route is the
- * part that is actually route-specific: which workflow runs and what its
- * progress means.
+ * Emits whatever `execute` sends, a heartbeat while it works, then `done`.
+ * A throw from `execute` becomes one `error` frame instead of a broken stream.
  *
- * Deliberately knows nothing about the run registry. Registering a handle is
- * what makes a run reattachable, and that lives in
- * `server/lib/runs/detachedWorkflowStream.ts` so this module stays a pure
- * encoder and cannot grow a dependency on the database layer.
+ * @param args - The task to run and how to report its failures.
+ * @returns A `ReadableStream` to hand straight to a `Response`.
+ * @example
+ * ```ts
+ * return new Response(
+ *   workflowStream({
+ *     execute: async (emit) => runResearch(emit),
+ *     onError: (err) => log.error({ err }, "research failed"),
+ *   }),
+ *   { headers: setSseHeaders() },
+ * );
+ * ```
  */
 export function workflowStream(
   args: WorkflowStreamArgs,
@@ -118,17 +164,21 @@ export function workflowStream(
 }
 
 /**
- * The progress pair every research-family route passes to its runner.
+ * Build the progress callbacks a streaming workflow route emits through.
  *
- * `research_start` announces the run id, and the id is repeated on every page
- * frame so a client that attached mid-run still learns it. Both are needed for
- * the stop button and for `POST /api/runs/{id}/retry` to have anything to work
- * with.
+ * Each returned callback writes one SSE frame. Once `onRunStarted` has been
+ * called, its run id is attached to every later frame, so a client that
+ * attached mid-run still learns which run it is watching.
  *
- * `workflow` is the route's own identity, sent explicitly rather than inferred
- * from `researchType`: the team reuses `"combined"` as its retrieval flavour and
- * deep research reuses the user's `"general"`, so the flavour cannot tell the
- * four routes apart. Without it every live crawl renders as deep research.
+ * @param emit - Writes one frame to the stream.
+ * @param meta - The query and workflow name to stamp on every frame.
+ * @returns Three callbacks: run start, workflow progress, and agent progress.
+ * @example
+ * ```ts
+ * const progress = runProgressFrames(emit, { query, workflow: "research" });
+ * progress.onRunStarted(runId);
+ * progress.onProgress({ addedEvidence: true, label: "crawling" });
+ * ```
  */
 export function runProgressFrames(
   emit: (payload: SseFrame) => void,

@@ -196,6 +196,20 @@ function renderArray(
   }
 }
 
+/**
+ * Render any JSON value as readable Markdown.
+ *
+ * Objects become nested headings, arrays become ordered lists, and cycles,
+ * oversized values, and over-long output are summarised rather than throwing.
+ *
+ * @param value - The value to render.
+ * @param options - Heading level, depth and size caps, and title keys.
+ * @returns The Markdown, or `_(none)_` for an empty value.
+ * @example
+ * ```ts
+ * const md = jsonToMarkdown(payload, { maxStringLength: 500 });
+ * ```
+ */
 export function jsonToMarkdown(
   value: unknown,
   options: JsonToMarkdownOptions = {},

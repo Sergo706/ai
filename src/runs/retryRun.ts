@@ -15,21 +15,19 @@ function workflowName(row: StoredRun): string | undefined {
 }
 
 /**
- * Puts a closed run back to work at the user's request.
+ * Restart a closed run at the user's request.
  *
- * This is the manual counterpart to the recovery sweep. The sweep only adopts
- * rows that look abandoned; this one runs when a person asks, so it accepts
- * `aborted` and `failed` as well — the two statuses the sweep deliberately
- * never touches.
+ * Accepts `aborted` and `failed` runs, which the recovery sweep never touches.
+ * A checkpoint is kept: a run that has one continues from its last round, and
+ * one that does not starts over. `outcome.resumed` says which happened.
  *
- * The checkpoint is kept. A run with a snapshot continues from its last round
- * boundary, and one without starts over; the response reports which happened so
- * the caller can tell the difference before it starts waiting.
- *
- * `attempts` is incremented by this call and is **not** reset, which is what
- * makes the cap meaningful for manual retries too. When the cap is already
- * reached the run is not reopened: repeating a run that keeps dying produces the
- * same death, so the answer is a new run with a new id.
+ * @param runId - The run to restart.
+ * @returns `ok: true` with the run's details, or `ok: false` with the reason.
+ * @example
+ * ```ts
+ * const outcome = await retryRun(runId);
+ * if (!outcome.ok) return badRequest(outcome.message);
+ * ```
  */
 export async function retryRun(runId: string): Promise<RetryOutcome> {
   const log = getConfiguration().logger;

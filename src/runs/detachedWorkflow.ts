@@ -8,6 +8,21 @@ import type {
 } from "./types.js";
 
 
+/**
+ * Register a run so its frames can be streamed, replayed and aborted.
+ *
+ * Use the returned helpers rather than publishing directly: `tee` records every
+ * frame, and `finish`/`fail` drive the run to a terminal state.
+ *
+ * @param args - The run's identity and logger.
+ * @returns The handle plus `tee`, `finish` and `fail`.
+ * @example
+ * ```ts
+ * const detached = attachDetachedWorkflow({ runId, kind: "workflow", log });
+ * const emit = detached.tee(send);
+ * detached.finish(result);
+ * ```
+ */
 export function attachDetachedWorkflow(
   args: DetachedWorkflowArgs,
 ): DetachedWorkflow {
@@ -43,13 +58,14 @@ export function attachDetachedWorkflow(
 }
 
 /**
- * The streaming response for a detached workflow, registered for replay.
+ * Build the SSE response for a detached workflow, registered for replay.
  *
- * This is the single place the research-family routes get their SSE body from,
- * so they cannot drift on the three things that must happen in order: the handle
- * exists before the work starts, every frame is published as well as written,
- * and the registry reaches a terminal state on both paths — including after a
- * throw, where a run left `running` would look alive until its lease expired.
+ * Owns the order that matters: the handle exists before the work starts, every
+ * frame is published as well as written, and the run reaches a terminal state on
+ * both paths, including after a throw.
+ *
+ * @param args - The run identity plus the work to execute.
+ * @returns A `ReadableStream` to hand straight to a `Response`.
  */
 export function workflowStreamWithRegistry(
   args: WorkflowStreamWithRegistryArgs,

@@ -4,6 +4,22 @@ import { firstIndexAfter } from "./eventStore";
 import { FIRST_ID } from "./eventStore";
 import type { StreamFromRunParams } from "./types";
 
+/**
+ * Stream a run held in this process's memory as an SSE body.
+ *
+ * Replays everything after `since`, then follows the run live. A finished run
+ * replays and closes. Use this only when the run is on this replica; otherwise
+ * `streamFromStore` serves any replica.
+ *
+ * @param p - The run, the resume cursor and the heartbeat interval.
+ * @returns A `ReadableStream` to hand straight to a `Response`.
+ * @example
+ * ```ts
+ * const run = getRun(runId);
+ * if (run) return new Response(streamFromRun({ run, since, log }));
+ * return new Response(streamFromStore({ runId, since, log, isRunAlive }));
+ * ```
+ */
 export function streamFromRun(
   p: StreamFromRunParams,
 ): ReadableStream<Uint8Array> {

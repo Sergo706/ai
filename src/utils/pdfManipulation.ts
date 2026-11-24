@@ -38,6 +38,18 @@ function toExactBytes(bytes: Buffer): Uint8Array {
   return exact;
 }
 
+/**
+ * Extract a PDF's text and metadata as Markdown.
+ *
+ * @param params - The PDF bytes, page limit, and whether to include metadata.
+ * @returns Markdown with a metadata block and one `--- Page N ---` section per
+ * page read.
+ * @throws If the PDF cannot be parsed.
+ * @example
+ * ```ts
+ * const markdown = await readPdf({ fileBuffer });
+ * ```
+ */
 export async function readPdf(params: ReadPdfParams): Promise<string> {
   const { fileBuffer, maxPages = 0, includeMetadata = true } = params;
   const parser = new PDFParse({ data: fileBuffer });
@@ -77,6 +89,23 @@ export async function readPdf(params: ReadPdfParams): Promise<string> {
 }
 
 
+/**
+ * Create a PDF, or draw onto an existing one.
+ *
+ * Requires the optional `pdf-lib` and `@pdf-lib/fontkit` peers.
+ *
+ * @param params - Base document, metadata, and the page instructions to apply.
+ * @returns The PDF three ways: `buffer`, `base64Data`, and the `mimeType`
+ * (`application/pdf`) with the `filename` you passed in.
+ * @throws If a page index is out of bounds or a page instruction is invalid.
+ * @example
+ * ```ts
+ * const pdf = await createPdf({
+ *   filename: "invoice.pdf",
+ *   pages: [{ action: "add", items: [{ type: "text", x: 50, y: 800, text: "Invoice" }] }],
+ * });
+ * ```
+ */
 export async function createPdf(params: CreateOrModifyPdfParams): Promise<{
   buffer: Buffer;
   filename?: string;

@@ -4,18 +4,44 @@ import type { ToolHandler } from "../../types/ToolExecutionTypes";
 import { toolError } from "../execution";
 import { documentParams } from "./schemas";
 
+/** Tuning for {@link getDocument}. */
 export interface GetDocumentOptions {
-  /** Chars per token used by every truncation in this tool. */
+  /**
+   * Characters per token used by every truncation in this tool.
+   *
+   * @default 4
+   */
   charsPerToken?: number;
-  /** Whole-document ceiling, in tokens. */
+  /**
+   * Whole-document ceiling, in tokens.
+   *
+   * @default 3000
+   */
   maxDocTokens?: number;
-  /** Per-chunk ceiling; chunks are produced before this cap exists. */
+  /**
+   * Per-chunk ceiling, in tokens. Chunks are produced before this cap exists.
+   *
+   * @default 1000
+   */
   chunkTokenCap?: number;
-  /** Chunks returned by one read. The tool schema allows at most 10. */
+  /**
+   * Chunks returned by one read. The tool schema allows at most 10.
+   *
+   * @default 10
+   */
   maxChunksPerRead?: number;
 }
 
 
+/**
+ * Read one indexed document, in chunks, for the model.
+ *
+ * Scoped to `userId`, so a call can never read another user's document.
+ *
+ * @param userId - Owner whose documents may be read.
+ * @param options - Token and chunk limits.
+ * @returns A handler that takes the document id and a chunk range.
+ */
 export function getDocument(
   userId: string,
   options: GetDocumentOptions = {},

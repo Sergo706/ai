@@ -18,13 +18,16 @@ function describeKey(resumer: ResumerKey): string {
 const resumers = new Map<string, RunResumer>();
 
 /**
- * Teaches the sweep how to resume one kind, or one named runner inside a kind.
+ * Teach the recovery sweep how to resume one kind, or one named runner in a kind.
  *
- * Call this once at module load of the file that owns the runner — in practice
- * from `server/lib/runs/resumers/`, wired in `server/plugins/runsBoot.ts`.
+ * Call once at module load of the file that owns the runner, before `startRuns`.
  *
- * Registering the same kind+name twice is a programming error, not a runtime
- * condition, so this throws rather than silently replacing the first one.
+ * @param resumer - The kind (and optional name) plus its `adopt` function.
+ * @throws If the same kind and name are already registered.
+ * @example
+ * ```ts
+ * registerRunResumer({ kind: "workflow", name: "research", adopt });
+ * ```
  */
 export function registerRunResumer(resumer: RunResumer): void {
   const key = keyOf(resumer);
@@ -39,19 +42,19 @@ export function registerRunResumer(resumer: RunResumer): void {
 /**
  * Every registered resumer, in registration order.
  *
- * The sweep iterates this rather than a hard-coded list, which is the whole
- * reason a new workflow does not need to touch the sweep at all.
+ * @returns The resumers, as registered.
  */
 export function listRunResumers(): RunResumer[] {
   return [...resumers.values()];
 }
 
 /**
- * The resumer for one `runs` row, or `undefined` when nothing claims it.
+ * The resumer that owns one `runs` row.
  *
- * A named resumer wins over an unnamed one for the same kind, so `workflow` can
- * have a specific runner for `input.name === "price-watch"` without also
- * needing a catch-all.
+ * @param kind - The row's kind.
+ * @param name - The row's `input.name`, when it has one.
+ * @returns The matching resumer; a named one wins over the unnamed one for the
+ * same kind. `undefined` when nothing is registered.
  */
 export function findRunResumer(
   kind: RunKind,

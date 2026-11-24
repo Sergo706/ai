@@ -4,17 +4,22 @@ import { FIRST_ID, tailRun } from "./eventStore";
 import type { StreamFromStoreParams } from "./types";
 
 /**
- * The cross-replica counterpart to `streamFromRun`.
+ * Stream a run from the shared event store, from any replica.
  *
- * `streamFromRun` reads a `RunHandle` in this process's memory. That works only
- * while the replica that started the run is also the replica serving the
- * reader. `streamFromStore` reads the Redis Stream instead, so any replica can
- * serve any run — which is the entire reason a load balancer in front of the
- * service is safe.
+ * This is the cross-replica counterpart to `streamFromRun`: the cursor is a
+ * stream id, so a client that reconnects gets exactly the events after the last
+ * one it saw, even if another replica answers.
  *
- * The `since` cursor is a stream id rather than an array index. A client that
- * reconnects passes back the last id it saw and gets exactly the events after
- * it, even across a replica change.
+ * @param p - The run, the resume cursor, and a liveness check used when the
+ * stream goes quiet.
+ * @returns A `ReadableStream` to hand straight to a `Response`.
+ * @example
+ * ```ts
+ * return new Response(
+ *   streamFromStore({ runId, since, log, isRunAlive }),
+ *   { headers: setSseHeaders() },
+ * );
+ * ```
  */
 export function streamFromStore(
   p: StreamFromStoreParams,

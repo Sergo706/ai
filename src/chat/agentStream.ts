@@ -6,6 +6,7 @@ import { getConfiguration } from "../config/config.js";
 import { encode, frame, SSE_HEARTBEAT } from "./sse.js";
 import { RequestAbortedError } from "../tools/execution/errors.js";
 
+/** Everything {@link runAgentStream} needs for one streaming turn. */
 export interface AgentStreamParams {
   agent: AsyncIterable<AgentEvent>;
   convId: number;
@@ -13,9 +14,23 @@ export interface AgentStreamParams {
   trace: TraceCollector;
   abort: RequestAbort;
   onFinish: () => Promise<void>;
+  /**
+   * Milliseconds between keep-alive comments.
+   *
+   * @default 10000
+   */
   heartbeatMs?: number;
 }
 
+/**
+ * Stream an agent turn as a Server-Sent Events body.
+ *
+ * Forwards every agent event, emits a heartbeat while the turn runs, mirrors
+ * progress into the trace and sink, and ends with a terminal frame.
+ *
+ * @param p - The agent's event stream and the turn's collaborators.
+ * @returns A `ReadableStream` to hand straight to a `Response`.
+ */
 export function runAgentStream(
   p: AgentStreamParams,
 ): ReadableStream<Uint8Array> {

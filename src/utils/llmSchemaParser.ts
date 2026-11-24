@@ -21,6 +21,31 @@ async function openAiZod(): Promise<OpenAiZodPeer> {
 }
 
 
+/**
+ * Validate a model reply against a Zod schema, repairing it when needed.
+ *
+ * Strips thinking blocks and code fences, parses the JSON, and validates it.
+ * On failure it re-asks with the validation errors and, when the schema can be
+ * rendered strictly, the schema itself.
+ *
+ * @param schema - The schema the reply must satisfy.
+ * @param llmResponse - The completion to validate.
+ * @param configs - Messages, retry budget, and the function that performs a
+ * repair call.
+ * @param logger - Optional logger.
+ * @default logger console
+ * @returns The validated, typed value.
+ * @throws If the reply is empty, was refused, did not finish with `stop`, or no
+ * attempt produced valid JSON.
+ * @example
+ * ```ts
+ * const results = await llmSchemaParser(ResultsSchema, completion, {
+ *   agent: "extractor",
+ *   messages,
+ *   retry: (request) => client.chat.completions.create({ model, ...request }),
+ * });
+ * ```
+ */
 export async function llmSchemaParser<S extends z.ZodType>(
   schema: S,
   llmResponse: ChatCompletion,

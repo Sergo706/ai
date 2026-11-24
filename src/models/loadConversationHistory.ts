@@ -1,6 +1,14 @@
 import { getDb } from "../config/config";
 import type { CompactionState } from "../types/Compaction";
 
+/**
+ * Load a conversation's stored turns and compaction state.
+ *
+ * @param userId - Owner, checked against the conversation.
+ * @param conversationId - Existing conversation, or `undefined` for a new one.
+ * @param currentMessage - Used to title a newly created conversation.
+ * @returns The history and compaction state, or `ok: false` with a reason.
+ */
 export async function loadConversationHistory(
   userId: string,
   conversationId: number | undefined,

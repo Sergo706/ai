@@ -13,7 +13,14 @@ export interface ProgressSink {
   onProgress?: (event: WorkflowProgressEvent) => void;
 }
 
-/** Thrown when the caller's `AbortSignal` fires mid-run. */
+/**
+ * Thrown when the caller's `AbortSignal` fires mid-run.
+ *
+ * @example
+ * ```ts
+ * if (err instanceof WorkflowAbortedError) return; // caller cancelled
+ * ```
+ */
 export class WorkflowAbortedError extends Error {
   constructor(workflow: string) {
     super(`${workflow} workflow aborted by caller`);

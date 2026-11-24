@@ -19,6 +19,27 @@ let globalDb: Kysely<Database> | undefined;
 let aiClient: OpenAI | undefined;
 let embeddingClient: OpenAI | undefined;
 
+/**
+ * Initialise the package: storage, database and AI clients.
+ *
+ * Call once and await it before anything else. Runs the migrations on first
+ * use. Calling it twice keeps the clients the first call created.
+ *
+ * @param config - Storage backend, database target and OpenAI clients.
+ * @throws If `db` is missing or a migration fails.
+ * @example
+ * ```ts
+ * await configuration({
+ *   db: "./data/app.db",
+ *   openAiConfig: new OpenAI({ apiKey }),
+ *   embeddingConfig: {
+ *     dimensions: 1536,
+ *     matchingModel: "text-embedding-3-small",
+ *     retrievalModel: "text-embedding-3-small",
+ *   },
+ * });
+ * ```
+ */
 export async function configuration(config: ConfigurationInput): Promise<void> {
   const initStorageTask = () => {
     globalCache ??= config.redis === "memory" ? new MiniCache() : config.redis;
@@ -101,6 +122,13 @@ export function getStorage(): Redis | MiniCache {
 }
 
 
+/**
+ * Read one cached value.
+ *
+ * @param key - Cache key.
+ * @returns The stored value, or `null` when absent or expired.
+ * @throws If `configuration()` has not run yet.
+ */
 export async function cacheGet<T>(key: string): Promise<T | null> {
   const store = getStorage();
   if (store instanceof MiniCache) {
@@ -110,6 +138,15 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
   return await store.get(key) as T | null;
 }
 
+/**
+ * Write one cached value.
+ *
+ * @param key - Cache key.
+ * @param value - Value to store.
+ * @param ttlMs - Lifetime in milliseconds. Rounded up to whole seconds on
+ * Redis, which cannot expire in fractions.
+ * @throws If `configuration()` has not run yet.
+ */
 export async function cacheSet(
   key: string,
   value: string,
@@ -124,8 +161,11 @@ export async function cacheSet(
 }
 
 /**
- * Read several keys in one round trip where the store allows it.
+ * Read several cached values at once.
  *
+ * @param keys - Keys to read. An empty array returns `[]` without a round trip.
+ * @returns Values in the same order as `keys`, `null` for absent entries.
+ * @throws If `configuration()` has not run yet.
  */
 export async function cacheGetMany(
   keys: readonly string[],
@@ -140,8 +180,13 @@ export async function cacheGetMany(
 }
 
 /**
- * Write several entries with one TTL, pipelined where the store allows it.
+ * Write several cached values with one shared lifetime.
  *
+ * Pipelined on Redis, so it is one round trip.
+ *
+ * @param entries - Key/value pairs to write.
+ * @param ttlMs - Shared lifetime in milliseconds.
+ * @throws If `configuration()` has not run yet.
  */
 export async function cacheSetMany(
   entries: readonly { key: string; value: string }[],
@@ -171,6 +216,19 @@ export function getDb(): Kysely<Database> {
   return globalDb;
 }
 
+/**
+ * An OpenAI client from the configuration.
+ *
+ * @param type - `"embedding"` for the embeddings client, `"default"` for chat.
+ * Falls back to the chat client when no separate embeddings client is set.
+ * @default type = "default"
+ * @returns The configured client.
+ * @throws If `configuration()` has not run yet.
+ * @example
+ * ```ts
+ * const embeddings = aiClients("embedding");
+ * ```
+ */
 export function aiClients(type: "embedding" | "default" = "default"): OpenAI {
   if (!aiClient) {
     console.trace("Premature aiClients call");

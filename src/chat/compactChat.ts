@@ -15,6 +15,12 @@ function toMessage(message: HistoryMessage): ChatCompletionMessageParam {
 
 /**
  * One stored message as provider messages.
+ *
+ * An assistant message that called tools expands into the call plus one `tool`
+ * message per step, so a replay still matches the recorded trace.
+ *
+ * @param message - One stored turn.
+ * @returns Provider messages for that turn, in order.
  */
 export function historyToMessages(
   message: HistoryMessage,
@@ -81,6 +87,19 @@ function buildSummaryPrompt(
   );
 }
 
+/**
+ * Fold older messages into the rolling summary when the history grows too long.
+ *
+ * Keeps the newest `keepRecentMessages` verbatim and summarises whatever would
+ * push the history past `tokenThreshold`. Returns the messages untouched when
+ * the history already fits.
+ *
+ * @param history - The conversation so far, oldest first.
+ * @param state - Where the previous summary ended.
+ * @param compaction - Thresholds and how many messages to keep.
+ * @param summarize - Performs the summary call, so the caller owns the model.
+ * @returns The messages to send, the estimated tokens, and the new watermark.
+ */
 export async function compactHistory(
   history: HistoryMessage[],
   state: CompactionState,

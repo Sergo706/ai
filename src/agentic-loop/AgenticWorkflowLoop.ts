@@ -12,6 +12,27 @@ import { CriticPhase } from "./phases/CriticPhase";
 import { FinalAnswerPhase } from "./phases/FinalAnswerPhase";
 import { getConfiguration } from "../config/config";
 
+/**
+ * Runs a multi-stage research loop: seeds, local evidence, external discovery,
+ * critic, final answer.
+ *
+ * You supply each stage as an adapter. The loop owns stage ordering, budgeting,
+ * progress reporting and checkpointing between them.
+ *
+ * @example
+ * ```ts
+ * const loop = new AgenticWorkflowLoop({
+ *   name: "research",
+ *   query: "how does pgvector index work",
+ *   budgets,
+ *   targetExecutor: myExecutor,
+ *   evaluator: myEvaluator,
+ * });
+ *
+ * const result = await loop.run();
+ * console.log(result.isSufficient, result.context);
+ * ```
+ */
 export class AgenticWorkflowLoop<
   TLocalItem,
   TDiscoveryPayload,
@@ -46,6 +67,10 @@ export class AgenticWorkflowLoop<
     TReport
   > | null;
 
+  /**
+   * @param config - The stages to run and the budgets that bound them.
+   * @throws If `config.query` is empty.
+   */
   constructor(
     private readonly config: AgenticWorkflowConfig<
       TLocalItem,
@@ -111,6 +136,16 @@ export class AgenticWorkflowLoop<
       : null;
   }
 
+  /**
+   * Run every configured stage in order and return what was gathered.
+   *
+   * Stops early when the evaluator is satisfied, a budget runs out, or `signal`
+   * fires. `result.stopReason` says which of those happened. An abort is a
+   * normal outcome here: it resolves with `stopReason: "aborted"` instead of
+   * throwing.
+   *
+   * @returns The evidence, artifacts, counters and optional report.
+   */
   public async run(): Promise<
     WorkflowRunResult<TLocalItem, TExternalArtifact, TReport>
   > {

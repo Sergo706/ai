@@ -11,16 +11,13 @@ import { datetimeParams } from "./getCurrentDatetime";
 import { searchParams } from "../../models/searchDbDocs";
 
 /**
- * 
  * Tool definitions for the generic tool loop.
  *
  * Only tools that need nothing but their arguments live here. Anything bound to
- * an application — its research runs, its product/video tables, its market data
- * provider — is defined by that application and passed in as `extra`, because
- * the package cannot describe a domain it does not know.
+ * an application is defined by that application and passed in as `extra`.
  */
 
-/** Every tool this module can build. */
+/** Every built-in tool this module can build a definition for. */
 export type CommonToolName =
   | "get_document"
   | "extractor"
@@ -31,10 +28,15 @@ export type CommonToolName =
   | "create_styled_spreadsheet"
   | "pdf_creator";
 
+/** Arguments for {@link buildToolDefinitions}. */
 export interface BuildToolDefinitionsArgs {
-  /** Which of the common tools to include. Defaults to all of them. */
+  /**
+   * Which of the built-in tools to include.
+   *
+   * @default all of them
+   */
   enabled?: readonly CommonToolName[];
-  /** Additional definitions — the host's own tools, MCP tools, anything else. */
+  /** Additional definitions, e.g. the host's own tools or MCP tools. */
   extra?: readonly ChatCompletionTool[];
 }
 
@@ -129,16 +131,15 @@ const COMMON_TOOLS: readonly ChatCompletionTool[] = [
 /**
  * The tool definitions to hand the loop.
  *
- * `enabled` selects from `COMMON_TOOLS` by name rather than by rebuild, so a
- * host that disables one pays nothing for it and cannot end up with a handler
- * whose definition it forgot to include. `extra` is appended after the common
- * ones, which keeps a host's own tool names late in the list without reordering
- * anything it did not supply.
+ * Filtering preserves the declaration order in this module, so two callers that
+ * enable the same set send the model the same list.
  *
- * Filtering preserves declaration order: a caller passing
- * `["pdf_creator", "calculator"]` gets them in the order this module declares,
- * not the order it asked for, so two callers that enable the same set send the
- * model the same list.
+ * @param args - Which built-in tools to include, plus any extra definitions.
+ * @returns The selected definitions, followed by `extra`.
+ * @example
+ * ```ts
+ * const tools = buildToolDefinitions({ enabled: ["calculator"] });
+ * ```
  */
 export function buildToolDefinitions(
   args: BuildToolDefinitionsArgs = {},

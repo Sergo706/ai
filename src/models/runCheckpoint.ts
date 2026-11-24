@@ -4,18 +4,13 @@ import type { Checkpoint } from "../types/Checkpoint";
 import { INSTANCE_ID } from "./runLease";
 
 /**
- * Writes a checkpoint, but only while this process still owns the run.
+ * Save a checkpoint for a run this process still owns.
  *
- * The `AND owner = $self` is not decoration. Once another replica has claimed
- * the run, this process is a zombie: it will keep finishing its current round
- * and would otherwise overwrite the snapshot of whoever took over with a stale
- * one, sending the successor back in time. The guard has to be in the `WHERE`
- * clause, not a post-write comparison — a post-write check still performs the
- * write.
+ * Writes are silently skipped when another replica has taken the run, and
+ * failures are logged rather than thrown: a lost checkpoint only costs
+ * re-running the last round.
  *
- * Failures are logged and swallowed. A snapshot is an optimisation; losing one
- * costs a re-run of the last round, while throwing here would kill a run that is
- * otherwise healthy.
+ * @param args - The run id and the snapshot to store.
  */
 export async function saveCheckpoint(args: {
   runId: string;
@@ -55,9 +50,10 @@ export async function saveCheckpoint(args: {
 }
 
 /**
- * Reads a checkpoint written by a previous process. Returns `null` for a row
- * with no snapshot, which is the normal case for a run that never reached its
- * first round boundary.
+ * Read the checkpoint a previous process left for a run.
+ *
+ * @param runId - The run to resume.
+ * @returns The snapshot, or `null` when the run has none yet.
  */
 export async function loadCheckpoint(runId: string): Promise<Checkpoint | null> {
   const row = await getDb()

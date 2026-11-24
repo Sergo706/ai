@@ -51,13 +51,23 @@ function enqueueAppend(runId: string, id: string, event: StoredEvent): void {
   });
 }
 
+/**
+ * Read a run this process is currently holding.
+ *
+ * @param id - The run id.
+ * @returns The handle, or `undefined` when this replica does not hold it.
+ */
 export function getRun(id: string): RunHandle | undefined {
   return runs.get(id);
 }
 
 /**
- * Registers a live run.
+ * Register a live run so it can be streamed, aborted and reattached to.
  *
+ * @param init - The run's identity; log arrays, subscribers and the controller
+ * are created here.
+ * @param seedAfterId - Cursor the run continues from, when resuming.
+ * @returns The registered handle.
  */
 export function registerRun(
   init: RunHandleInit,
@@ -75,10 +85,16 @@ export function registerRun(
   return handle;
 }
 
+/**
+ * Drop a run's handle so it stops being streamable from this process.
+ *
+ * @param id - The run id.
+ */
 export function forgetRun(id: string): void {
   runs.delete(id);
 }
 
+/** Every run this process is holding. */
 export function listRuns(): RunHandle[] {
   return [...runs.values()];
 }
@@ -91,21 +107,14 @@ export function listRunsForConversation(conversationId: number): RunHandle[] {
 }
 
 /**
- * Records one event, mirrors it into Redis, and forwards it to every attached
- * client.
+ * Record one event, mirror it into the event store, and forward it to every
+ * attached reader.
  *
- * There are now two copies of the log on purpose. The in-memory array is the
- * fast path for readers in this process; the Redis Stream in `eventStore.ts` is
- * what a reader on another replica attaches to. Keeping the array means a
- * same-process reader does not pay a round-trip per chunk, and keeping the
- * stream means no reader has to care which replica served the original request.
+ * The cursor id is assigned once here so the in-memory copy and the stored copy
+ * share one id space; a client can replay from either using the last id it saw.
  *
- * `appendEvent` is fire-and-forget and ordered through `enqueueAppend`, so a
- * Redis outage degrades cross-replica attach without failing the run.
- *
- * The id is assigned here, once, so both copies share one cursor space. A
- * client can therefore replay from this handle, lose the connection, reattach
- * to another replica and pass the last id it saw — the store will resolve it.
+ * @param run - The run that emitted the event.
+ * @param event - The event to record.
  */
 export function publish(run: RunHandle, event: StoredEvent): void {
   const id = nextId(run.lastMintedId ?? run.eventIds.at(-1));
@@ -127,6 +136,11 @@ export function publish(run: RunHandle, event: StoredEvent): void {
   }
 }
 
+/**
+ * Keep a settled run readable for a while, then drop it.
+ *
+ * @param run - The run to dispose of.
+ */
 export function scheduleDisposal(run: RunHandle): void {
   const timer = setTimeout(() => {
     forgetRun(run.id);
@@ -144,11 +158,13 @@ export function clearRuns(): void {
 }
 
 /**
- * Drains the agent loop independently of any HTTP response.
+ * Drain the agent loop independently of any HTTP response.
  *
- * This is what makes a run survive the browser going away: the loop's lifetime
- * is the pump's lifetime, not the response's. Closing the laptop removes a
- * subscriber; it does not abort anything.
+ * The loop's lifetime is the pump's, not the response's, which is what lets a
+ * run survive the browser going away. Always persists a terminal status and
+ * schedules disposal.
+ *
+ * @param args - The run, its event stream, trace and persist callback.
  */
 export async function pumpRun(args: PumpRunArgs): Promise<void> {
   const { run, agent, trace, log, persist } = args;

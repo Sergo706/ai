@@ -1,12 +1,28 @@
 import { AgentEvent } from "../types/ToolExecutionTypes";
 
 
+/**
+ * Buffers agent events until something is ready to consume them.
+ *
+ * `push` before `attach` queues instead of dropping, so a producer that starts
+ * first loses nothing.
+ *
+ * @example
+ * ```ts
+ * const sink = createEventSink();
+ * sink.attach((event) => send(frame(event)));
+ * ```
+ */
 export interface EventSink {
+  /** Record an event. Queued while nothing is attached, delivered otherwise. */
   push(event: AgentEvent): void;
+  /** Take over delivery; replays anything already queued. */
   attach(consumer: (event: AgentEvent) => void): void;
+  /** Stop delivering and drop the queue. */
   detach(): void;
 }
 
+/** Create an {@link EventSink} with an empty queue. */
 export function createEventSink(): EventSink {
   const queue: AgentEvent[] = [];
   let state: "waiting" | "attached" | "detached" = "waiting";

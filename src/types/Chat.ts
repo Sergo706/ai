@@ -76,6 +76,7 @@ export const fileUploadSchema = z
     { error: "Unsupported file format" },
   );
   
+/** Shape of one `/ask` request. */
 export const askSchema = z.object({
   user: whoIsUser
     .optional()
@@ -86,11 +87,18 @@ export const askSchema = z.object({
     .describe("The current message or prompt from the user."),
 });
 
+/** The validated `/ask` request body. */
 export type AskSchema = z.infer<typeof askSchema>;
+
+/** A request plus the conversation history loaded for it. */
 export type AgentPayload = AskSchema & {
+  /** Turns already stored for this conversation, oldest first. */
   conversationHistory: {
+    /** `messages.id` of the stored turn. */
     id: number;
+    /** Who said it. */
     role: "user" | "assistant";
+    /** The message text. */
     message: string;
     /** Persisted tool/reasoning trace; only assistant rows carry it. */
     trace?: MessageTrace | null;

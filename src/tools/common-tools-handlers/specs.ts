@@ -12,15 +12,32 @@ import { getDocument } from "./getDocument";
 import { pdfCreator } from "./pdfCreator";
 import { searchDb } from "./searchDb";
 
+/**
+ * One built-in tool, optionally tuned.
+ *
+ * A bare name in {@link CommonTools} means "use the defaults"; this shape is for
+ * when a host wants to change something about a built-in.
+ */
 export interface CommonToolEntry<TMeta = unknown> extends Partial<
   Pick<ToolSpec<TMeta>, "cache" | "maxCalls" | "concurrency" | "stream">
 > {
+  /** Which built-in tool this entry configures. */
   name: CommonToolName;
+  /** Replace the built-in handler, e.g. to add host-specific behaviour. */
   make?: (ctx: ToolFactoryContext<TMeta>) => ToolHandler;
 }
 
+/**
+ * The built-in tools a host wants exposed.
+ *
+ * @example
+ * ```ts
+ * const common: CommonTools = ["calculator", { name: "get_document", maxCalls: 2 }];
+ * ```
+ */
 export type CommonTools<TMeta = unknown> = readonly (
-  CommonToolName | CommonToolEntry<TMeta>
+  | CommonToolName
+  | CommonToolEntry<TMeta>
 )[];
 
 type Defaults = Omit<ToolSpec<unknown>, "name" | "definitions">;
@@ -95,7 +112,18 @@ function assemble<TMeta>(
 }
 
 /**
- * Turns the host's built-in selection into executable specs.
+ * Turn the built-in tool selection into executable tool specs.
+ *
+ * Entries are resolved in the built-in order, so the resulting spec list is
+ * stable regardless of how the host ordered its selection. An entry can override
+ * any of the cache, call cap, concurrency and stream policy of its built-in.
+ *
+ * @param tools - The built-in names to enable, optionally tuned.
+ * @returns One spec per enabled tool; empty when nothing was requested.
+ * @example
+ * ```ts
+ * const specs = resolveCommonTools(["calculator", "search_db"]);
+ * ```
  */
 export function resolveCommonTools<TMeta = unknown>(
   tools: CommonTools<TMeta> = [],

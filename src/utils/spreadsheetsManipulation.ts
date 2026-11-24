@@ -68,6 +68,15 @@ function worksheetToMarkdown(worksheet: Worksheet): string {
   return `${lines.join("\n")}\n`;
 }
 
+/**
+ * Render an XLSX workbook as Markdown tables.
+ *
+ * Requires the optional `exceljs` peer.
+ *
+ * @param buffer - The workbook bytes.
+ * @returns One Markdown table per non-empty sheet, prefixed with an `##` heading
+ * when there is more than one. Empty string when the workbook has no rows.
+ */
 export async function readXlsxToMarkdown(buffer: Buffer): Promise<string> {
   const { default: exceljs } = await loadExceljs();
   const workbook: Workbook = new exceljs.Workbook();
@@ -88,6 +97,14 @@ export async function readXlsxToMarkdown(buffer: Buffer): Promise<string> {
     .join("\n");
 }
 
+/**
+ * Render a CSV file as a Markdown table.
+ *
+ * Requires the optional `exceljs` peer.
+ *
+ * @param buffer - The CSV bytes.
+ * @returns The first sheet as a Markdown table with the first row as header.
+ */
 export async function readCsvToMarkdown(buffer: Buffer): Promise<string> {
   const { default: exceljs } = await loadExceljs();
   const workbook: Workbook = new exceljs.Workbook();
@@ -100,6 +117,23 @@ export async function readCsvToMarkdown(buffer: Buffer): Promise<string> {
 }
 
 
+/**
+ * Build a styled spreadsheet from an array of records.
+ *
+ * Requires the optional `exceljs` peer. Columns default to the keys of the first
+ * row, and the header row uses a bold blue default unless overridden.
+ *
+ * @param data - Rows to write; each object becomes a row.
+ * @param options - Sheet name, format, columns, and styling.
+ * @returns The file as a `buffer` (plus `base64Data`, `mimeType`, `format`)
+ * with the `filename` you passed in.
+ * @example
+ * ```ts
+ * const { buffer, mimeType } = await generateStyledSpreadsheet(rows, {
+ *   filename: "report.xlsx",
+ * });
+ * ```
+ */
 export async function generateStyledSpreadsheet<
   T extends Record<string, unknown>,
 >(

@@ -37,6 +37,12 @@ const openai = z.custom<OpenAI>(
   { message: "Expected an OpenAI client instance" },
 );
 
+/**
+ * The logger the package writes through.
+ *
+ * Any object with these five methods works; pass one to `configuration()`. A
+ * pino instance satisfies it as-is.
+ */
 export interface Logger {
   debug(obj: unknown, msg?: string): void;
   info(obj: unknown, msg?: string): void;
@@ -45,6 +51,19 @@ export interface Logger {
   child(bindings: Record<string, unknown>): Logger;
 }
 
+/**
+ * A `Logger` that writes to `console`.
+ *
+ * Useful as a default and in tests; swap it for a real logger in production.
+ *
+ * @param bindings - Fields added to every line, e.g. `{ service: "api" }`.
+ * @returns A logger whose `child()` merges more bindings.
+ * @example
+ * ```ts
+ * const logger = consoleLogger({ service: "api" });
+ * logger.info({ userId }, "turn started");
+ * ```
+ */
 export function consoleLogger(
   bindings: Record<string, unknown> = {},
 ): Logger {
@@ -74,17 +93,39 @@ const loggerSchema = z.custom<Logger>(
   { message: "logger must implement debug/info/warn/error/child" },
 );
 
+
 export const configSchema = z.object({
-    redis: z.union([redis, z.literal("memory")]).default("memory"),
-    db: z.union([pg, sqlitePath]),
-    openAiConfig: openai,
-    embeddingConfig: z.object({
-        client: openai.optional(),
-        dimensions: z.number().nonnegative(),
-        matchingModel: z.string(),
-        retrievalModel: z.string() 
-    }),
-    logger: loggerSchema.default(consoleLogger()),
+  /**
+   * Cache backend: an ioredis client, or `"memory"` for a process-local cache.
+   *
+   * @default "memory"
+   */
+  redis: z.union([redis, z.literal("memory")]).default("memory"),
+  /**
+   * Where the tables live: a SQLite file path, or a `pg` `Pool`.
+   *
+   * A path gets migrations, WAL mode and `sqlite-vec` loaded automatically.
+   */
+  db: z.union([pg, sqlitePath]),
+  /** The client used for every chat completion. */
+  openAiConfig: openai,
+  /** Embedding models and the vector width they return. */
+  embeddingConfig: z.object({
+    /** Embedding client, when it differs from `openAiConfig`. */
+    client: openai.optional(),
+    /** Vector width; must match what the models return. */
+    dimensions: z.number().nonnegative(),
+    /** Model used to embed queries for the semantic cache and retrieval. */
+    matchingModel: z.string(),
+    /** Model used to embed documents for storage. */
+    retrievalModel: z.string(),
+  }),
+  /**
+   * Where the package logs. Defaults to a console logger.
+   *
+   * @default consoleLogger()
+   */
+  logger: loggerSchema.default(consoleLogger()),
     extractor: z.object({
       ytDlpBin: z.string().optional(),
       whisperCppBin: z.string().optional(),
@@ -166,5 +207,13 @@ export const configSchema = z.object({
     }).prefault({}),
 })
 
+/** The configuration after defaults are applied. */
 export type Configuration = z.infer<typeof configSchema>;
+
+/**
+ * The configuration you pass to `configuration()`.
+ *
+ * Every field except `db`, `openAiConfig` and `embeddingConfig` has a default,
+ * so a local setup can be as small as those three.
+ */
 export type ConfigurationInput = z.input<typeof configSchema>;

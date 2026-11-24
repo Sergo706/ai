@@ -1,5 +1,13 @@
 import { getDb } from "../config/config";
 
+/**
+ * Read every message in a conversation, oldest first.
+ *
+ * @param userId - Owner, checked against the conversation.
+ * @param conversationId - The conversation to read.
+ * @returns `ok: true` with the messages, or `ok: false` when the conversation
+ * does not belong to `userId`.
+ */
 export async function getMessages(userId: string, conversationId: number) {
   const db = getDb();
 

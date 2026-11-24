@@ -12,6 +12,15 @@ const AGENT_GENERATED_FILE_TTL = envInt("AGENT_GENERATED_FILE_TTL", 86_400, {
   min: 0,
 });
 
+/**
+ * Render markdown into a downloadable PDF.
+ *
+ * The file is cached in the configured store, keyed by its params hash, so a
+ * repeated call returns the same link.
+ *
+ * @returns A handler that takes the PDF options and returns a URL to the file.
+ * Requires a Redis store; returns `TOOL_DISABLED` with the memory store.
+ */
 export function pdfCreator(): ToolHandler {
   const config = getConfiguration();
   const log = config.logger;

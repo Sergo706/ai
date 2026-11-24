@@ -3,21 +3,29 @@ import type { TerminalStatus } from "../runs/types";
 import { saveAssistantMessage } from "./saveMessages";
 import { updateRun } from "./runs";
 
+/** What to record for a finished turn. */
 export interface PersistChatRunArgs {
+  /** The run being completed. */
   runId: string;
+  /** Conversation the message belongs to. */
   conversationId: number;
+  /** Collected answer text, reasoning and tool steps. */
   trace: TraceCollector;
+  /** Names of the tools the turn used. */
   toolsUsed: Iterable<string>;
+  /** Final run status to record. */
   status: TerminalStatus;
+  /** Failure message, when the turn did not succeed. */
   error?: string;
 }
 
 /**
- * Writes the assistant message and the matching `runs` row.
+ * Save the assistant message and update its run row.
  *
- * Called from the pump's `finally`, so an aborted or failed run still keeps
- * whatever it produced — which is the difference between the user finding a
- * partial answer and an empty screen.
+ * Also called for aborted and failed runs, so partial output is kept rather
+ * than lost.
+ *
+ * @param args - The run to complete and what it produced.
  */
 export async function persistChatRun(args: PersistChatRunArgs): Promise<void> {
   const { runId, conversationId, trace, toolsUsed, status, error } = args;

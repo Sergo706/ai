@@ -4,11 +4,14 @@ import { appendMemory } from "./memory";
 import { appendRedis } from "./redis";
 
 /**
- * Appends one event to a run's log.
+ * Append one event to a run's log.
  *
- * Redis when a client is configured, the process-local `MiniCache` otherwise.
- * Both are fire-and-forget from the caller's point of view: `runRegistry`
- * serializes appends per run and never blocks the agent on either one.
+ * Stores in Redis when one is configured and in process memory otherwise. The
+ * caller serialises appends per run, so a burst keeps its order.
+ *
+ * @param runId - The run to append to.
+ * @param id - Cursor id for this event.
+ * @param event - The event to store.
  */
 export async function appendEvent(
   runId: string,

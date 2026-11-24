@@ -12,9 +12,8 @@ import type { ModelBodyOptions, ThinkingEffort } from "../types/ToolExecutionTyp
 /**
  * SDK options that describe *how* a request travels, not what it contains.
  *
- * Everything that shapes the payload — body, method, path, query, stream,
- * signal — is owned by the turn and rejected here, so there is exactly one
- * place each of those can be set.
+ * Body, method, path, query, stream and signal are owned by the turn, so they
+ * are rejected here to keep a single place where each can be set.
  */
 export type ModelRequestOptions = Omit<
   OpenAI.RequestOptions,
@@ -40,22 +39,43 @@ export type ModelRequestOptions = Omit<
 export interface ModelOptions {
   /** Provider model id, e.g. `"gpt-4o-mini"`. */
   model: string;
-  /** Answer temperature. Defaults to `0.4`. */
-  temperature?: number;
-  /** Answer token cap, sent as `max_tokens`. Defaults to `8192`. */
-  maxTokens?: number;
   /**
-   * Settings for tool-decision rounds. Each falls back to the answer setting.
+   * Answer temperature.
    *
-   * Lower temperature and a smaller cap here is the usual choice: a round only
-   * has to emit a well-formed call, not prose.
+   * @default 0.4
    */
+  temperature?: number;
+  /**
+   * Answer token cap, sent as `max_tokens`.
+   *
+   * @default 8192
+   */
+  maxTokens?: number;
+  /** Settings for tool-decision rounds, kept separate from the answer call. */
   tools?: {
+    /**
+     * Temperature for tool-decision rounds.
+     *
+     * @default 0.1
+     */
     temperature?: number;
+    /**
+     * Token cap for tool-decision rounds.
+     *
+     * @default 4096
+     */
     maxTokens?: number;
-    /** Rounds that may call tools. Zero disables tools entirely. */
+    /**
+     * Rounds that may call tools. `0` disables tools entirely.
+     *
+     * @default 5
+     */
     maxRounds?: number;
-    /** Attempted calls across all rounds, not per round. */
+    /**
+     * Tool calls allowed across all rounds, not per round.
+     *
+     * @default 20
+     */
     maxCalls?: number;
   };
   /** Provider reasoning budget, forwarded as `reasoning_effort`. */
@@ -85,13 +105,11 @@ export interface ToolOptions<TMeta = unknown> {
   /**
    * Built-in tools to expose.
    *
-   * A bare name uses the package defaults — its definition, factory, cache and
-   * disclosure policy. An object with the same `name` tunes those, so a host can
-   * set a call cap or hand its own factory to a built-in without rebuilding the
-   * definition.
+   * A bare name uses the package defaults: definition, factory, cache and
+   * disclosure policy. An object with the same `name` tunes those.
    */
   common?: CommonTools<TMeta>;
-  /** MCP servers. Their tools are advertised to the model under their namespace. */
+  /** MCP servers. Their tools are advertised under the server's namespace. */
   mcp?: readonly McpServerConfig[];
 }
 
@@ -104,36 +122,43 @@ export interface ToolOptions<TMeta = unknown> {
  * ```
  */
 export interface ConversationOptions {
-  /** Persist the user and assistant messages. Defaults to `true`. */
+  /**
+   * Persist the user and assistant messages.
+   *
+   * @default true
+   */
   persist?: boolean;
 }
 
 /**
- * Wraps the turn in the run system: a `runs` row before any work, a lease so two
- * replicas cannot both answer, a heartbeat, a terminal status, and the event log.
+ * Runs the turn through the run system: a `runs` row before any work, a lease so
+ * two replicas cannot both answer, a heartbeat, a terminal status and the event
+ * log.
  *
- * Requires `conversation` with `persist` on: a run row carries `conversation_id`,
- * and a run whose messages are not persisted has nothing to resume into. The
- * type system cannot express "this field requires that one", so `createAgent`
- * validates it and throws at construction — failing at boot beats failing on the
- * first request.
+ * Requires `conversation.persist`: a run is stored against its conversation, so
+ * a run whose messages are not persisted has nothing to resume into.
+ * `createAgent` throws at construction when that pair is inconsistent.
  */
 export interface RunOptions {
-  /** `runs.kind` for this agent's turns. Defaults to `"chat"`. */
+  /**
+   * `runs.kind` for this agent's turns.
+   *
+   * @default "chat"
+   */
   kind?: RunKind;
   /**
-   * Discriminator within `kind`, recorded on `runs.input.name`.
+   * Name recorded on `runs.input.name`, to tell this agent's runs apart.
    *
-   * Only needed when a host reuses one `kind` for several agents and its
-   * recovery has to tell them apart.
+   * Only needed when several agents share one `kind` and run recovery has to
+   * distinguish them.
    */
   name?: string;
   /**
-   * Mirror progress into the in-process registry so a client that dropped can
-   * reattach with `streamFromRun`.
+   * Also keep the live event stream in process memory, so a client that dropped
+   * can reattach with `streamFromRun`.
    *
-   * The durable event log is written either way; this only adds the fast
-   * same-process replay path.
+   * The durable event log is always written; this only enables same-process
+   * replay.
    */
   registry?: boolean;
 }
@@ -147,29 +172,54 @@ export interface RunOptions {
  * ```
  */
 export interface AttachmentOptions {
-  /** Maximum files per turn. Defaults to 3. */
+  /**
+   * Maximum files per turn.
+   *
+   * @default 3
+   */
   maxFiles?: number;
-  /** Maximum bytes per file. Defaults to 10 MB. */
+  /**
+   * Maximum size of one file, in bytes.
+   *
+   * @default 10485760 (10 MB)
+   */
   maxBytes?: number;
-  /** Accepted mime types. Defaults to the formats `parseFiles` can read. */
+  /**
+   * Accepted mime types.
+   *
+   * @default the formats `parseFiles` can read
+   */
   mimeTypes?: readonly string[];
-  /** Pages read from a PDF before truncating. Defaults to 5. */
+  /**
+   * Pages read from a PDF before the text is truncated.
+   *
+   * @default 5
+   */
   maxPdfPages?: number;
 }
 
-/** Per-agent embedding overrides. */
+/** Per-agent overrides for the global embedding configuration. */
 export interface EmbeddingOptions {
-  /** Model used for document retrieval. */
+  /** Model used to embed document chunks for retrieval. */
   retrievalModel?: string;
-  /** Model used for the semantic cache. Kept separate from retrieval on purpose. */
+  /** Model used to embed messages for the semantic cache. */
   matchingModel?: string;
   /** Vector size, when it differs from the global configuration. */
   dimensions?: number;
 }
 
-/** Folds old messages into a rolling summary. Requires `conversation`. */
+/**
+ * Folds old messages into a rolling summary once the history grows past a limit.
+ *
+ * Requires `conversation`.
+ */
 export type CompactionOptions = Compaction & {
-  /** Write attempts for the watermark; a failed write never fails the turn. */
+  /**
+   * Write attempts for the summary watermark; a failed write never fails the
+   * turn.
+   *
+   * @default 2
+   */
   attempts?: number;
 };
 
@@ -182,20 +232,28 @@ export type CompactionOptions = Compaction & {
  * ```
  */
 export interface SemanticCacheOptions {
-  /** Cosine similarity at which an earlier answer counts as the same question. Defaults to `0.9`. */
+  /**
+   * Cosine similarity at which an earlier answer counts as the same question.
+   *
+   * @default 0.9
+   */
   similarity?: number;
-  /** How far back to look, in hours. Defaults to `24`. */
+  /**
+   * How far back to look, in hours.
+   *
+   * @default 24
+   */
   windowHours?: number;
   /**
    * Tools whose earlier use disqualifies a cached answer.
    *
-   * A cached reply came from a turn that did not call these tools, and an answer
-   * that needed live data is not safe to reuse.
+   * An answer that needed live data is not safe to reuse.
    */
   poisonTools?: readonly string[];
   /**
-   * Skips the lookup for one turn, e.g. after a retry or when the caller knows
-   * the answer must be fresh. Returning `true` runs the model instead.
+   * Skip the lookup for one turn, e.g. after a retry.
+   *
+   * @returns `true` to call the model instead of reusing a cached answer.
    */
   skipEvaluator?: (conversationId: number, message: string) => boolean;
 }
@@ -212,6 +270,7 @@ export interface SemanticCacheOptions {
  * ```
  */
 export interface AgentConfig<TMeta = unknown> {
+  /** Provider model, sampling and transport settings. */
   model: ModelOptions;
   /**
    * Who this agent is.
@@ -220,10 +279,15 @@ export interface AgentConfig<TMeta = unknown> {
    * applies to every conversation the agent serves.
    */
   systemInstructions: string;
+  /** Tools the model may call. */
   tools?: ToolOptions<TMeta>;
+  /** Where turns are stored. Omit to keep the agent stateless. */
   conversation?: ConversationOptions;
+  /** Run tracking, leasing and event log. Requires `conversation.persist`. */
   runs?: RunOptions;
+  /** Rolling summary of old messages. Requires `conversation`. */
   compaction?: CompactionOptions;
+  /** Reuse a near-identical earlier answer instead of calling the model. */
   semanticCache?: SemanticCacheOptions;
   /** Limits for caller-attached files. */
   attachments?: AttachmentOptions;
@@ -232,10 +296,10 @@ export interface AgentConfig<TMeta = unknown> {
   /** Extra fields handed to every tool factory. */
   meta?: TMeta;
   /**
-   * Extra trace fields to collect per turn.
+   * Extra trace fields collected on every turn.
    *
    * The core trace is fixed (`reasoning`, `steps`); an extension adds what only
-   * the host cares about, and its fields are merged into `ChatTurnResult.trace`.
+   * the host cares about, merged into `ChatTurnResult.trace`.
    */
   trace?: readonly TraceExtension<Record<string, unknown>>[];
 }
@@ -243,15 +307,13 @@ export interface AgentConfig<TMeta = unknown> {
 /**
  * Ask for a JSON answer.
  *
- * By default the request is sent with `response_format: { type: "json_object" }`
- * and nothing else happens: the raw JSON text comes back in
- * `ChatTurnResult.text`, the turn still streams, and no extra model call is
- * made. Parsing is opt-in through `validate`.
+ * With no `validate`, the request is sent with
+ * `response_format: { type: "json_object" }` and the raw JSON text arrives in
+ * `ChatTurnResult.text`; the turn still streams and no extra model call is made.
  *
- * With `validate: true` the reply is checked against `schema` and repaired with
+ * With `validate: true`, the reply is checked against `schema` and repaired with
  * follow-up calls when it does not match, and the accepted value is returned in
- * `ChatTurnResult.structured`. That path runs without streaming, because the
- * object only exists once the whole reply parses.
+ * `ChatTurnResult.structured`. That path cannot stream.
  *
  * @example
  * ```ts
@@ -269,17 +331,28 @@ export interface JsonOptions<S extends z.ZodType = z.ZodType> {
   /**
    * Validate the reply against `schema` and repair it when it fails.
    *
-   * Defaults to `false`. When `true`, `schema` is required and the turn runs
-   * without streaming.
+   * @default false
    */
   validate?: boolean;
   /** Shape the answer must satisfy. Required when `validate` is `true`. */
   schema?: S;
-  /** Name used for the rendered schema. Defaults to `"results"`. */
+  /**
+   * Name used when the schema is rendered into the prompt.
+   *
+   * @default "results"
+   */
   schemaName?: string;
-  /** Repair attempts after the first reply. Defaults to 2. */
+  /**
+   * Repair attempts after the first reply.
+   *
+   * @default 2
+   */
   maxRetries?: number;
-  /** Include the rendered schema in each repair prompt. Defaults to true. */
+  /**
+   * Include the rendered schema in each repair prompt.
+   *
+   * @default true
+   */
   includeSchemaInPrompt?: boolean;
 }
 
@@ -298,17 +371,19 @@ export interface ChatInput<TMeta = unknown> {
   /** What the user said. */
   message: string;
   /**
-   * History to use when `conversation` is absent.
+   * History to use when no conversation is configured.
    *
    * Ignored when a conversation is configured, because the stored transcript is
-   * then the truth and merging the two would duplicate messages.
+   * then the truth.
    */
   history?: readonly HistoryMessage[];
   /** Files to inline. Checked against `AgentConfig.attachments`. */
   files?: readonly File[];
   /**
-   * Owner of the conversation. Required whenever `conversation` is configured,
-   * because every message row is scoped by it.
+   * Owner of the conversation.
+   *
+   * Required whenever `conversation` is configured, because every message row
+   * is scoped by it.
    */
   userId?: string;
   /** Continue an existing conversation. Omit to start a new one. */
@@ -323,10 +398,15 @@ export interface ChatInput<TMeta = unknown> {
   meta?: Partial<TMeta>;
   /** Context about the person asking, appended to the system prompt. */
   user?: {
+    /** Locale hint, e.g. `"en-GB"`. */
     locale?: string;
+    /** Timezone hint, e.g. `"Europe/London"`. */
     timezone?: string;
+    /** Today's date, when the host wants to be explicit about it. */
     currentDate?: string;
+    /** Location hint used for locally-relevant answers. */
     geo?: string;
+    /** Any other facts worth passing to the model. */
     other?: readonly string[];
   };
 }
@@ -360,15 +440,20 @@ export interface ChatTurnResult<TStructured = never> {
   /** Tools the model called, in order. */
   toolsUsed: readonly string[];
   /**
-   * The collected reasoning and tool trace for this turn.
+   * The reasoning and tool trace for this turn, or `null` when nothing was
+   * recorded.
    *
-   * Includes whatever the configured `trace` extensions contributed, so the
-   * value a host reports on is the one it asked to collect.
+   * Includes whatever the configured `trace` extensions contributed.
    */
   trace: (MessageTrace & Record<string, unknown>) | null;
-  /** True when the answer came from the semantic cache instead of the model. */
+  /** `true` when the answer came from the semantic cache instead of the model. */
   cached: boolean;
-  /** The validated object, present only when the turn asked for one with `json`. */
+  /**
+   * The validated object.
+   *
+   * Present only when the turn asked for a schema with
+   * `json: { validate: true, schema }`.
+   */
   structured?: TStructured;
   /** Set when the turn failed. */
   error?: Error;

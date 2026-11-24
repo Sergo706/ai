@@ -4,13 +4,17 @@ import { toVec } from "../db/utils";
 import { prepareScrape, type PrepareScrapeOptions } from "../rag/prepareScrape";
 import { generateHash } from "../utils/hash";
 
+/** What an upload run did. */
 export interface Results {
+  /** Filenames stored successfully. */
   ingested: string[];
+  /** Filenames skipped because an identical document already existed. */
   skippedDuplicates: string[];
+  /** Filenames that failed; the reason is in the log. */
   errors: string[];
 }
 
-
+/** One file to ingest: a browser `File`, or raw text/bytes with a name. */
 export type UploadSource =
   | File
   | {
@@ -18,6 +22,7 @@ export type UploadSource =
       data: string | Uint8Array | Buffer;
     };
 
+/** A form submission, or an explicit list of sources. */
 export type UploadSources = FormData | readonly UploadSource[];
 
 async function readSource(
@@ -47,6 +52,7 @@ function listSources(files: UploadSources): readonly UploadSource[] {
   return out;
 }
 
+/** Tuning for {@link saveUploadedScrappedFile}. */
 export interface SaveUploadedScrappedFileOptions<T> {
   /** Payload handed to a `prepare.formatter`. Defaults to `{}`. */
   jsonData?: T;
@@ -69,6 +75,21 @@ export interface SaveUploadedScrappedFileOptions<T> {
  * Duplicates are recognised by content hash, so re-uploading the same text
  * under a different filename is skipped rather than embedded twice. Each file
  * is its own transaction: one failure leaves the others ingested.
+ */
+/**
+ * Read uploaded files, chunk and embed them, and store them as documents.
+ *
+ * Identical content is detected by hash and skipped, so re-uploading a file is
+ * safe.
+ *
+ * @param files - A form submission or a list of sources.
+ * @param userId - Owner to attribute the documents to.
+ * @param options - Chunking, batching and accepted extensions.
+ * @returns Which files were ingested, skipped, or failed.
+ * @example
+ * ```ts
+ * const { ingested } = await saveUploadedScrappedFile(formData, userId);
+ * ```
  */
 export async function saveUploadedScrappedFile<T>(
   files: UploadSources,

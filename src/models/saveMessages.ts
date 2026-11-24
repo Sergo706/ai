@@ -2,6 +2,13 @@ import { getConfiguration, getDb } from "../config/config";
 import type { MessageTrace } from "../db/schema";
 import { toJson, toVec } from "../db/utils";
 
+/**
+ * Store a user message, with its embedding for later retrieval.
+ *
+ * @param conversationId - Conversation the message belongs to.
+ * @param content - The message text.
+ * @param embedding - Vector from `generateEmbedding`.
+ */
 export async function saveUserMessage(
   conversationId: number,
   content: string,
@@ -18,6 +25,17 @@ export async function saveUserMessage(
     .execute();
 }
 
+/**
+ * Store a user question and its cached answer as one pair.
+ *
+ * Used when serving a semantic-cache hit, so the exchange still appears in the
+ * conversation history.
+ *
+ * @param conversationId - Conversation the exchange belongs to.
+ * @param userContent - The question text.
+ * @param embedding - Embedding of the question.
+ * @param assistantContent - The cached answer.
+ */
 export async function saveCachedExchange(
   conversationId: number,
   userContent: string,
@@ -42,6 +60,13 @@ export async function saveCachedExchange(
     .execute();
 }
 
+/**
+ * Store an assistant reply with its trace.
+ *
+ * @param args - The conversation, answer text, tool names used, and the
+ * collected trace (or `null`).
+ * @returns The inserted message id, or `null` when the text was empty.
+ */
 export async function saveAssistantMessage(args: {
   conversationId: number;
   content: string;

@@ -3,8 +3,12 @@ import { dropMemory } from "./memory";
 import { dropRedis } from "./redis";
 
 /**
- * Best-effort cleanup. A stream is disposable once its run has settled and its
- * TTL has passed; deleting it early would break a reader that attaches late.
+ * Delete a run's stored log.
+ *
+ * Best effort: delete only after the run has settled and its TTL has passed,
+ * because deleting early breaks a reader that attaches late.
+ *
+ * @param runId - The run whose log to delete.
  */
 export async function dropStream(runId: string): Promise<void> {
   const redis = redisStreams();

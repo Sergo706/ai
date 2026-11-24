@@ -3,12 +3,26 @@ import { getDb } from "../config/config";
 import { getDistance, fromJson, isPg } from "../db/utils";
 
 
+/** A semantic-cache lookup result. */
 export interface CacheHit {
+  /** Whether a similar-enough earlier question was found. */
   hit: boolean;
+  /** The stored answer, when `hit` is true. */
   content?: string;
+  /** Id of the matched user message, when `hit` is true. */
   matchedMessageId?: number;
 }
 
+/**
+ * Look for an earlier question close enough to answer this one.
+ *
+ * @param queryEmbedding - Embedding of the current question.
+ * @param similarityThreshold - Minimum cosine similarity, e.g. `0.9`.
+ * @param CHAT_CACHE_WINDOW_HOURS - How far back to search.
+ * @default CHAT_CACHE_WINDOW_HOURS 24
+ * @param poisonTools - Tools whose earlier use disqualifies a cached answer.
+ * @returns The match, or `{ hit: false }`.
+ */
 export async function checkChatSemanticCache(
   queryEmbedding: number[],
   similarityThreshold: number,

@@ -1,5 +1,12 @@
 import { aiClients, getConfiguration } from "../config/config";
 
+/**
+ * Embed text for storage, using `embeddingConfig.retrievalModel`.
+ *
+ * @param text - Text to embed.
+ * @returns The embedding vector.
+ * @throws If the model's width differs from `embeddingConfig.dimensions`.
+ */
 export async function generateEmbedding(text: string): Promise<number[]> {
   const {embeddingConfig} = getConfiguration()
   const model = await aiClients("embedding").embeddings.create({
@@ -13,6 +20,16 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   return res;
 }
 
+/**
+ * Embed a query for retrieval, using `embeddingConfig.matchingModel`.
+ *
+ * A separate model is allowed because asymmetric search models expect queries
+ * and documents to be embedded differently.
+ *
+ * @param text - Query to embed.
+ * @returns The embedding vector.
+ * @throws If the model's width differs from `embeddingConfig.dimensions`.
+ */
 export async function generateMatchingEmbedding(
   text: string,
 ): Promise<number[]> {

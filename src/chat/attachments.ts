@@ -4,20 +4,39 @@ import {
   readXlsxToMarkdown,
 } from "../utils/spreadsheetsManipulation";
 
+/** A turn's message with any attached files folded into its text. */
 export interface Attachments {
+  /** `true` when at least one file was read and appended. */
   hasFiles: boolean;
+  /** The message to send: file contents followed by the original message. */
   message: string;
 }
 
-/** Limits applied to one turn's files. */
+/** Limits applied to one turn's attached files. */
 export interface ParseFileLimits {
-  /** Maximum files per turn. Defaults to 3. */
+  /**
+   * Maximum files per turn.
+   *
+   * @default 3
+   */
   maxFiles?: number;
-  /** Maximum bytes per file. Defaults to 10 MB. */
+  /**
+   * Maximum size of one file, in bytes.
+   *
+   * @default 10485760 (10 MB)
+   */
   maxBytes?: number;
-  /** Accepted mime types. Defaults to the formats `parseFiles` can read. */
+  /**
+   * Accepted mime types, on top of any `text/*` type.
+   *
+   * @default PDF, CSV and XLSX
+   */
   mimeTypes?: readonly string[];
-  /** Pages read from a PDF before truncating. Defaults to 5. */
+  /**
+   * Pages read from a PDF before the text is truncated.
+   *
+   * @default 5
+   */
   maxPdfPages?: number;
 }
 
@@ -27,6 +46,22 @@ const DEFAULT_MIME_TYPES: readonly string[] = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ];
 
+/**
+ * Read attached files and append them to the message as markdown.
+ *
+ * PDFs, CSVs and XLSX are converted to text and any `text/*` file is read as-is;
+ * other types are rejected. Only the extracted text is kept, never the file.
+ *
+ * @param files - Files from the request, or `undefined` for none.
+ * @param currentMessage - The caller's message, returned unchanged with no files.
+ * @param limits - Size, count and type limits.
+ * @returns The combined message and whether any file was read.
+ * @throws If a file exceeds the count, size or mime-type limit.
+ * @example
+ * ```ts
+ * const { message, hasFiles } = await parseFiles(files, "summarise this");
+ * ```
+ */
 export async function parseFiles(
   files: File[] | undefined,
   currentMessage: string,

@@ -1,5 +1,15 @@
 import { getDb } from "../config/config";
 
+/**
+ * List a user's conversations, most recently updated first.
+ *
+ * @param userId - Owner of the conversations.
+ * @param limit - Maximum rows to return.
+ * @default limit 50
+ * @param offset - Rows to skip, for paging.
+ * @default offset 0
+ * @returns `ok: true` with the page of conversations.
+ */
 export async function getConversations(
   userId: string,
   limit = 50,

@@ -1,6 +1,18 @@
 import { ToolExecutionContext, ToolHandler } from "../types/ToolExecutionTypes";
 import { toolError } from "./execution";
 
+/**
+ * Cap how many times one tool may be called in a request.
+ *
+ * Past the cap the handler does not run; the model gets a `TOOL_LIMIT_REACHED`
+ * error telling it to answer with what it already has.
+ *
+ * @param name - Tool name, also the counting key.
+ * @param max - Calls allowed per request.
+ * @param handler - The handler to wrap.
+ * @param toolCounts - Shared counter map for the request.
+ * @returns A handler that refuses calls past the cap.
+ */
 export const limitTool =
   (
     name: string,
@@ -20,6 +32,14 @@ export const limitTool =
     return await handler(args, context);
   };
 
+/**
+ * Record that a tool ran, so the turn can report `toolsUsed`.
+ *
+ * @param name - Tool name to record.
+ * @param handler - The handler to wrap.
+ * @param usedTools - Set shared by the request.
+ * @returns A handler that marks the tool as used before it runs.
+ */
 export const trackTool = (
   name: string,
   handler: ToolHandler,

@@ -38,14 +38,14 @@ function parseEntries(entries: [string, string[]][]): {
 }
 
 /**
- * Appends one event under the id the caller assigned. `MAXLEN ~` lets Redis trim
- * approximately rather than exactly, which is far cheaper and irrelevant for a
- * capped stream.
+ * Append one event to a run's Redis stream.
  *
- * The id is explicit so the stream and the registry's in-memory log share one
- * cursor space: a client can replay from the handle, reconnect to another
- * replica, and pass the same id back. The run lease guarantees one writer per
- * run, which is what keeps the ids strictly increasing.
+ * Also refreshes the stream's TTL and wakes every parked reader.
+ *
+ * @param redis - Client to write with.
+ * @param runId - The run to append to.
+ * @param id - The event id, assigned by the caller.
+ * @param event - The event to store.
  */
 export async function appendRedis(
   redis: Redis,
@@ -81,12 +81,13 @@ export async function appendRedis(
 }
 
 /**
- * Reads one bounded page strictly after `afterId`.
+ * Read one bounded page of a run's stream, strictly after `afterId`.
  *
- * `COUNT` keeps a run that emitted tens of thousands of deltas from building a
- * single huge reply, and the returned `lastId` lets the caller continue. The
- * `(` prefix tells Redis the bound is exclusive, so the cursor entry itself is
- * not returned twice.
+ * @param redis - Client to read with.
+ * @param runId - The run to read.
+ * @param afterId - Cursor to resume from; the entry itself is skipped.
+ * @param count - Maximum events to return.
+ * @returns The events plus the id to pass as `afterId` next time.
  */
 export async function readRedisPage(
   redis: Redis,
@@ -110,11 +111,12 @@ export async function readRedisPage(
 }
 
 /**
- * Waits until something is published for this run, or `BLOCK_MS` elapses.
+ * Wait for the next event on a run's stream, up to `BLOCK_MS`.
  *
- * Nothing blocks on the command connection: the wait is a timer plus a pub/sub
- * wakeup, and the read that follows is a plain `XRANGE`. A stopped reader
- * therefore costs no socket and leaves no command parked in Redis.
+ * @param redis - Client to read with.
+ * @param runId - The run to follow.
+ * @param afterId - Cursor to resume from.
+ * @returns The new page, or `null` when nothing arrived before the timeout.
  */
 export async function waitForRedisNext(
   redis: Redis,
@@ -190,7 +192,13 @@ function ensureWakeSubscriber(redis: Redis): Promise<void> {
   return subscribing;
 }
 
-/** The id of the newest entry in a run's stream, or `undefined` when empty. */
+/**
+ * The id of the newest entry in a run's stream.
+ *
+ * @param redis - Client to read with.
+ * @param runId - The run to inspect.
+ * @returns The latest id, or `undefined` when the stream is empty.
+ */
 export async function lastRedisId(
   redis: Redis,
   runId: string,
@@ -205,12 +213,22 @@ export async function lastRedisId(
   return top.at(0)?.[0];
 }
 
-/** Refreshes the TTL while the run is working but silent. */
+/**
+ * Restart the expiry clock on a run's stream.
+ *
+ * @param redis - Client to write with.
+ * @param runId - The run to keep alive.
+ */
 export async function touchRedis(redis: Redis, runId: string): Promise<void> {
   await redis.expire(streamKey(runId), STREAM_TTL_SECONDS);
 }
 
-/** Best-effort cleanup of a settled run's stream. */
+/**
+ * Delete a run's stream.
+ *
+ * @param redis - Client to write with.
+ * @param runId - The run to drop.
+ */
 export async function dropRedis(redis: Redis, runId: string): Promise<void> {
   await redis.del(streamKey(runId));
 }

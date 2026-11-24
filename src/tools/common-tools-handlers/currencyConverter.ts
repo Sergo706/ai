@@ -11,6 +11,15 @@ interface EasyCurrenciesPeer {
   ) => { from: (code: string) => { to: (code: string) => Promise<number> } };
 }
 
+/**
+ * Convert an amount between two currency codes.
+ *
+ * Backed by `easy-currencies`, which is loaded on first use because its rate
+ * tables only matter when the tool is enabled.
+ *
+ * @returns A handler that takes `{ amount, from, to }` and returns
+ * `{ amount, from, to, convertedAmount }`.
+ */
 export function currenciesConvertor(): ToolHandler {
   const log = getConfiguration().logger;
   return async (args) => {

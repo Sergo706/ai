@@ -21,6 +21,17 @@ function truncateToTokens(
 }
 
 
+/**
+ * Read one stored document for the model, truncated to a token budget.
+ *
+ * @param userId - Owner, checked before returning anything.
+ * @param args - Which document to read.
+ * @param CHARS_PER_TOKEN - Fallback characters-per-token estimate.
+ * @default CHARS_PER_TOKEN 4
+ * @param MAX_DOC_TOKENS - Whole-document ceiling; anything past it is dropped.
+ * @param MAX_CHUNKS - Maximum chunks to read.
+ * @returns The document text, whether it was truncated, and row metadata.
+ */
 export async function readToolDocument(
   userId: string,
   args: z.infer<typeof documentParams>,

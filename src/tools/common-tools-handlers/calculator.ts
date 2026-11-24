@@ -7,6 +7,13 @@ interface MathjsPeer {
   evaluate: (expression: string) => unknown;
 }
 
+/**
+ * Evaluate an arithmetic expression.
+ *
+ * Backed by `mathjs`, which is loaded on first use.
+ *
+ * @returns A handler that takes `{ expression }` and returns the result as text.
+ */
 export function calculator(): ToolHandler {
   const log = getConfiguration().logger;
   return async (args) => {

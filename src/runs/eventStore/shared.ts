@@ -5,10 +5,9 @@ import type { StoredEvent } from "../../types/Chat";
 const eventConfig = () => getConfiguration().runs.eventStore;
 
 /**
- * How many events one stream keeps. Redis trims the oldest entries past this.
+ * How many events one run's stream keeps. Older entries are trimmed.
  *
- * The floor of 100 exists because a smaller cap can trim an entry a reader is
- * still replaying on a busy run. The cap is a safety valve, not a tuning target.
+ * @default config.runs.eventStore.maxStreamLen
  */
 export const MAX_STREAM_LEN = envInt(
   "RUNS_STREAM_MAX_LEN",
@@ -16,7 +15,11 @@ export const MAX_STREAM_LEN = envInt(
   { min: 100 },
 );
 
-/** How long a finished stream survives, so a late reader can still replay it. */
+/**
+ * How long a finished stream survives, so a late reader can still replay it.
+ *
+ * @default config.runs.eventStore.ttlSeconds
+ */
 export const STREAM_TTL_SECONDS = envInt(
   "RUNS_STREAM_TTL_SECONDS",
   eventConfig().ttlSeconds,
@@ -24,12 +27,9 @@ export const STREAM_TTL_SECONDS = envInt(
 );
 
 /**
- * How long one `XREAD BLOCK` waits before the caller re-checks for closure.
+ * How long one blocking read waits before the caller re-checks for closure.
  *
- * The only one of the four with a ceiling. A block longer than the stream TTL
- * would let the key expire while the read is still parked, so the reader would
- * wake to a missing key instead of to its own timeout. Clamping keeps that from
- * becoming configurable.
+ * Clamped to half the stream TTL so a parked read cannot outlive the key.
  */
 export const BLOCK_MS = Math.min(
   envInt("RUNS_STREAM_BLOCK_MS", eventConfig().blockMs, { min: 1_000 }),
@@ -49,13 +49,12 @@ export const FIRST_ID = "0-0";
 /**
  * The next stream id after `lastId`.
  *
- * The registry assigns ids rather than letting each backend mint its own, so a
- * client sees one cursor space whether it reattaches to the local handle or to
- * the cross-replica store. `Date.now()` alone is not enough — two events in the
- * same millisecond need distinct ids — so the second half is a counter that
- * resets whenever the clock advances.
+ * Ids are minted here so a client sees one cursor space whether it reattaches
+ * to the local handle or to the shared store, and they stay strictly increasing
+ * as `XADD` requires.
  *
- * Ids must stay strictly increasing for `XADD` to accept them explicitly.
+ * @param lastId - The previous id, or `undefined` to start a stream.
+ * @returns An id of the form `<ms>-<seq>`.
  */
 export function nextId(lastId: string | undefined): string {
   const now = Date.now();
@@ -71,12 +70,11 @@ export function nextId(lastId: string | undefined): string {
 }
 
 /**
- * Orders two stream ids.
+ * Order two stream ids numerically.
  *
- * Plain string comparison is wrong here — `"…-10"` sorts before `"…-3"` — so
- * both halves are compared numerically. `streamFromRun` uses this to find the
- * first local event a reconnecting client has not seen, which replaces the
- * array index that silently shifted once the log was trimmed.
+ * @param a - First id.
+ * @param b - Second id.
+ * @returns Negative when `a` comes first, positive when `b` does, else `0`.
  */
 export function compareIds(a: string, b: string): number {
   const [aMs, aSeq] = a.split("-");
@@ -92,15 +90,12 @@ export function compareIds(a: string, b: string): number {
 }
 
 /**
- * The index of the first entry in `ids` that comes after `afterId`.
+ * Index of the first entry in `ids` that comes after `afterId`.
  *
- * This is what a local replay starts at, and why `streamFromRun` no longer
- * takes an array index: an index means "the 12th event this process still
- * holds", which shifts every time the log is trimmed, whereas an id means "the
- * event after this one" no matter what was dropped. A cursor the log no longer
- * contains starts at 0 — the eager equivalent of Redis replaying from the
- * oldest surviving entry — and a cursor past the end returns `ids.length`, so
- * a stale client gets no events rather than the wrong ones.
+ * @param ids - The ids of the events still held.
+ * @param afterId - The cursor the client last saw.
+ * @returns The index to start replaying at; `ids.length` when the cursor is
+ * past the end, and `0` when the log no longer contains it.
  */
 export function firstIndexAfter(ids: string[], afterId: string): number {
   if (afterId === FIRST_ID) return 0;
@@ -108,6 +103,11 @@ export function firstIndexAfter(ids: string[], afterId: string): number {
   return index === -1 ? ids.length : index;
 }
 
+/**
+ * The store key holding one run's event stream.
+ *
+ * @param runId - The run id.
+ */
 export function streamKey(runId: string): string {
   return `run:${runId}:events`;
 }
@@ -116,6 +116,8 @@ export function streamKey(runId: string): string {
 export interface EventPage {
   /** The stream id of each entry in `events`, in the same order. */
   ids: string[];
+  /** The events in this page, oldest first. */
   events: StoredEvent[];
+  /** Cursor to request the next page from. */
   lastId: string;
 }

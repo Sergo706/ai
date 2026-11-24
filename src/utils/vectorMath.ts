@@ -1,3 +1,15 @@
+/**
+ * Cosine similarity between two vectors.
+ *
+ * @param vecA - First vector.
+ * @param vecB - Second vector of the same length.
+ * @returns A score from `-1` to `1`, or `0` when the lengths differ or either
+ * vector is all zeros.
+ * @example
+ * ```ts
+ * const score = calculateCosineSimilarity(queryVec, chunkVec);
+ * ```
+ */
 export function calculateCosineSimilarity(
   vecA: number[],
   vecB: number[],

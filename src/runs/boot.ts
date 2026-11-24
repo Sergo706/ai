@@ -4,13 +4,17 @@ import { listRunResumers } from "./resumerRegistry";
 import { startRunRecovery } from "./runRecovery";
 
 /**
- * Starts the parts of the run subsystem that outlive a single request.
+ * Start the parts of the run subsystem that outlive a single request.
  *
- * Call this once per process, after `configuration()`. It returns the stop
- * function the host wires into its own shutdown path — a plugin `dispose` hook,
- * an `app.on("close")`, a signal handler. That is the whole of the framework
- * coupling: the host decides *when*, this module decides *what*.
+ * Call once per process, after `configuration()`. It closes stale runs left by a
+ * previous process and starts the recovery sweep.
  *
+ * @returns A stop function; call it from your shutdown path.
+ * @example
+ * ```ts
+ * const stopRuns = startRuns();
+ * process.on("SIGTERM", () => stopRuns());
+ * ```
  */
 export function startRuns(): () => void {
   const log = getConfiguration().logger;

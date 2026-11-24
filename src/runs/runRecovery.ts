@@ -35,13 +35,10 @@ const MAX_ADOPT_PER_SWEEP = envInt(
 /**
  * How many times one run may be resumed after its owner died.
  *
- * `claimRun()` only increments `attempts` on a *takeover*, so a fresh run starts
- * at 0 and this number means exactly what its name says. Counting the original
- * claim as well would silently halve it.
+ * Enforced by both the sweep and `retryRun`, so a manual retry cannot resume a
+ * run the sweep already gave up on.
  *
- * Exported because the manual retry route enforces the same cap. Two different
- * numbers here would let an endpoint resume a run the sweep had already given up
- * on.
+ * @default config.runs.recovery.maxResumeAttempts
  */
 export const MAX_RESUME_ATTEMPTS = envInt(
   "RUNS_MAX_RESUME_ATTEMPTS",
@@ -70,6 +67,7 @@ const UNCLAIMED_GRACE_MS = envInt(
 
 let sweeping = false;
 
+/** The settings the recovery sweep runs with, as resolved at module load. */
 export const RUN_RECOVERY_SETTINGS = {
   sweepIntervalMs: SWEEP_INTERVAL_MS,
   maxAdoptPerSweep: MAX_ADOPT_PER_SWEEP,
@@ -193,15 +191,17 @@ async function sweepOnce(): Promise<void> {
 }
 
 /**
- * Starts the background sweeper. Returns a stop function.
+ * Start the background sweeper that adopts abandoned runs.
  *
  * A single replica runs this fine; with several, the conditional claim means
- * only one of them does the work and the rest find nothing to adopt.
+ * only one does the work. Resumers register themselves when their module is
+ * imported, so nothing is registered here.
  *
- * This function never registers anything. Resumers register themselves when
- * their module is imported, and `server/plugins/runsBoot.ts` is the one place
- * that imports them for that side effect. Keeping registration out of here is
- * what stops this file from growing a branch per workflow.
+ * @returns A stop function; call it from your shutdown path.
+ * @example
+ * ```ts
+ * const stopRecovery = startRunRecovery();
+ * ```
  */
 export function startRunRecovery(): () => void {
   void sweepOnce();

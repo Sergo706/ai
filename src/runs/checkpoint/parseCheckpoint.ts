@@ -1,18 +1,20 @@
 import type { Checkpoint, CheckpointSpec } from "../../types/Checkpoint";
 
 /**
- * Narrows an unknown value from `runs.checkpoint` to a checkpoint this build can
- * use.
+ * Narrow an unknown value from `runs.checkpoint` to a usable checkpoint.
  *
- * Returns `null` rather than throwing. A row written by an older build, by
- * another workflow, or by a partially failed write is not a reason to fail a
- * run — it is the normal case for a run that never reached a durable boundary,
- * and the caller resumes from the beginning.
+ * Only the envelope is checked: `version` must match and `phase` must still
+ * exist in this build. `state` is only checked to be an object, because its
+ * shape belongs to the workflow.
  *
- * Only the envelope is checked: `version` matches and `phase` is one this build
- * still lists. `state` is validated as "an object" and nothing more, because its
- * shape belongs to the workflow and guessing at it here would couple this module
- * to one workflow's internals.
+ * @param value - The raw stored value.
+ * @param spec - The version and phases this build understands.
+ * @returns The checkpoint, or `null` when it was written by another build or
+ * workflow, in which case the run starts from the beginning.
+ * @example
+ * ```ts
+ * const ckpt = parseCheckpoint(raw, { version: 1, phases: ["seeds", "local"] });
+ * ```
  */
 export function parseCheckpoint<TState, TPhase extends string>(
   value: unknown,

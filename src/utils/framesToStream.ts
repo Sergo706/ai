@@ -1,29 +1,39 @@
 import type { SseFrame } from "../types/Chat";
 import { encode, frame, SSE_HEARTBEAT } from "../chat/sse";
 
+/** Tuning for {@link framesToStream}. */
 export interface FramesToStreamOptions {
-  /** Comment frame sent while nothing is being produced. Defaults to 10s. */
+  /**
+   * Comment frame sent while nothing is being produced.
+   *
+   * @default 10000
+   */
   heartbeatMs?: number;
   /**
    * Called when the reader goes away.
    *
-   * Pass `() => controller.abort()` for the `AbortSignal` given to `chat()`
-   * when a dropped client should end the turn. Omit it when the turn is also
-   * being written to a run the client can reattach to.
+   * Pass `() => controller.abort()` for the signal given to `chat()` when a
+   * dropped client should end the turn. Omit it when the run can be reattached
+   * to instead.
    */
   onCancel?: () => void;
 }
 
 /**
- * Turns the frames of a turn into a Server-Sent Events body.
+ * Turn a turn's frame iterable into a Server-Sent Events body.
  *
- * This is the runs-off path: `chat()` returns `ChatStream.frames` whenever the
- * run system is not configured, and the caller decides whether that becomes an
- * SSE response, a WebSocket message stream, or CLI output. Keep it out of
- * `chat()` so a caller that wants none of those never pays for it.
+ * The caller decides what the frames become: an SSE response, a WebSocket
+ * stream, or CLI output. When the run system is enabled, use `streamFromRun`
+ * instead, which replays the run's own log.
  *
- * The runs-on path does not use this: there the response is `streamFromRun`,
- * which replays the run's own log and then follows it live.
+ * @param frames - The frames from `chat()`.
+ * @param options - Heartbeat interval and cancel hook.
+ * @returns A `ReadableStream` to hand straight to a `Response`.
+ * @example
+ * ```ts
+ * const { frames } = await agent.chat({ message, userId });
+ * return new Response(framesToStream(frames));
+ * ```
  */
 export function framesToStream(
   frames: AsyncIterable<SseFrame>,

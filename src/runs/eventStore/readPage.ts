@@ -4,10 +4,14 @@ import { readRedisPage } from "./redis";
 import { FIRST_ID, REPLAY_BATCH, type EventPage } from "./shared";
 
 /**
- * Reads one bounded page of a run's log strictly after `afterId`.
+ * Read one bounded page of a run's log, strictly after `afterId`.
  *
- * `count` defaults to `REPLAY_BATCH` so a replay of a long run arrives in pages
- * instead of one enormous array; pass a bigger value when re-reading in-loop.
+ * @param runId - The run to read.
+ * @param afterId - Cursor to continue from.
+ * @default afterId FIRST_ID
+ * @param count - Maximum events in this page.
+ * @default count REPLAY_BATCH
+ * @returns The page plus the cursor to request the next one.
  */
 export async function readPage(
   runId: string,

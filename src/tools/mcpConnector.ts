@@ -116,17 +116,24 @@ async function readServerTools(
 }
 
 /**
- * Connects to one or more MCP servers and collects their tool definitions.
+ * Connect to one or more MCP servers and collect their tool definitions.
  *
- * This module only *describes* tools — it never calls them. The returned
- * `definitions` are plain OpenAI schemas, so a caller can merge them with its
- * own and hand the result to whatever executes tool calls. That split is why
- * nothing here knows about caching, concurrency or streaming: those belong to
- * the layer that runs the call, not to the one that lists it.
+ * The returned `definitions` are plain OpenAI schemas, ready to merge with your
+ * own. This function only lists tools; it never calls them, so caching,
+ * concurrency and streaming stay with the layer that executes the call.
  *
- * Every server is connected before any tool list is read, and a failure closes
- * the ones already open before rethrowing. A partially connected set would leak
- * transports whose handles the caller never received and therefore cannot close.
+ * @param configs - The servers to connect to. An empty list resolves to an empty
+ * toolset with no connections.
+ * @returns Definitions plus `refresh()` and `close()`.
+ * @throws If a server cannot be connected, after closing the ones already open.
+ * @example
+ * ```ts
+ * const toolset = await createMcpToolset([
+ *   { url: "https://mcp.example.com/mcp", namespace: "ex" },
+ * ]);
+ * await agent.tools.mcp(toolset.definitions);
+ * onShutdown(() => toolset.close());
+ * ```
  */
 export async function createMcpToolset(
   configs: readonly McpServerConfig[],

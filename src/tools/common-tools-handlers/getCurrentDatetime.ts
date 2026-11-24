@@ -7,6 +7,7 @@ export const datetimeParams = z.strictObject({
   timezone: z.string().min(1).max(100).optional(),
 });
 
+/** Whether a string is an IANA timezone the runtime can format. */
 export function validTimezone(timezone: string): boolean {
   if (/^[+-]/.test(timezone)) return false;
   try {
@@ -17,6 +18,12 @@ export function validTimezone(timezone: string): boolean {
   }
 }
 
+/**
+ * Report the current date and time.
+ *
+ * @returns A handler that takes an optional `{ timezone }` (IANA name, defaults to
+ * `"UTC"`) and returns the UTC instant plus formatted local fields.
+ */
 export function getCurrentDatetime(): ToolHandler {
   const log = getConfiguration().logger;
   return (args) => {

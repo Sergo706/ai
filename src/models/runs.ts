@@ -3,6 +3,13 @@ import type { RunKind, RunStatus } from "../db/schema";
 import { timestamp, toJson } from "../db/utils";
 import type { CreateRunArgs, StoredRun, UpdateRunArgs } from "../types/RunModel";
 
+/**
+ * Insert a new run row in the `running` state.
+ *
+ * Call this before doing any work, so a crash still leaves a resumable record.
+ *
+ * @param args - The run's identity, kind and initial input.
+ */
 export async function createRun(args: CreateRunArgs): Promise<void> {
   await getDb()
     .insertInto("runs")
@@ -18,6 +25,12 @@ export async function createRun(args: CreateRunArgs): Promise<void> {
     .execute();
 }
 
+/**
+ * Patch a run row. Fields left `undefined` are not touched.
+ *
+ * @param args - The run id plus any of status, partial output, stop reason,
+ * error, message id, or `finished: true` to stamp `finished_at` now.
+ */
 export async function updateRun(args: UpdateRunArgs): Promise<void> {
   const patch: {
     status?: RunStatus;
@@ -43,6 +56,12 @@ export async function updateRun(args: UpdateRunArgs): Promise<void> {
     .execute();
 }
 
+/**
+ * Read one run by id.
+ *
+ * @param id - The run id.
+ * @returns The row, or `null` if there is no such run.
+ */
 export async function getRunById(id: string): Promise<StoredRun | null> {
   const row = await getDb()
     .selectFrom("runs")
@@ -53,6 +72,14 @@ export async function getRunById(id: string): Promise<StoredRun | null> {
   return row ?? null;
 }
 
+/**
+ * List a conversation's runs, newest first.
+ *
+ * @param conversationId - The conversation to read.
+ * @param limit - Maximum rows to return.
+ * @default limit 20
+ * @returns The run rows.
+ */
 export async function getRunsByConversation(
   conversationId: number,
   limit = 20,
@@ -67,15 +94,13 @@ export async function getRunsByConversation(
 }
 
 /**
- * The most recent workflow run of a conversation that ended without finishing.
+ * The most recent run of a conversation that ended before finishing.
  *
- * A run is resumable by kind and status alone, so this answers "what did the
- * user just see stop" without knowing which workflow it was. The `input.name`
- * discriminator says which resumer to hand it to.
+ * Used to offer a resume after a crash or an abort, without knowing which
+ * workflow the run belonged to.
  *
- * Ordered by `started_at` descending rather than `updated_at`, so the answer is
- * the run the user just saw stop rather than whichever row the recovery sweep
- * happened to touch last.
+ * @param args - The conversation, and optionally its owner and run kind.
+ * @returns The newest interrupted, failed or aborted run, or `null`.
  */
 export async function getLatestResumableRun(args: {
   conversationId: number;
@@ -103,11 +128,14 @@ export async function getLatestResumableRun(args: {
 }
 
 /**
- * Runs that never produced a host-side record of their output.
+ * List finished or stopped runs for a user, newest first.
  *
- * A workflow run that stops without a sufficient answer has no row in whatever
- * table the host persists its results to, so this table is the only place its
- * partial synthesis survives.
+ * @param userId - Owner of the runs.
+ * @param limit - Maximum rows to return.
+ * @default limit 20
+ * @param kind - Run kind to filter by.
+ * @default kind "workflow"
+ * @returns The run rows.
  */
 export async function getUnpersistedRuns(
   userId: string,

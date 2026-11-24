@@ -2,16 +2,24 @@ import { getConfiguration } from "../config/config";
 import { saveConversationCompaction } from "../models/saveConversationCompaction";
 import { CompactionUpdate } from "../types/Compaction";
 
+/** Tuning for {@link makeCompactionHandler}. */
 export interface CompactionHandlerOptions {
+  /**
+   * Write attempts before giving up; the turn continues either way.
+   *
+   * @default 2
+   */
   attempts?: number;
 }
 
 /**
- * Persists the rolled-up summary watermark after a turn.
+ * Create the hook that records a compaction result after a turn.
  *
- * This runs inside the request that already produced the answer, so it must not
- * be able to fail it: the summary was written, the conversation is answerable,
- * and the only consequence of a lost watermark is re-summarizing next turn.
+ * Never throws: a write failure is logged and the turn still completes.
+ *
+ * @param convId - Conversation the summary belongs to.
+ * @param options - Write retry count.
+ * @returns A handler that takes one `CompactionUpdate`.
  */
 export function makeCompactionHandler(
   convId: number,

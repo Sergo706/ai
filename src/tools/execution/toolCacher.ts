@@ -42,6 +42,25 @@ function isErrorResult(res: unknown): boolean {
 }
 
 
+/**
+ * Wrap a tool handler so repeated identical calls are served from the cache.
+ *
+ * Failed results are never cached, so a transient error is retried next time.
+ *
+ * @param toolName - Tool name, part of the cache key.
+ * @param handler - The handler to wrap.
+ * @param ttlSeconds - Cache lifetime in seconds.
+ * @default ttlSeconds 3600
+ * @param scopeKey - Extra key component, e.g. a user or tenant id.
+ * @default scopeKey "global"
+ * @param normalizeArgs - Drop or rewrite arguments that should not affect the
+ * key, e.g. a timestamp.
+ * @returns A handler with the same signature, served from the cache on a hit.
+ * @example
+ * ```ts
+ * const handler = withToolCache("get_weather", getWeather, 600, userId);
+ * ```
+ */
 export function withToolCache(
   toolName: string,
   handler: ToolHandler,

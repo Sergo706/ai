@@ -25,6 +25,21 @@ function countNonTextParts(content: unknown): number {
   ).length;
 }
 
+/**
+ * Estimate the token cost of one chat message.
+ *
+ * Counts text content, tool calls, non-text parts, and the per-message overhead
+ * a provider adds.
+ *
+ * @param message - The message to measure.
+ * @param MESSAGE_OVERHEAD_TOKENS - Role header and separators per message.
+ * @default MESSAGE_OVERHEAD_TOKENS 4
+ * @param CHARS_PER_TOKEN - Characters per token for the estimate.
+ * @default CHARS_PER_TOKEN 3.6
+ * @param NON_TEXT_PART_TOKENS - Stand-in for an image or audio part.
+ * @default NON_TEXT_PART_TOKENS 85
+ * @returns The estimated token count.
+ */
 export function estimateMessageTokens(
   message: ChatCompletionMessageParam,
   /** Role header and separators a provider adds per message. */
@@ -52,6 +67,24 @@ export function estimateMessageTokens(
   return Math.ceil(chars / CHARS_PER_TOKEN) + MESSAGE_OVERHEAD_TOKENS;
 }
 
+/**
+ * Estimate the token cost of a message list.
+ *
+ * The sum of {@link estimateMessageTokens} over `messages`.
+ *
+ * @param messages - The messages to measure.
+ * @param MESSAGE_OVERHEAD_TOKENS - Role header and separators per message.
+ * @default MESSAGE_OVERHEAD_TOKENS 4
+ * @param CHARS_PER_TOKEN - Characters per token for the estimate.
+ * @default CHARS_PER_TOKEN 3.6
+ * @param NON_TEXT_PART_TOKENS - Stand-in for an image or audio part.
+ * @default NON_TEXT_PART_TOKENS 85
+ * @returns The estimated token count.
+ * @example
+ * ```ts
+ * if (estimateMessagesTokens(messages) > 8000) await compact(messages);
+ * ```
+ */
 export function estimateMessagesTokens(
   messages: readonly ChatCompletionMessageParam[],
   /** Role header and separators a provider adds per message. */
@@ -74,6 +107,13 @@ export function estimateMessagesTokens(
   );
 }
 
+/**
+ * Estimate tokens for plain text from its length.
+ *
+ * @param text - The text to measure.
+ * @param CHARS_PER_TOKEN_ESTIMATE - Characters per token.
+ * @returns The estimated token count, rounded up.
+ */
 export function estimateTextTokens(text: string, CHARS_PER_TOKEN_ESTIMATE: number): number {
   return Math.ceil(text.length / CHARS_PER_TOKEN_ESTIMATE);
 }

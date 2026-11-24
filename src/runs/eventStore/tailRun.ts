@@ -5,15 +5,18 @@ import { touchStream } from "./touchStream";
 import { waitForNext } from "./waitForNext";
 
 /**
- * Attaches one reader to a run's log: replay what exists, then tail live.
+ * Attach one reader to a run's log: replay what exists, then follow it live.
  *
- * The replay-then-tail order is safe because the stream id is the cursor. A
- * snapshot read returns a `lastId`, and the live read starts from exactly that
- * id, so nothing appended in between can be skipped or duplicated — the property
- * an array index does not have.
+ * Snapshot then live is safe because the cursor is a stream id: nothing appended
+ * in between is skipped or duplicated.
  *
- * @returns a stop function. It only detaches this reader; it never aborts the
- *   run, matching `streamFromRun`'s `cancel()`.
+ * @param params - The run, the cursor, and the callbacks to report into.
+ * @returns A stop function that only detaches this reader; it never aborts the
+ * run.
+ * @example
+ * ```ts
+ * const stop = tailRun({ runId, onEvent, shouldStop, log });
+ * ```
  */
 export function tailRun(params: TailRunParams): () => void {
   const { runId, onEvent, shouldStop, onIdle, onError, log } = params;

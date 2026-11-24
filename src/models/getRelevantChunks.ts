@@ -2,18 +2,36 @@ import { sql } from "kysely";
 import { getConfiguration, getDb } from "../config/config";
 import { getDistance } from "../db/utils";
 
+/** A document chunk returned by {@link fetchRelevantChunks}. */
 export interface RelevantChunk {
+  /** Chunk row id. */
   id: number;
+  /** Document the chunk belongs to, if any. */
   documentId: number | null;
+  /** Position of the chunk within its document. */
   chunkIndex: number;
+  /** The chunk text. */
   chunkText: string;
+  /** Title of the owning document. */
   title: string | null;
+  /** When the chunk was stored. */
   retrievedAt: Date | string;
+  /** Cosine similarity to the query, from 0 to 1. */
   similarity: number;
 }
 
 /**
- * Nearest chunks to `queryVector`, most similar first.
+ * Find the document chunks nearest to a query vector.
+ *
+ * @param queryVector - Embedding to compare against, e.g. from
+ * `generateMatchingEmbedding`.
+ * @param limit - Maximum chunks to return.
+ * @default limit 10
+ * @param offset - Rows to skip, for paging.
+ * @default offset 0
+ * @param similarityThreshold - Minimum similarity to include.
+ * @default similarityThreshold 0.1
+ * @returns Matching chunks, most similar first.
  */
 export async function fetchRelevantChunks(
   queryVector: number[],

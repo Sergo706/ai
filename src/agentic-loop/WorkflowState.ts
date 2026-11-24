@@ -6,54 +6,93 @@ import type {
   WorkflowStateSnapshot,
 } from "./types";
 
+/**
+ * Everything a running workflow accumulates.
+ *
+ * Adapters read and write this to record evidence, remember which items were
+ * already seen, and track how much of the budget is spent.
+ *
+ * @example
+ * ```ts
+ * const state = new WorkflowState("my query", budgets);
+ * state.appendEvidence("a relevant paragraph");
+ * const result = state.buildResult();
+ * ```
+ */
 export class WorkflowState<TLocalItem, TExternalArtifact> {
+  /** Caps this run must respect. Read-only once constructed. */
   public readonly budgets: WorkflowBudgets;
 
+  /** Rounds skipped in a row that produced no new targets. */
   public consecutiveSkippedRounds = 0;
+  /** Rounds in a row where the evaluator re-issued already-searched intents. */
   public consecutiveRepeatedIntentRounds = 0;
 
+  /** Intents already searched, keyed by fingerprint. */
   public issuedIntents = new Map<string, string>();
+  /** Fingerprints already dispatched to discovery. */
   public dispatchedIntents = new Set<string>();
+  /** Intents dropped as unproductive, keyed by fingerprint. */
   public exhaustedIntents = new Map<string, string>();
 
+  /** Whether the last evaluation found every intent already searched. */
   public lastEvaluationAllRepeated = false;
+  /** How many repeated intents the last evaluation returned. */
   public lastEvaluationRepeatCount = 0;
 
+  /** Whether the evaluator reported the evidence sufficient. */
   public contextIsSufficient = false;
+  /** Intents queued for the next round. Starts as the query. */
   public pendingIntents: string[];
+  /** Local batches already run. */
   public localSearches = 0;
+  /** External rounds already run. */
   public externalRounds = 0;
 
+  /** Accepted evidence blocks, oldest dropped past `maxEvaluatorItems`. */
   public evidenceSet: string[] = [];
+  /** Local items the run accepted. */
   public localItems: TLocalItem[] = [];
+  /** External artifacts the executor produced. */
   public externalArtifacts: TExternalArtifact[] = [];
+  /** Recoverable errors, e.g. a failed discovery call. */
   public errors: string[] = [];
+  /** Notes left by the critic, when one is configured. */
   public criticNotes?: string;
 
+  /** Discovery failures per intent fingerprint. */
   public discoveryFailures = new Map<string, number>();
+  /** Intents whose discovery call failed at least once. */
   public failedIntents: string[] = [];
 
+  /** Ids of local items already seen, used to skip duplicates. */
   public seenLocalIds = new Set<string | number>();
+  /** Keys of targets already attempted. */
   public attemptedTargets = new Set<string>();
+  /** Why the run stopped, once something set it. */
   public stopReason: StopReason | undefined;
 
+  /**
+   * @param initialQuery - First intent queued for the run.
+   * @param budgets - Caps this run must respect.
+   */
   constructor(initialQuery: string, budgets: WorkflowBudgets) {
     this.pendingIntents = [initialQuery];
     this.budgets = budgets;
   }
 
-  /** Marks the run aborted so `buildResult` reports it instead of a budget stop. */
+  /** Marks the run aborted, so `buildResult` reports `aborted` as the stop reason. */
   public markAborted(): void {
     this.stopReason = "aborted";
   }
 
   /**
-   * Serialises everything a resume needs.
+   * Serialise what a resume needs.
    *
-   * Only the progress is written. Budgets and thresholds are intentionally left
-   * out so a tunable changed between the crash and the resume takes effect
-   * instead of being frozen at the value the dead process was using. Every
-   * container is flattened because JSON has no Map or Set.
+   * Progress only: budgets and thresholds are left out so a configuration
+   * change takes effect on resume instead of staying frozen.
+   *
+   * @returns A JSON-safe snapshot suitable for `resumeFrom`.
    */
   public toCheckpoint(): WorkflowStateSnapshot<TLocalItem, TExternalArtifact> {
     return {
@@ -82,14 +121,12 @@ export class WorkflowState<TLocalItem, TExternalArtifact> {
   }
 
   /**
-   * Copies a snapshot back over this instance.
+   * Copy a snapshot back over this instance.
    *
-   * Called from the constructor, so the loop can build the state from current
-   * config and then rewind only the progress. The snapshot is deliberately
-   * partial: a checkpoint written by an older build may not carry every field,
-   * and anything absent keeps its freshly-constructed value rather than
-   * becoming `undefined`. Every container is copied so the live state cannot
-   * mutate the snapshot it came from.
+   * Fields the snapshot does not carry keep their current value, so a snapshot
+   * from an older build still restores.
+   *
+   * @param snapshot - A snapshot from `toCheckpoint`, possibly partial.
    */
   public restore(
     snapshot: Partial<WorkflowStateSnapshot<TLocalItem, TExternalArtifact>>,
@@ -145,6 +182,11 @@ export class WorkflowState<TLocalItem, TExternalArtifact> {
     this.stopReason = snapshot.stopReason ?? this.stopReason;
   }
 
+  /**
+   * Record an evidence block, dropping the oldest past `maxEvaluatorItems`.
+   *
+   * @param block - Evidence text to record.
+   */
   public appendEvidence(block: string) {
     this.evidenceSet.push(block);
     if (this.evidenceSet.length > this.budgets.maxEvaluatorItems) {
@@ -155,6 +197,12 @@ export class WorkflowState<TLocalItem, TExternalArtifact> {
     }
   }
 
+  /**
+   * Build the result object returned by the run.
+   *
+   * @param report - Output of the final answer step, when one ran.
+   * @returns Evidence, artifacts, counters and the stop reason.
+   */
   public buildResult<TReport = undefined>(
     report?: TReport,
   ): WorkflowRunResult<TLocalItem, TExternalArtifact, TReport> {

@@ -3,10 +3,9 @@ import { touchMemory } from "./memory";
 import { touchRedis } from "./redis";
 
 /**
- * Refreshes the TTL while the run is working but silent.
+ * Refresh a run's stream TTL while the run is working but silent.
  *
- * The tail loop calls this on every idle round so a long-running but quiet run
- * does not lose its log to the TTL before its reader reconnects.
+ * @param runId - The run to keep alive.
  */
 export async function touchStream(runId: string): Promise<void> {
   const redis = redisStreams();

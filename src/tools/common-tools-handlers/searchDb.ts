@@ -6,6 +6,12 @@ import { getConfiguration } from "../../config/config";
 
 
 
+/**
+ * Search the indexed documents for chunks relevant to a query.
+ *
+ * @returns A handler that takes a search query and returns matching chunks with
+ * their similarity score.
+ */
 export function searchDb(): ToolHandler {
   const log = getConfiguration().logger;
   return async (args) => {

@@ -5,6 +5,17 @@ import { getConfiguration } from "../../config/config";
 export const log = () => getConfiguration().logger;
 
 
+/**
+ * Build the error envelope a tool handler returns to the model.
+ *
+ * @param code - Short machine-readable code, e.g. `"NOT_FOUND"`.
+ * @param message - Human-readable explanation.
+ * @returns A JSON string the loop recognises as a failed call.
+ * @example
+ * ```ts
+ * return toolError("NOT_FOUND", `No file named ${name}`);
+ * ```
+ */
 export function toolError(code: string, message: string): string {
   return JSON.stringify({ error: { code, message } });
 }
