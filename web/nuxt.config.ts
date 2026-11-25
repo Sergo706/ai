@@ -80,6 +80,12 @@ export default defineNuxtConfig({
             href: '/tools/mcp-tools',
           },
           {
+            title: 'Streaming & SSE',
+            description:
+              'Typed Server-Sent Events helpers, heartbeat streams, out-of-band event sinks, trace collection, abort control, and composable low-level chat primitives.',
+            href: '/sse',
+          },
+          {
             title: 'RAG',
             description:
               'Chunking, embedding, adaptive filtering, and vector search. Search is dialect-aware: `toVec` writes a pgvector literal on PostgreSQL and a `Float32Array` blob on SQLite, so the same query code returns `RelevantChunk` rows either way.',
@@ -95,7 +101,19 @@ export default defineNuxtConfig({
             title: 'The Run System',
             description:
               'Durable run records with leases, Redis-backed event logs, checkpoints, and crash recovery. A run survives a dropped connection, a rolling deploy, and a process crash, and a client can reattach to it from another replica. Cross-replica streaming requires Redis.',
-            href: '/run-system',
+            href: '/runs',
+          },
+          {
+            title: 'Database & Models',
+            description:
+              'Type-safe Kysely schema for documents, chunks, conversations, messages, and runs, dialect-portable helpers for PostgreSQL and SQLite, and standalone data-access models.',
+            href: '/database',
+          },
+          {
+            title: 'Utilities',
+            description:
+              'Standalone schema repair, thinking-block stripping, token accounting, JSON-to-Markdown formatting, PDF and spreadsheet helpers, generated file downloads, and vector math.',
+            href: '/utilities',
           },
           {
             title: 'Configuration',
