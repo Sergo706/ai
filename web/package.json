@@ -1,0 +1,13 @@
+{
+  "name": "ai",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "docus": "latest",
+    "nuxt": "^4.6.4",
+    "nuxt-studio": "^1.8.2"
+  }
+}

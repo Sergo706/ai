@@ -3,3 +3,10 @@ logs/*
 *.log
 dist/*
 coverage/*
+
+.nuxt
+.output
+.nitro
+.cache
+.data
+.env
