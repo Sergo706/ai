@@ -6,9 +6,9 @@ export { loadConversationHistory } from "./loadConversationHistory";
 export { persistChatRun, type PersistChatRunArgs } from "./persistChatRun";
 export { loadCheckpoint, saveCheckpoint } from "./runCheckpoint";
 export {
-  HEARTBEAT_INTERVAL_MS,
+  getHeartbeatIntervalMs,
   INSTANCE_ID,
-  LEASE_TTL_MS,
+  getLeaseTtlMs,
   claimRun,
   reopenRunForRetry,
   heartbeatRun,

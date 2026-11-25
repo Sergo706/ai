@@ -75,11 +75,16 @@ function parse(text: string): Record<string, unknown>[] {
   return text
     .split("\n\n")
     .map((block) => block.trim())
-    .filter((block) => block.startsWith("data: "))
-    .map(
-      (block) =>
-        JSON.parse(block.slice("data: ".length)) as Record<string, unknown>,
-    );
+    .flatMap((block) => {
+      // A frame carries an `id:` line before `data:` when the event has a
+      // stream id, so extract the data line rather than matching the whole block.
+      const data = block
+        .split("\n")
+        .find((line) => line.startsWith("data: "));
+      return data === undefined
+        ? []
+        : [JSON.parse(data.slice("data: ".length)) as Record<string, unknown>];
+    });
 }
 
 function params(

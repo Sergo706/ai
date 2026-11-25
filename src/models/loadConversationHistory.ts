@@ -1,4 +1,6 @@
 import { getDb } from "../config/config";
+import type { MessageTrace } from "../db/schema";
+import { fromJson } from "../db/utils";
 import type { CompactionState } from "../types/Compaction";
 
 /**
@@ -51,7 +53,7 @@ export async function loadConversationHistory(
         id: msg.id,
         role: msg.role as "user" | "assistant",
         message: msg.content,
-        trace: msg.trace,
+        trace: fromJson<MessageTrace>(msg.trace),
       }));
 
     const compaction: CompactionState = {

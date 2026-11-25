@@ -311,7 +311,7 @@ describe("LocalKnowledgePhase", () => {
   });
 
   describe("checkpointing", () => {
-    it("fires onBatchComplete once per batch with the batch index", async () => {
+    it("fires onBatchComplete once per batch after it is processed", async () => {
       const { phase } = build(
         [localPage("1", "2", "3"), localPage("4")],
         [{ isSufficient: false, nextIntents: ["x"] }],
@@ -320,17 +320,17 @@ describe("LocalKnowledgePhase", () => {
 
       await phase.run(ctx(), { onBatchComplete });
 
-      expect(onBatchComplete.mock.calls).toEqual([[0], [1]]);
+      expect(onBatchComplete.mock.calls).toEqual([[1], [2]]);
     });
 
-    it("fires onBatchComplete before the batch is fetched", async () => {
-      const onBatchComplete = vi.fn();
+    it("fires onBatchComplete after the batch is fetched and ingested", async () => {
+      const snapshots: { batch: number; evidenceCount: number }[] = [];
       const state = makeState<LocalItem, LocalItem>();
-      let fetchedAfterCallback = false;
+      let calledDuringFetch = false;
       const adapter: LocalKnowledgeAdapter<LocalItem> = {
         fetchBatch: vi.fn(() => {
-          fetchedAfterCallback = onBatchComplete.mock.calls.length > 0;
-          return Promise.resolve([]);
+          calledDuringFetch = snapshots.length > 0;
+          return Promise.resolve([localItem("1", "evidence one")]);
         }),
         getId: (item) => item.id,
         formatEvidence: (item) => item.text,
@@ -338,7 +338,7 @@ describe("LocalKnowledgePhase", () => {
       const evaluatorPhase = new EvaluatorPhase<LocalItem, LocalItem>(
         "w",
         "q",
-        scriptedEvaluator([]).adapter,
+        scriptedEvaluator([{ isSufficient: true, nextIntents: [] }]).adapter,
         state,
         makeLogger(),
       );
@@ -350,9 +350,14 @@ describe("LocalKnowledgePhase", () => {
         makeLogger(),
       );
 
-      await phase.run(ctx(), { onBatchComplete });
+      await phase.run(ctx(), {
+        onBatchComplete: (batch) => {
+          snapshots.push({ batch, evidenceCount: state.evidenceSet.length });
+        },
+      });
 
-      expect(fetchedAfterCallback).toBe(true);
+      expect(calledDuringFetch).toBe(false);
+      expect(snapshots).toEqual([{ batch: 1, evidenceCount: 1 }]);
     });
 
     it("does not require a checkpoint callback", async () => {

@@ -38,7 +38,6 @@ export class LocalKnowledgePhase<TLocalItem, TExternalArtifact> {
 
     for (let i = options.startBatch ?? 0; i < maxLocalRounds; i++) {
       throwIfAborted(context.signal, this.workflowName);
-      options.onBatchComplete?.(i);
       const offset = i * localBatchSize;
       const batch = await this.adapter.fetchBatch(
         offset,
@@ -79,6 +78,7 @@ export class LocalKnowledgePhase<TLocalItem, TExternalArtifact> {
           { workflow: this.workflowName, iteration: i },
           `[${this.workflowName}] Local search stopped: empty batch`,
         );
+        options.onBatchComplete?.(this.state.localSearches);
         break;
       }
 
@@ -127,6 +127,7 @@ export class LocalKnowledgePhase<TLocalItem, TExternalArtifact> {
         },
         `[${this.workflowName}] Local batch processed`,
       );
+      let shouldStop = false;
 
       if (addedEvidence) {
         this.state.contextIsSufficient = await this.evaluatorPhase.evaluate(
@@ -139,29 +140,29 @@ export class LocalKnowledgePhase<TLocalItem, TExternalArtifact> {
             { workflow: this.workflowName, iteration: i },
             `[${this.workflowName}] Local search stopped: evaluator reported sufficient`,
           );
-          break;
-        }
+          shouldStop = true;
+        } else {
+          insufficientBatches++;
 
-        insufficientBatches++;
-
-        if (
-          insufficientBatches >=
-          this.state.budgets.maxConsecutiveInsufficientLocalBatches
-        ) {
-          this.logger.debug(
-            {
-              workflow: this.workflowName,
-              iteration: i,
-              insufficientBatches,
-              maxConsecutiveInsufficientLocalBatches:
-                this.state.budgets.maxConsecutiveInsufficientLocalBatches,
-              addedItems,
-              totalLocalItems: this.state.localItems.length,
-              evidenceItems: this.state.evidenceSet.length,
-            },
-            `[${this.workflowName}] Local search stopped: consecutive insufficient batches limit reached`,
-          );
-          break;
+          if (
+            insufficientBatches >=
+            this.state.budgets.maxConsecutiveInsufficientLocalBatches
+          ) {
+            this.logger.debug(
+              {
+                workflow: this.workflowName,
+                iteration: i,
+                insufficientBatches,
+                maxConsecutiveInsufficientLocalBatches:
+                  this.state.budgets.maxConsecutiveInsufficientLocalBatches,
+                addedItems,
+                totalLocalItems: this.state.localItems.length,
+                evidenceItems: this.state.evidenceSet.length,
+              },
+              `[${this.workflowName}] Local search stopped: consecutive insufficient batches limit reached`,
+            );
+            shouldStop = true;
+          }
         }
       } else {
         // A page that contributed nothing breaks the streak: the guard only
@@ -169,13 +170,16 @@ export class LocalKnowledgePhase<TLocalItem, TExternalArtifact> {
         insufficientBatches = 0;
       }
 
-      if (batch.length < localBatchSize) {
+      if (!shouldStop && batch.length < localBatchSize) {
         this.logger.debug(
           { workflow: this.workflowName, iteration: i, returned: batch.length },
           `[${this.workflowName}] Local search stopped: short batch (last page)`,
         );
-        break;
+        shouldStop = true;
       }
+
+      options.onBatchComplete?.(this.state.localSearches);
+      if (shouldStop) break;
     }
   }
 }

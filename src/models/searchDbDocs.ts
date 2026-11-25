@@ -26,11 +26,17 @@ export type SearchDbParams = z.infer<typeof searchParams>;
  * const hits = await searchDbDocs({ query: "pricing", limit: 5, offset: 0, similarity: 0.8 });
  * ```
  */
-export async function searchDbDocs(conf: SearchDbParams) {
+export async function searchDbDocs(conf: SearchDbParams, userId?: string) {
   const { query, limit, offset, similarity } = conf;
   const embedding = await generateEmbedding(query);
 
-  const res = await fetchRelevantChunks(embedding, limit, offset, similarity);
+  const res = await fetchRelevantChunks(
+    embedding,
+    limit,
+    offset,
+    similarity,
+    userId,
+  );
     if (res.length === 0) {
       return {
         ok: false,

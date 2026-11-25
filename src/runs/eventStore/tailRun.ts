@@ -1,6 +1,6 @@
 import type { TailRunParams } from "../types";
 import { readPage } from "./readPage";
-import { FIRST_ID, REPLAY_BATCH } from "./shared";
+import { FIRST_ID, getReplayBatch } from "./shared";
 import { touchStream } from "./touchStream";
 import { waitForNext } from "./waitForNext";
 
@@ -35,7 +35,7 @@ export function tailRun(params: TailRunParams): () => void {
           if (page.events[i].type === "done" || page.events[i].type === "error")
             return;
         }
-        if (page.events.length < REPLAY_BATCH) break;
+        if (page.events.length < getReplayBatch()) break;
       }
 
       while (!shouldStop()) {

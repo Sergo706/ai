@@ -17,7 +17,7 @@ const h = vi.hoisted(() => ({
 vi.mock("../../models/runLease.js", () => ({
   findResumableRuns: h.findResumableRuns,
   INSTANCE_ID: "test-host:1:0",
-  LEASE_TTL_MS: 60_000,
+  getLeaseTtlMs: () => 60_000,
   reopenRunForRetry: vi.fn(),
 }));
 
@@ -30,8 +30,9 @@ vi.mock("../resumerRegistry.js", () => ({
   findRunResumer: h.findRunResumer,
 }));
 
-const { startRunRecovery, MAX_RESUME_ATTEMPTS } =
+const { startRunRecovery, getMaxResumeAttempts } =
   await import("../runRecovery.js");
+const MAX_RESUME_ATTEMPTS = getMaxResumeAttempts();
 
 /**
  * A resumable row.

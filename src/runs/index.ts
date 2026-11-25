@@ -1,8 +1,8 @@
 export type * from "./types";
 export { startRuns } from "./boot";
 export {
-  MAX_RESUME_ATTEMPTS,
-  RUN_RECOVERY_SETTINGS,
+  getMaxResumeAttempts,
+  getRunRecoverySettings,
   startRunRecovery,
 } from "./runRecovery";
 export {

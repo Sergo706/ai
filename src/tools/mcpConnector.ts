@@ -86,13 +86,35 @@ function contentToText(content: unknown): string {
   if (!Array.isArray(content)) return "";
 
   return content
-    .map((block) =>
-      block !== null && typeof block === "object" && "text" in block
-        ? String((block as { text?: unknown }).text)
-        : "",
-    )
+    .map((block) => formatContentBlock(block))
     .filter((text) => text !== "")
     .join("\n");
+}
+
+function formatContentBlock(block: unknown): string {
+  if (block === null || typeof block !== "object") return "";
+  const rec = block as Record<string, unknown>;
+
+  if (typeof rec.text === "string") return rec.text;
+
+  if (rec.type === "resource" && rec.resource && typeof rec.resource === "object") {
+    const resource = rec.resource as Record<string, unknown>;
+    if (typeof resource.text === "string" && resource.text !== "") {
+      return resource.text;
+    }
+    return "";
+  }
+
+  if (rec.type === "resource_link") {
+    const uri = typeof rec.uri === "string" ? rec.uri : "";
+    const name = typeof rec.name === "string" ? rec.name : "";
+    const description = typeof rec.description === "string" ? rec.description : "";
+    const label = [name, uri].filter(Boolean).join(" ");
+    if (!label && !description) return "";
+    return description ? `${label}: ${description}`.trim() : label;
+  }
+
+  return "";
 }
 
 

@@ -151,7 +151,7 @@ export function createLibMigrator(db: Kysely<any>, isPg: boolean, dimensions: nu
 
   return new Migrator({
     db,
-    migrationTableName: "mylib_migrations",
+    migrationTableName: "@riavzon/ai_migrations",
     provider: {
       getMigrations() {
         return Promise.resolve(migrations);

@@ -5,6 +5,7 @@ import type { Kysely } from "kysely";
 import { fromJson, toJson, toVec } from "~/db/utils.js";
 import type { Database } from "~/db/schema.js";
 import { TraceCollector } from "~/chat/traceCollector.js";
+import { historyToMessages } from "~/chat/compactChat.js";
 import { loadConfig, type LoadedConfig } from "~~/test/test-utils/config";
 import { libLog, libLogger } from "~~/test/test-utils/logger";
 
@@ -260,10 +261,10 @@ describe("getMessages", () => {
     const result = await models.getMessages("u-1", conversationId);
     const [row] = result.data ?? [];
 
-    // The columns are `jsonb` on postgres and `text` on sqlite, so the reader
-    // is `fromJson` — this is the assertion that keeps both branches honest.
-    expect(fromJson(row.toolsUsed)).toEqual(["search", "read"]);
-    expect(fromJson(row.trace)).toEqual(trace);
+    // `getMessages` parses JSON columns on both postgres (`jsonb`) and sqlite
+    // (`text`), so callers receive structured values without manual parsing.
+    expect(row.toolsUsed).toEqual(["search", "read"]);
+    expect(row.trace).toEqual(trace);
   });
 });
 
@@ -358,6 +359,66 @@ describe("loadConversationHistory", () => {
     const messages = (result.data as { conversation: { message: string }[] })
       .conversation;
     expect(messages.map((message) => message.message)).toEqual(["keep me"]);
+  });
+
+  it("parses stored trace JSON so historyToMessages expands recorded tool steps on sqlite", async () => {
+    const { db, models } = harness;
+    const conversationId = await insertConversation(db);
+    const trace = {
+      steps: [
+        {
+          id: "call-1",
+          name: "searchDb",
+          args: { query: "pricing" },
+          result: "Plan A is $10",
+        },
+      ],
+    };
+    await insertMessage(db, {
+      conversationId,
+      role: "assistant",
+      content: "Plan A costs $10.",
+      trace,
+    });
+
+    const result = await models.loadConversationHistory(
+      "u-1",
+      conversationId,
+      "follow-up",
+    );
+
+    expect(result.ok).toBe(true);
+    const [assistant] = (
+      result.data as {
+        conversation: import("~/types/Compaction.js").HistoryMessage[];
+      }
+    ).conversation;
+    expect(assistant.trace).toEqual(trace);
+    expect(historyToMessages(assistant)).toEqual([
+      {
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "call-1",
+            type: "function",
+            function: {
+              name: "searchDb",
+              arguments: JSON.stringify({ query: "pricing" }),
+            },
+          },
+        ],
+      },
+      {
+        role: "tool",
+        tool_call_id: "call-1",
+        content: "Plan A is $10",
+      },
+      {
+        role: "assistant",
+        content: "Plan A costs $10.",
+      },
+    ]);
   });
 
   it("refuses a conversation owned by somebody else", async () => {

@@ -22,14 +22,12 @@ vi.mock("../resumerRegistry.js", () => ({
 vi.mock("../../models/runs.js", () => ({ getRunById: h.getRunById }));
 vi.mock("../../models/runLease.js", () => ({
   reopenRunForRetry: h.reopenRunForRetry,
-  // `runRecovery` reads the lease duration to size its sweep interval, and
-  // `retryRun` imports the attempt cap from there, so the constant has to exist
-  // on the mock even though this suite never uses it.
-  LEASE_TTL_MS: 60_000,
+  getLeaseTtlMs: () => 60_000,
 }));
 
 const { retryRun } = await import("../retryRun.js");
-const { MAX_RESUME_ATTEMPTS } = await import("../runRecovery.js");
+const { getMaxResumeAttempts } = await import("../runRecovery.js");
+const MAX_RESUME_ATTEMPTS = getMaxResumeAttempts();
 
 function row(overrides: Partial<StoredRun> = {}): StoredRun {
   return {
@@ -102,7 +100,7 @@ describe("retryRun", () => {
   it("passes undefined for a run with no stored name", async () => {
     h.getRunById.mockResolvedValue(row({ kind: "chat", input: {} }));
     await retryRun("run-1");
-    expect(h.findRunResumer).toHaveBeenCalledWith("research", undefined);
+    expect(h.findRunResumer).toHaveBeenCalledWith("chat", undefined);
   });
 
   it("refuses a run that is still running, in this process or elsewhere", async () => {

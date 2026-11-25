@@ -38,6 +38,7 @@ export async function fetchRelevantChunks(
   limit = 10,
   offset = 0,
   similarityThreshold = 0.1,
+  userId?: string,
 ): Promise<RelevantChunk[]> {
   const { dimensions } = getConfiguration().embeddingConfig;
 
@@ -58,7 +59,7 @@ export async function fetchRelevantChunks(
   const distance = getDistance(queryVector);
   const similarity = sql<number>`1 - (${distance})`;
 
-  return getDb()
+  let query = getDb()
     .selectFrom("document_chunks as c")
     .innerJoin("documents as d", "d.id", "c.document_id")
     .select([
@@ -71,7 +72,13 @@ export async function fetchRelevantChunks(
     ])
     .select(similarity.as("similarity"))
     .where(sql<boolean>`1 - (${distance}) > ${similarityThreshold}`)
-    .where("c.embedding", "is not", null)
+    .where("c.embedding", "is not", null);
+
+  if (userId) {
+    query = query.where("d.user_id", "=", userId);
+  }
+
+  return query
     .orderBy(distance, "asc")
     .limit(limit)
     .offset(offset)

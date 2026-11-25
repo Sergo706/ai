@@ -357,7 +357,7 @@ describe("memory backend branches", () => {
   it("trims the oldest entries past the stream cap", async () => {
     const mem = await bootMemory();
     env = { ...mem, redis: undefined as never };
-    const cap = mem.shared.MAX_STREAM_LEN;
+    const cap = mem.shared.getMaxStreamLen();
 
     // One past the cap, so exactly one entry must fall off the front.
     for (let i = 0; i <= cap; i += 1) {
@@ -410,7 +410,7 @@ describe("memory backend branches", () => {
     const page = await mem.store.waitForNext(RUN, "1000-0");
     expect(page).toBeNull();
     expect(Date.now() - started).toBeGreaterThanOrEqual(
-      Math.max(1_000, mem.shared.BLOCK_MS) - 100,
+      Math.max(1_000, mem.shared.getBlockMs()) - 100,
     );
   }, 20_000);
 

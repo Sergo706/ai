@@ -27,23 +27,32 @@ export async function checkChatSemanticCache(
   queryEmbedding: number[],
   similarityThreshold: number,
   CHAT_CACHE_WINDOW_HOURS = 24,
-  poisonTools: string[]
+  poisonTools: string[] = [],
+  userId?: string,
 ): Promise<CacheHit> {
   const db = getDb();
   const distance = getDistance(queryEmbedding);
   const similarityScore = sql<number>`1 - (${distance})`;
 
   const withinWindow = isPg()
-    ? sql<boolean>`created_at >= CURRENT_TIMESTAMP - (${sql.lit(CHAT_CACHE_WINDOW_HOURS)} * INTERVAL '1 hour')`
-    : sql<boolean>`created_at >= datetime('now', '-' || ${sql.lit(CHAT_CACHE_WINDOW_HOURS)} || ' hours')`;
+    ? sql<boolean>`m.created_at >= CURRENT_TIMESTAMP - (${sql.lit(CHAT_CACHE_WINDOW_HOURS)} * INTERVAL '1 hour')`
+    : sql<boolean>`m.created_at >= datetime('now', '-' || ${sql.lit(CHAT_CACHE_WINDOW_HOURS)} || ' hours')`;
 
-  const matchedUserMsg = await db
-    .selectFrom("messages")
-    .select(["id", "conversation_id as conversationId"])
+  const baseQuery = db
+    .selectFrom("messages as m")
+    .select(["m.id", "m.conversation_id as conversationId"])
     .select(similarityScore.as("similarity"))
-    .where("role", "=", "user")
-    .where("embedding", "is not", null)
-    .where(withinWindow)
+    .where("m.role", "=", "user")
+    .where("m.embedding", "is not", null)
+    .where(withinWindow);
+
+  const matchedUserMsg = await (
+    userId !== undefined
+      ? baseQuery
+          .innerJoin("conversations as c", "c.id", "m.conversation_id")
+          .where("c.user_id", "=", userId)
+      : baseQuery
+  )
     .orderBy(distance, "asc")
     .limit(1)
     .executeTakeFirst();

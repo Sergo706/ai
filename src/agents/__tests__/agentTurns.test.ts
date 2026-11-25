@@ -21,6 +21,7 @@ type Finish = typeof import("../finish.js");
 type Frames = typeof import("../frames.js");
 type Types = typeof import("../types.js");
 type Trace = typeof import("../../chat/traceCollector.js");
+type Errors = typeof import("../../tools/execution/errors.js");
 
 interface Harness {
   jsonTurn: JsonTurn;
@@ -29,6 +30,7 @@ interface Harness {
   frames: Frames;
   types: Types;
   TraceCollector: Trace["TraceCollector"];
+  RequestAbortedError: Errors["RequestAbortedError"];
   db: ReturnType<typeof import("../../config/config.js").getDb>;
   cleanup: () => Promise<void>;
 }
@@ -43,6 +45,8 @@ async function boot(): Promise<Harness> {
     types: (await import("../types.js")),
     TraceCollector: (await import("../../chat/traceCollector.js"))
       .TraceCollector,
+    RequestAbortedError: (await import("../../tools/execution/errors.js"))
+      .RequestAbortedError,
     db: env.mod.getDb(),
     cleanup: env.cleanup,
   };
@@ -334,6 +338,66 @@ describe("runJsonTurn", () => {
           conversationId: 1,
         }),
       ).rejects.toThrow("upstream 500");
+    } finally {
+      await env.cleanup();
+    }
+  });
+
+  it("stops the heartbeat and marks the run failed when the provider throws", async () => {
+    const env = await boot();
+    try {
+      const llm = createFakeLlm(chatCompletion("unused"));
+      llm.failNext(new Error("upstream 500"));
+      const finish = vi.fn(() => Promise.resolve({} as never));
+      const stopHeartbeat = vi.fn();
+
+      await expect(
+        env.jsonTurn.runJsonTurn({
+          loopOptions: loopOptions(llm),
+          client: llm.client as never,
+          chat: { temperature: 0.2, maxTokens: 100 },
+          model: "test-model",
+          messages: [{ role: "user", content: "hi" }],
+          json: { schema },
+          trace: new env.TraceCollector(),
+          finish,
+          stopHeartbeat,
+          conversationId: 1,
+        }),
+      ).rejects.toThrow("upstream 500");
+
+      expect(stopHeartbeat).toHaveBeenCalledTimes(1);
+      expect(finish).toHaveBeenCalledWith("failed", { error: "upstream 500" });
+    } finally {
+      await env.cleanup();
+    }
+  });
+
+  it("stops the heartbeat and marks the run aborted on RequestAbortedError", async () => {
+    const env = await boot();
+    try {
+      const llm = createFakeLlm(chatCompletion("unused"));
+      llm.failNext(new env.RequestAbortedError());
+      const finish = vi.fn(() => Promise.resolve({} as never));
+      const stopHeartbeat = vi.fn();
+
+      await expect(
+        env.jsonTurn.runJsonTurn({
+          loopOptions: loopOptions(llm),
+          client: llm.client as never,
+          chat: { temperature: 0.2, maxTokens: 100 },
+          model: "test-model",
+          messages: [{ role: "user", content: "hi" }],
+          json: { schema },
+          trace: new env.TraceCollector(),
+          finish,
+          stopHeartbeat,
+          conversationId: 1,
+        }),
+      ).rejects.toBeInstanceOf(env.RequestAbortedError);
+
+      expect(stopHeartbeat).toHaveBeenCalledTimes(1);
+      expect(finish).toHaveBeenCalledWith("aborted", {});
     } finally {
       await env.cleanup();
     }

@@ -47,9 +47,11 @@ function stubOpenAi(create: (...args: never[]) => Promise<unknown>): OpenAI {
  * to whichever config module was live when the file was evaluated and would
  * then dial the real network.
  */
+const DEFAULT_TEST_MODEL = "gpt-4o-mini";
+
 async function boot(
   llm: ReturnType<typeof createFakeLlm>,
-  extractor: Record<string, unknown> = {},
+  extractor: Record<string, unknown> = { llmModel: DEFAULT_TEST_MODEL },
 ): Promise<Harness> {
   const env = await loadConfig({
     overrides: {
@@ -149,7 +151,7 @@ describe("summarizeWithLlm", () => {
         summary: body,
         length: "medium",
         passthrough: true,
-        model: "deepseek-flash",
+        model: DEFAULT_TEST_MODEL,
       });
       expect(llm.calls).toHaveLength(0);
       // The passthrough is logged so an operator can see why no tokens were
@@ -171,9 +173,42 @@ describe("summarizeWithLlm", () => {
         summary: "A condensed summary.",
         length: "medium",
         passthrough: false,
-        model: "deepseek-flash",
+        model: DEFAULT_TEST_MODEL,
       });
       expect(llm.calls).toHaveLength(1);
+    } finally {
+      await env.cleanup();
+    }
+  });
+
+  it("throws a clear error when neither config.extractor.llmModel nor options.model is configured", async () => {
+    const llm = createFakeLlm(chatCompletion("unused"));
+    const env = await boot(llm, {});
+
+    try {
+      await expect(
+        env.summarizeWithLlm(extraction(), log.logger),
+      ).rejects.toThrow(
+        "LLM summarization requires config.extractor.llmModel or options.model to be configured.",
+      );
+      expect(llm.calls).toHaveLength(0);
+    } finally {
+      await env.cleanup();
+    }
+  });
+
+  it("accepts a per-call model override even when config.extractor.llmModel is unset", async () => {
+    const llm = createFakeLlm(chatCompletion("Per-call summary."));
+    const env = await boot(llm, {});
+
+    try {
+      const result = await env.summarizeWithLlm(extraction(), log.logger, {
+        model: "claude-sonnet-4",
+      });
+
+      expect(result.model).toBe("claude-sonnet-4");
+      expect(result.summary).toBe("Per-call summary.");
+      expect(llm.calls[0]?.model).toBe("claude-sonnet-4");
     } finally {
       await env.cleanup();
     }
@@ -183,7 +218,10 @@ describe("summarizeWithLlm", () => {
     const llm = createFakeLlm(chatCompletion("condensed"));
     // A threshold above the body length forces the passthrough branch without
     // the caller passing an option.
-    const env = await boot(llm, { llmMinCharacters: 20_000 });
+    const env = await boot(llm, {
+      llmModel: DEFAULT_TEST_MODEL,
+      llmMinCharacters: 20_000,
+    });
 
     try {
       const result = await env.summarizeWithLlm(extraction(), log.logger);
@@ -197,7 +235,10 @@ describe("summarizeWithLlm", () => {
 
   it("lets a per-call threshold win over the configured one", async () => {
     const llm = createFakeLlm(chatCompletion("condensed"));
-    const env = await boot(llm, { llmMinCharacters: 20_000 });
+    const env = await boot(llm, {
+      llmModel: DEFAULT_TEST_MODEL,
+      llmMinCharacters: 20_000,
+    });
 
     try {
       const result = await env.summarizeWithLlm(extraction(), log.logger, {
@@ -229,7 +270,7 @@ describe("summarizeWithLlm", () => {
         throw new Error("both calls must carry a token budget");
       }
       expect(shortCall.stream).toBe(false);
-      expect(shortCall.model).toBe("deepseek-flash");
+      expect(shortCall.model).toBe(DEFAULT_TEST_MODEL);
       expect(shortCall.temperature).toBe(0.2);
       expect(shortCall.max_tokens).toBeGreaterThan(0);
       expect(longCall.max_tokens).toBeGreaterThan(shortCall.max_tokens);

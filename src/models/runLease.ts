@@ -14,26 +14,28 @@ export type KindOf = RunKind;
  * Read once at module load, so changing it means restarting the process.
  * Set `RUNS_LEASE_TTL_MS` to override; defaults to `config.runs.leaseTtlMs`.
  */
-export const LEASE_TTL_MS = envInt(
-  "RUNS_LEASE_TTL_MS",
-  getConfiguration().runs.leaseTtlMs,
-  { min: 5_000 },
-);
+export function getLeaseTtlMs(): number {
+  return envInt("RUNS_LEASE_TTL_MS", getConfiguration().runs.leaseTtlMs, {
+    min: 5_000,
+  });
+}
 
 /**
  * How often a live run refreshes its claim, in milliseconds.
  *
- * Clamped to half of {@link LEASE_TTL_MS}, so a misconfigured interval cannot
+ * Clamped to half of {@link getLeaseTtlMs}, so a misconfigured interval cannot
  * outlive the lease. Set `RUNS_HEARTBEAT_INTERVAL_MS` to override.
  */
-export const HEARTBEAT_INTERVAL_MS = Math.min(
-  envInt(
-    "RUNS_HEARTBEAT_INTERVAL_MS",
-    getConfiguration().runs.heartbeatIntervalMs,
-    { min: 1_000 },
-  ),
-  Math.floor(LEASE_TTL_MS / 2),
-);
+export function getHeartbeatIntervalMs(): number {
+  return Math.min(
+    envInt(
+      "RUNS_HEARTBEAT_INTERVAL_MS",
+      getConfiguration().runs.heartbeatIntervalMs,
+      { min: 1_000 },
+    ),
+    Math.floor(getLeaseTtlMs() / 2),
+  );
+}
 
 /**
  * Identifies this process as a lease owner.
@@ -59,7 +61,7 @@ function detectHostname(): string {
  * sweep can never disagree about what "abandoned" means for the same row.
  */
 function staleCutoff(): string {
-  return new Date(Date.now() - LEASE_TTL_MS).toISOString();
+  return new Date(Date.now() - getLeaseTtlMs()).toISOString();
 }
 
 /**
@@ -167,7 +169,7 @@ export type LeaseState = "alive" | "aborted" | "terminated" | "lost" | "gone";
  *
  * This is also how a stop request reaches a run on another replica: the row is
  * set to `aborted`, and the owner notices on its next beat, so a stop takes at
- * most {@link HEARTBEAT_INTERVAL_MS}.
+ * most {@link getHeartbeatIntervalMs}.
  *
  * @param runId - The run being worked on.
  * @returns `alive` to continue; any other value means stop and do not write.
@@ -238,8 +240,9 @@ export async function requestAbort(runId: string): Promise<boolean> {
 /**
  * Record a successful finish.
  *
- * Will not overwrite a run that was cancelled meanwhile, so a late stop request
- * is never reported as success.
+ * Will not overwrite a run that was cancelled meanwhile or taken over by
+ * another replica, so a late stop request is never reported as success and a
+ * fenced zombie cannot clobber the new owner's row.
  *
  * @param args - The run id, its stop reason, and any partial output to keep.
  * @returns `true` when the finish was recorded.
@@ -259,6 +262,7 @@ export async function finishRun(args: {
     })
     .where("id", "=", args.runId)
     .where("status", "=", "running")
+    .where("owner", "=", INSTANCE_ID)
     .returning("id")
     .executeTakeFirst();
   return updated !== undefined;
@@ -325,7 +329,7 @@ export function startLeaseHeartbeat(
       .catch((err: unknown) => {
         log.warn({ err, runId }, "[runs] Heartbeat failed");
       });
-  }, HEARTBEAT_INTERVAL_MS);
+  }, getHeartbeatIntervalMs());
   timer.unref();
   return () => {
     clearInterval(timer);

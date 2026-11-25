@@ -9,39 +9,41 @@ const eventConfig = () => getConfiguration().runs.eventStore;
  *
  * @default config.runs.eventStore.maxStreamLen
  */
-export const MAX_STREAM_LEN = envInt(
-  "RUNS_STREAM_MAX_LEN",
-  eventConfig().maxStreamLen,
-  { min: 100 },
-);
+export function getMaxStreamLen(): number {
+  return envInt("RUNS_STREAM_MAX_LEN", eventConfig().maxStreamLen, {
+    min: 100,
+  });
+}
 
 /**
  * How long a finished stream survives, so a late reader can still replay it.
  *
  * @default config.runs.eventStore.ttlSeconds
  */
-export const STREAM_TTL_SECONDS = envInt(
-  "RUNS_STREAM_TTL_SECONDS",
-  eventConfig().ttlSeconds,
-  { min: 60 },
-);
+export function getStreamTtlSeconds(): number {
+  return envInt("RUNS_STREAM_TTL_SECONDS", eventConfig().ttlSeconds, {
+    min: 60,
+  });
+}
 
 /**
  * How long one blocking read waits before the caller re-checks for closure.
  *
  * Clamped to half the stream TTL so a parked read cannot outlive the key.
  */
-export const BLOCK_MS = Math.min(
-  envInt("RUNS_STREAM_BLOCK_MS", eventConfig().blockMs, { min: 1_000 }),
-  Math.max(1_000, Math.floor((STREAM_TTL_SECONDS * 1_000) / 2)),
-);
+export function getBlockMs(): number {
+  return Math.min(
+    envInt("RUNS_STREAM_BLOCK_MS", eventConfig().blockMs, { min: 1_000 }),
+    Math.max(1_000, Math.floor((getStreamTtlSeconds() * 1_000) / 2)),
+  );
+}
 
 /** Page size when replaying a stream that already holds thousands of entries. */
-export const REPLAY_BATCH = envInt(
-  "RUNS_STREAM_REPLAY_BATCH",
-  eventConfig().replayBatch,
-  { min: 1 },
-);
+export function getReplayBatch(): number {
+  return envInt("RUNS_STREAM_REPLAY_BATCH", eventConfig().replayBatch, {
+    min: 1,
+  });
+}
 
 /** A fresh cursor. Redis stream ids are `<ms>-<seq>`; `0-0` is the beginning. */
 export const FIRST_ID = "0-0";

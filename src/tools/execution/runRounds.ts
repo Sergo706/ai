@@ -149,12 +149,12 @@ export async function runToolRounds(
       );
     });
 
-    const buckets = new Map<number, number[]>();
+    const buckets = new Map<string, { width: number; indexes: number[] }>();
     executable.forEach((call, index) => {
       const width = normalizeConcurrency(toolConcurrency?.[call.name]);
-      const bucket = buckets.get(width);
-      if (bucket) bucket.push(index);
-      else buckets.set(width, [index]);
+      const bucket = buckets.get(call.name);
+      if (bucket) bucket.indexes.push(index);
+      else buckets.set(call.name, { width, indexes: [index] });
     });
 
     // Ordinals are computed before execution so parallel calls still get stable
@@ -187,7 +187,7 @@ export async function runToolRounds(
     });
 
     await Promise.all(
-      [...buckets].map(([width, indexes]) =>
+      [...buckets.values()].map(({ width, indexes }) =>
         chunkProcess(indexes, width, async (batch) => {
           await Promise.all(
             batch.map(async (index) => {

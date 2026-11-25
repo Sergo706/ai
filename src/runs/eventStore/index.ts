@@ -7,13 +7,13 @@ export { touchStream } from "./touchStream";
 export { waitForNext } from "./waitForNext";
 
 export {
-  BLOCK_MS,
   FIRST_ID,
-  MAX_STREAM_LEN,
-  REPLAY_BATCH,
-  STREAM_TTL_SECONDS,
   compareIds,
   firstIndexAfter,
+  getBlockMs,
+  getMaxStreamLen,
+  getReplayBatch,
+  getStreamTtlSeconds,
   nextId,
   streamKey,
   type EventPage,

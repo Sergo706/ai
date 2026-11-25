@@ -30,10 +30,10 @@ let db: Db;
 let fake: ReturnType<typeof embeddingFake>;
 
 /** Creates an empty conversation the cache may write a replay into. */
-async function newConversation(): Promise<number> {
+async function newConversation(userId = "u-cache"): Promise<number> {
   const row = await db
     .insertInto("conversations")
-    .values({ user_id: "u-cache", title: "cache" })
+    .values({ user_id: userId, title: "cache" })
     .returning("id")
     .executeTakeFirstOrThrow();
   return row.id;
@@ -377,5 +377,43 @@ describe("cachedTurn", () => {
         managed: false,
       }),
     ).not.toBeNull();
+  });
+
+  it("isolates cached replies per userId when userId is provided", async () => {
+    const aliceConv = await newConversation("alice");
+    const bobConv = await newConversation("bob");
+    const aliceNext = await newConversation("alice");
+    const message = "my private notes";
+    await seedExchange({
+      conversationId: aliceConv,
+      question: message,
+      answer: "Alice private answer",
+    });
+
+    // Bob must miss Alice's cached turn when userId is supplied.
+    expect(
+      await cachedTurn({
+        options: {},
+        conversationId: bobConv,
+        userId: "bob",
+        hasFiles: false,
+        message,
+        log: libLogger,
+        managed: false,
+      }),
+    ).toBeNull();
+
+    // Alice hits her own cached turn.
+    const hit = await cachedTurn({
+      options: {},
+      conversationId: aliceNext,
+      userId: "alice",
+      hasFiles: false,
+      message,
+      log: libLogger,
+      managed: false,
+    });
+    if (hit === null) throw new Error("expected alice to hit her own cache");
+    expect((await hit.done).text).toBe("Alice private answer");
   });
 });

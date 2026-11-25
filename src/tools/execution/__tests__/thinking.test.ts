@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { thinkingParams } from "../thinking.js";
 
 describe("thinkingParams", () => {
@@ -6,11 +7,10 @@ describe("thinkingParams", () => {
     expect(thinkingParams(undefined)).toEqual({});
   });
 
-  it("forwards the effort verbatim alongside the DeepSeek thinking flag", () => {
-    expect(thinkingParams("high")).toEqual({
-      reasoning_effort: "high",
-      thinking: { type: "enabled" },
-    });
+  it("forwards reasoning_effort without provider-specific fields", () => {
+    const params = thinkingParams("high");
+    expect(params).toEqual({ reasoning_effort: "high" });
+    expect("thinking" in params).toBe(false);
   });
 
   it("keeps low, medium, high and max distinct", () => {
@@ -19,11 +19,5 @@ describe("thinkingParams", () => {
       (effort) => thinkingParams(effort).reasoning_effort,
     );
     expect(sent).toEqual(["low", "medium", "high", "max"]);
-  });
-
-  it("always enables thinking when an effort is present", () => {
-    for (const effort of ["low", "max"] as const) {
-      expect(thinkingParams(effort).thinking).toEqual({ type: "enabled" });
-    }
   });
 });

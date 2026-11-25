@@ -375,6 +375,37 @@ describe("searchDb tool", () => {
       message: "Database search failed or returned an invalid response.",
     });
   });
+
+  it("scopes searchDb results to userId when provided and searches all documents when omitted", async () => {
+    const { db, tools } = harness;
+    const query = "quarterly numbers";
+    const vector = embeddingVector(query, DIMENSIONS);
+    await seedDocument(db, {
+      title: "u1 doc",
+      userId: "u-1",
+      chunks: [{ index: 0, text: "u1 revenue", embedding: vector }],
+    });
+    await seedDocument(db, {
+      title: "u2 doc",
+      userId: "u-2",
+      chunks: [{ index: 0, text: "u2 revenue", embedding: vector }],
+    });
+
+    const scoped = (await tools.searchDb("u-1")(
+      { query, limit: 5, offset: 0, similarity: 0.5 },
+      ctx,
+    )) as { results: { content: string }[] };
+    expect(scoped.results.map((r) => r.content)).toEqual(["u1 revenue"]);
+
+    const unscoped = (await tools.searchDb()(
+      { query, limit: 5, offset: 0, similarity: 0.5 },
+      ctx,
+    )) as { results: { content: string }[] };
+    expect(unscoped.results.map((r) => r.content).sort()).toEqual([
+      "u1 revenue",
+      "u2 revenue",
+    ]);
+  });
 });
 
 describe("getDocument tool", () => {

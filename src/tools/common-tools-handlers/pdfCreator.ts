@@ -21,11 +21,12 @@ const AGENT_GENERATED_FILE_TTL = envInt("AGENT_GENERATED_FILE_TTL", 86_400, {
  * @returns A handler that takes the PDF options and returns a URL to the file.
  * Requires a Redis store; returns `TOOL_DISABLED` with the memory store.
  */
-export function pdfCreator(): ToolHandler {
+export function pdfCreator(downloadPath = "/api/files"): ToolHandler {
   const config = getConfiguration();
   const log = config.logger;
   const store = getStorage();
   const isMemoryStore = store instanceof MiniCache;
+  const basePath = downloadPath.replace(/\/+$/, "");
 
   return async (args) => {
     log.debug({ args }, "agent ran tool pdfCreator");
@@ -56,7 +57,7 @@ export function pdfCreator(): ToolHandler {
           success: true,
           message: "PDF created successfully.",
           filename: existing.filename,
-          downloadUrl: `/api/files/${fileId}`,
+          downloadUrl: `${basePath}/${fileId}`,
           sizeBytes:
             existing.sizeBytes ??
             Buffer.byteLength(existing.base64Data, "base64"),
@@ -81,7 +82,7 @@ export function pdfCreator(): ToolHandler {
         success: true,
         message: "PDF created successfully.",
         filename,
-        downloadUrl: `/api/files/${fileId}`,
+        downloadUrl: `${basePath}/${fileId}`,
         sizeBytes: result.buffer.length,
       };
     } catch (err) {

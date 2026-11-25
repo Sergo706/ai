@@ -425,6 +425,57 @@ describe("vector search on pgvector", () => {
     expect(results.map((row) => row.chunkText)).toEqual(["has vector"]);
   });
 
+  it("filters chunks by userId on postgres when provided and returns all users when omitted", async () => {
+    const { db, models, utils } = harness;
+    const query = embeddingVector("pg multi tenant query", DIMENSIONS);
+    const d1 = await db
+      .insertInto("documents")
+      .values({
+        title: "u1-doc",
+        raw_content: "body",
+        content_hash: "hash-pg-u1",
+        user_id: "u-1",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    const d2 = await db
+      .insertInto("documents")
+      .values({
+        title: "u2-doc",
+        raw_content: "body",
+        content_hash: "hash-pg-u2",
+        user_id: "u-2",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    await db
+      .insertInto("document_chunks")
+      .values([
+        {
+          document_id: d1.id,
+          chunk_index: 0,
+          chunk_text: "u1 pg chunk",
+          embedding: utils.toVec(query),
+        },
+        {
+          document_id: d2.id,
+          chunk_index: 0,
+          chunk_text: "u2 pg chunk",
+          embedding: utils.toVec(query),
+        },
+      ])
+      .execute();
+
+    const u1Only = await models.fetchRelevantChunks(query, 10, 0, 0.5, "u-1");
+    expect(u1Only.map((row) => row.chunkText)).toEqual(["u1 pg chunk"]);
+
+    const all = await models.fetchRelevantChunks(query, 10, 0, 0.5);
+    expect(all.map((row) => row.chunkText).sort()).toEqual([
+      "u1 pg chunk",
+      "u2 pg chunk",
+    ]);
+  });
+
   it("searches through the tool-facing wrapper", async () => {
     const { db, models, utils } = harness;
     const query = embeddingVector("a searchable line", DIMENSIONS);
@@ -531,6 +582,44 @@ describe("semantic cache on postgres", () => {
         "web-search",
       ]),
     ).toEqual({ hit: false });
+  });
+
+  it("scopes semantic cache hits by userId on postgres and stays unscoped when omitted", async () => {
+    const { db, models } = harness;
+    const question = "pg user-scoped secret";
+    const vector = embeddingVector(question, DIMENSIONS);
+    const aliceConv = await seedConversation(db, "alice");
+    await models.saveUserMessage(aliceConv, question, vector);
+    await models.saveAssistantMessage({
+      conversationId: aliceConv,
+      content: "alice pg answer",
+      toolsUsed: [],
+      trace: null,
+    });
+
+    expect(
+      await models.chatSemanticCache.checkChatSemanticCache(
+        vector,
+        0.9,
+        24,
+        [],
+        "bob",
+      ),
+    ).toEqual({ hit: false });
+
+    expect(
+      await models.chatSemanticCache.checkChatSemanticCache(
+        vector,
+        0.9,
+        24,
+        [],
+        "alice",
+      ),
+    ).toMatchObject({ hit: true, content: "alice pg answer" });
+
+    expect(
+      await models.chatSemanticCache.checkChatSemanticCache(vector, 0.9, 24, []),
+    ).toMatchObject({ hit: true, content: "alice pg answer" });
   });
 });
 

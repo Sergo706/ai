@@ -12,7 +12,7 @@ import { getConfiguration } from "../../config/config";
  * @returns A handler that takes a search query and returns matching chunks with
  * their similarity score.
  */
-export function searchDb(): ToolHandler {
+export function searchDb(userId?: string): ToolHandler {
   const log = getConfiguration().logger;
   return async (args) => {
     log.debug({ args }, "agent ran tool searchDb");
@@ -25,7 +25,7 @@ export function searchDb(): ToolHandler {
     const query = parse.data;
 
     try {
-      const res = await searchDbDocs(query);
+      const res = await searchDbDocs(query, userId);
 
       if ("ok" in res && !res.ok) return { results: [] };
 

@@ -1,10 +1,10 @@
 import { MiniCache } from "@riavzon/utils";
 import type { StoredEvent } from "../../types/Chat";
 import {
-  BLOCK_MS,
   FIRST_ID,
-  MAX_STREAM_LEN,
-  STREAM_TTL_SECONDS,
+  getBlockMs,
+  getMaxStreamLen,
+  getStreamTtlSeconds,
   type EventPage,
 } from "./shared";
 
@@ -68,13 +68,14 @@ export function appendMemory(
   log.ids.push(id);
   log.events.push(event);
 
-  if (log.events.length > MAX_STREAM_LEN) {
-    const excess = log.events.length - MAX_STREAM_LEN;
+  const maxStreamLen = getMaxStreamLen();
+  if (log.events.length > maxStreamLen) {
+    const excess = log.events.length - maxStreamLen;
     log.ids.splice(0, excess);
     log.events.splice(0, excess);
   }
 
-  memoryLogs.set(runId, log, STREAM_TTL_SECONDS * 1_000);
+  memoryLogs.set(runId, log, getStreamTtlSeconds() * 1_000);
   notifyMemory(runId);
 }
 
@@ -140,7 +141,7 @@ export async function waitForMemoryNext(
     const timer = setTimeout(() => {
       set.delete(wake);
       resolve(false);
-    }, BLOCK_MS);
+    }, getBlockMs());
 
     set.add(wake);
     waiters.set(runId, set);
@@ -158,7 +159,7 @@ export async function waitForMemoryNext(
  */
 export function touchMemory(runId: string): void {
   const log = readMemory(runId);
-  if (log) memoryLogs.set(runId, log, STREAM_TTL_SECONDS * 1_000);
+  if (log) memoryLogs.set(runId, log, getStreamTtlSeconds() * 1_000);
 }
 
 /**

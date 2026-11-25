@@ -11,6 +11,8 @@ export interface McpToolFixture {
   inputSchema?: Record<string, unknown>;
   /** Returned as the text content of the tool result when called. */
   result?: string;
+  /** Raw MCP content blocks to return instead of a single text block. */
+  content?: readonly Record<string, unknown>[];
   /** Returned as `structuredContent` when called. */
   structured?: unknown;
   /** Sets `isError` on the result. */
@@ -200,7 +202,7 @@ export async function startMcpServer(
             jsonrpc: "2.0",
             id: request.id,
             result: {
-              content: [{ type: "text", text: tool?.result ?? "" }],
+              content: tool?.content ?? [{ type: "text", text: tool?.result ?? "" }],
               ...(tool?.structured === undefined
                 ? {}
                 : { structuredContent: tool.structured }),

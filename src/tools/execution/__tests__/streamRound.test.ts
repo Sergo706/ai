@@ -234,6 +234,7 @@ describe("streamRound", () => {
     );
     const body = create.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(body.reasoning_effort).toBe("high");
+    expect("thinking" in body).toBe(false);
   });
 
   it("passes the abort signal to the provider", async () => {

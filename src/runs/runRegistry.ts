@@ -1,16 +1,15 @@
 import type { PumpRunArgs, RunHandle, RunHandleInit, TerminalStatus } from "./types";
 import {
   appendEvent,
-  MAX_STREAM_LEN,
+  getMaxStreamLen,
+  getStreamTtlSeconds,
   nextId,
-  STREAM_TTL_SECONDS,
 } from "./eventStore";
 import { StoredEvent } from "../types/Chat";
 import { envInt } from "@riavzon/utils/server";
 import { getConfiguration } from "../config/config";
 
 const runs = new Map<string, RunHandle>();
-const MAX_EVENTS = MAX_STREAM_LEN;
 
 /**
  * How long a settled run stays readable from the local handle.
@@ -18,14 +17,16 @@ const MAX_EVENTS = MAX_STREAM_LEN;
  * Clamped to the stream TTL: a local copy outliving the durable log would be
  * strictly worse than the store, and it would keep the event array alive.
  */
-const RETAIN_FINISHED_MS = Math.min(
-  envInt(
-    "RUNS_RETAIN_FINISHED_MS",
-    getConfiguration().runs.registry.retainFinishedMs,
-    { min: 0 },
-  ),
-  STREAM_TTL_SECONDS * 1_000,
-);
+function getRetainFinishedMs(): number {
+  return Math.min(
+    envInt(
+      "RUNS_RETAIN_FINISHED_MS",
+      getConfiguration().runs.registry.retainFinishedMs,
+      { min: 0 },
+    ),
+    getStreamTtlSeconds() * 1_000,
+  );
+}
 
 /**
  * A per-run serial queue for Redis appends.
@@ -121,8 +122,9 @@ export function publish(run: RunHandle, event: StoredEvent): void {
   run.lastMintedId = id;
   run.eventIds.push(id);
   run.events.push(event);
-  if (run.events.length > MAX_EVENTS) {
-    const excess = run.events.length - MAX_EVENTS;
+  const maxEvents = getMaxStreamLen();
+  if (run.events.length > maxEvents) {
+    const excess = run.events.length - maxEvents;
     run.events.splice(0, excess);
     run.eventIds.splice(0, excess);
   }
@@ -144,7 +146,7 @@ export function publish(run: RunHandle, event: StoredEvent): void {
 export function scheduleDisposal(run: RunHandle): void {
   const timer = setTimeout(() => {
     forgetRun(run.id);
-  }, RETAIN_FINISHED_MS);
+  }, getRetainFinishedMs());
   timer.unref();
   run.disposal = () => {
     clearTimeout(timer);

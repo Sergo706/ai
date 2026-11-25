@@ -1,4 +1,6 @@
 import { getDb } from "../config/config";
+import type { MessageTrace } from "../db/schema";
+import { fromJson } from "../db/utils";
 
 /**
  * Read every message in a conversation, oldest first.
@@ -44,6 +46,10 @@ export async function getMessages(userId: string, conversationId: number) {
   return {
     ok: true,
     date: new Date().toISOString(),
-    data: rows,
+    data: rows.map((row) => ({
+      ...row,
+      toolsUsed: fromJson<string[]>(row.toolsUsed),
+      trace: fromJson<MessageTrace>(row.trace),
+    })),
   } as const;
 }

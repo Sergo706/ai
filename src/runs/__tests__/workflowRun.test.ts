@@ -32,6 +32,7 @@ vi.mock("../../models/runs.js", () => ({
 }));
 
 vi.mock("../../models/runLease.js", () => ({
+  INSTANCE_ID: "test-host:1:0",
   claimRun: h.claimRun,
   finishRun: h.finishRun,
   releaseRun: h.releaseRun,
@@ -144,7 +145,7 @@ describe("runWorkflow", () => {
     expect(created.conversationId).toBe(7);
   });
 
-  it("omits the name key entirely for a research run", async () => {
+  it("omits the name key entirely for a chat run", async () => {
     await runWorkflow(
       {
         ...baseOptions,
@@ -161,7 +162,7 @@ describe("runWorkflow", () => {
       input: Record<string, unknown>;
     };
 
-    expect(created.kind).toBe("research");
+    expect(created.kind).toBe("chat");
     expect(created.input).not.toHaveProperty("name");
     expect(created.input).toEqual({
       researchType: "general",
@@ -247,10 +248,12 @@ describe("runWorkflow", () => {
       status: string;
       error: string;
       finished: boolean;
+      owner: string;
     };
     expect(args.status).toBe("interrupted");
     expect(args.error).toBe("socket hang up");
     expect(args.finished).toBe(true);
+    expect(args.owner).toBe("test-host:1:0");
     expect(h.finishRun).not.toHaveBeenCalled();
   });
 

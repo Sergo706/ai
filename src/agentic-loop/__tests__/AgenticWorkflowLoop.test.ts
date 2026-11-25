@@ -637,6 +637,183 @@ describe("AgenticWorkflowLoop — checkpoints", () => {
     // reports `budget_exhausted` for a run that finished cleanly.
     expect(result.stopReason).toBe("no_new_sources");
   });
+
+  it("resumes mid-local from an onCheckpoint snapshot without re-fetching completed batches", async () => {
+    const initialLocal = localAdapter([
+      localPage("1", "2", "3"),
+      localPage("4", "5", "6"),
+    ]);
+    const initialEval = scriptedEvaluator([
+      { isSufficient: false, nextIntents: ["more"] },
+      { isSufficient: true, nextIntents: [] },
+    ]);
+    const snapshots: WorkflowCheckpoint[] = [];
+
+    await run(
+      config(
+        {
+          ...parts(),
+          local: initialLocal,
+          evaluator: initialEval,
+        },
+        {
+          externalDiscovery: undefined,
+          budgets: {
+            ...testBudgets,
+            localBatchSize: 3,
+            maxLocalRounds: 2,
+            maxEvaluatorItems: 10,
+            maxExternalRounds: 0,
+          },
+          // Clone like real persistence (JSON round-trip) so later rounds
+          // cannot mutate earlier captured snapshots in place.
+          onCheckpoint: (snapshot) => {
+            snapshots.push(
+              JSON.parse(JSON.stringify(snapshot)) as WorkflowCheckpoint,
+            );
+          },
+        },
+      ),
+    );
+
+    const midLocal = snapshots.find(
+      (s) => s.localSearches === 1 && !s.completedStages.includes("local"),
+    );
+    expect(midLocal).toEqual(
+      expect.objectContaining({
+        completedStages: ["seeds"],
+        localSearches: 1,
+        externalRounds: 0,
+      }),
+    );
+
+    const resumedLocal = localAdapter([
+      localPage("1", "2", "3"),
+      localPage("4", "5", "6"),
+    ]);
+    const resumedEval = scriptedEvaluator([
+      { isSufficient: true, nextIntents: [] },
+    ]);
+    const resumedSynthesize = vi.fn(async () => "resumed local report");
+
+    const resumed = await run(
+      config(
+        {
+          ...parts(),
+          local: resumedLocal,
+          evaluator: resumedEval,
+          synthesize: resumedSynthesize,
+        },
+        {
+          externalDiscovery: undefined,
+          budgets: {
+            ...testBudgets,
+            localBatchSize: 3,
+            maxLocalRounds: 2,
+            maxEvaluatorItems: 10,
+            maxExternalRounds: 0,
+          },
+          resumeFrom: midLocal,
+        },
+      ),
+    );
+
+    expect(resumedLocal.calls).toEqual([{ offset: 3, limit: 3 }]);
+    expect(resumed.localSearches).toBe(2);
+    expect(resumed.localItems.map((item) => item.id)).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+    ]);
+    expect(resumed.context).toContain("[1] text 1");
+    expect(resumed.context).toContain("[4] text 4");
+    expect(resumed.report).toBe("resumed local report");
+  });
+
+  it("resumes mid-external from an onCheckpoint snapshot without re-running local or redundant cold-start eval", async () => {
+    let firstCounter = 0;
+    const initialDiscovery = discoveryHarness({
+      discover: async () => {
+        firstCounter += 1;
+        return { targets: [`t${String(firstCounter)}`] };
+      },
+    });
+    const initialEval = scriptedEvaluator([
+      { isSufficient: false, nextIntents: ["find t1"] },
+      { isSufficient: false, nextIntents: ["find t2"] },
+      { isSufficient: true, nextIntents: [] },
+    ]);
+    const snapshots: WorkflowCheckpoint[] = [];
+
+    await run(
+      config(
+        {
+          ...parts(),
+          local: localAdapter([]),
+          discovery: initialDiscovery,
+          evaluator: initialEval,
+        },
+        {
+          budgets: { ...testBudgets, maxExternalRounds: 2 },
+          onCheckpoint: (snapshot) => {
+            snapshots.push(
+              JSON.parse(JSON.stringify(snapshot)) as WorkflowCheckpoint,
+            );
+          },
+        },
+      ),
+    );
+
+    const midExternal = snapshots.find(
+      (s) => s.externalRounds === 1 && !s.completedStages.includes("external"),
+    );
+    expect(midExternal).toEqual(
+      expect.objectContaining({
+        completedStages: ["seeds", "local"],
+        externalRounds: 1,
+      }),
+    );
+
+    let resumedCounter = 1;
+    const resumedLocal = localAdapter([localPage("should-not-run")]);
+    const resumedDiscovery = discoveryHarness({
+      discover: async () => {
+        resumedCounter += 1;
+        return { targets: [`t${String(resumedCounter)}`] };
+      },
+    });
+    const resumedEval = scriptedEvaluator([
+      { isSufficient: true, nextIntents: [] },
+    ]);
+    const resumedSynthesize = vi.fn(async () => "resumed external report");
+
+    const resumed = await run(
+      config(
+        {
+          ...parts(),
+          local: resumedLocal,
+          discovery: resumedDiscovery,
+          evaluator: resumedEval,
+          synthesize: resumedSynthesize,
+        },
+        {
+          budgets: { ...testBudgets, maxExternalRounds: 2 },
+          resumeFrom: midExternal,
+        },
+      ),
+    );
+
+    expect(resumedLocal.calls).toEqual([]);
+    // Only the post-round-2 evaluator runs — no extra cold-start fallback eval.
+    expect(resumedEval.calls).toBe(1);
+    expect(resumed.externalRounds).toBe(2);
+    expect(resumed.context).toContain("evidence t1");
+    expect(resumed.context).toContain("evidence t2");
+    expect(resumed.report).toBe("resumed external report");
+  });
 });
 
 describe("AgenticWorkflowLoop — cancellation", () => {

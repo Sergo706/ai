@@ -1,13 +1,12 @@
 import { ThinkingEffort } from "../../types/ToolExecutionTypes";
 
 /**
- * DeepSeek accepts `thinking` (not modelled by the OpenAI SDK) plus
- * `reasoning_effort`. Effort is forwarded verbatim; the server maps
- * medium -> high and keeps low/high/max as-is.
+ * Translate the configured effort into the standard OpenAI-compatible
+ * `reasoning_effort` field. Provider-specific flags can be supplied via `body`.
  */
 export function thinkingParams(
   effort: ThinkingEffort | undefined,
 ): Record<string, unknown> {
   if (!effort) return {};
-  return { reasoning_effort: effort, thinking: { type: "enabled" } };
+  return { reasoning_effort: effort };
 }

@@ -1,7 +1,7 @@
 import { redisStreams } from "./backend";
 import { readMemoryPage } from "./memory";
 import { readRedisPage } from "./redis";
-import { FIRST_ID, REPLAY_BATCH, type EventPage } from "./shared";
+import { FIRST_ID, getReplayBatch, type EventPage } from "./shared";
 
 /**
  * Read one bounded page of a run's log, strictly after `afterId`.
@@ -16,7 +16,7 @@ import { FIRST_ID, REPLAY_BATCH, type EventPage } from "./shared";
 export async function readPage(
   runId: string,
   afterId: string = FIRST_ID,
-  count = REPLAY_BATCH,
+  count: number = getReplayBatch(),
 ): Promise<EventPage> {
   const redis = redisStreams();
   if (!redis) return readMemoryPage(runId, afterId, count);

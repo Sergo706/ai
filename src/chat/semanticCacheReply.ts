@@ -28,6 +28,7 @@ export async function tryCachedReply(
     stream: boolean;
     similarity: number;
     cacheWindowHours: number;
+    userId?: string;
   },
   skipEvaluator?: (convId: number, message: string) => boolean,
 ): Promise<ReadableStream<Uint8Array> | null | CacheHit> {
@@ -44,6 +45,7 @@ export async function tryCachedReply(
       args.similarity,
       args.cacheWindowHours,
       skipOnTools,
+      args.userId,
     );
 
   if (!hit.hit || !hit.content) return null;

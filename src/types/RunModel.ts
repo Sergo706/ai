@@ -62,4 +62,6 @@ export interface UpdateRunArgs {
   messageId?: number | null;
   /** Set `true` to stamp `finished_at` with the current time. */
   finished?: boolean;
+  /** When set, the update only applies if this instance still owns the lease. */
+  owner?: string;
 }

@@ -16,12 +16,14 @@ import type { ChatStream, ChatTurnResult, SemanticCacheOptions } from "./types";
 export async function cachedTurn<TStructured>(args: {
   options: SemanticCacheOptions | undefined;
   conversationId: number | undefined;
+  userId?: string;
   hasFiles: boolean;
   message: string;
   log: Logger;
   managed: boolean;
 }): Promise<ChatStream<TStructured> | null> {
-  const { options, conversationId, hasFiles, message, log, managed } = args;
+  const { options, conversationId, userId, hasFiles, message, log, managed } =
+    args;
   if (options === undefined || conversationId === undefined) return null;
   if (hasFiles || managed) return null;
 
@@ -36,6 +38,7 @@ export async function cachedTurn<TStructured>(args: {
       stream: false,
       similarity: options.similarity ?? 0.9,
       cacheWindowHours: options.windowHours ?? 24,
+      userId,
     },
     options.skipEvaluator,
   );

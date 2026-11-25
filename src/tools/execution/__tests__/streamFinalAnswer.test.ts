@@ -97,7 +97,7 @@ describe("streamFinalAnswer", () => {
     const body = create.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(body.stream).toBe(true);
     expect(body.reasoning_effort).toBe("high");
-    expect(body.thinking).toEqual({ type: "enabled" });
+    expect("thinking" in body).toBe(false);
   });
 
   it("surfaces a tool-call frame in the final answer as an error event", async () => {

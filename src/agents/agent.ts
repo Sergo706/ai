@@ -115,6 +115,7 @@ export async function buildAgent<TMeta = unknown>(
     const cacheHit = await cachedTurn<Output<S>>({
       options: config.semanticCache,
       conversationId,
+      userId: input.userId,
       hasFiles: attachments.hasFiles,
       message: attachments.message,
       log,
@@ -239,6 +240,7 @@ export async function buildAgent<TMeta = unknown>(
         trace,
         finish,
         conversationId,
+        stopHeartbeat,
       });
     }
 

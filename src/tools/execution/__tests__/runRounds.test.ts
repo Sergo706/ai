@@ -506,6 +506,81 @@ describe("runToolRounds — concurrency", () => {
     expect(peak).toBe(1);
   });
 
+  it("buckets concurrency limits per tool name so distinct tools with the same limit run in parallel", async () => {
+    let totalActive = 0;
+    let totalPeak = 0;
+    let alphaActive = 0;
+    let alphaPeak = 0;
+    let releaseBoth!: () => void;
+    const bothStarted = new Promise<void>((resolve) => {
+      releaseBoth = resolve;
+    });
+    const startedTools = new Set<string>();
+
+    const { client } = scriptedClient([
+      [
+        {
+          toolCalls: [
+            { index: 0, id: "a1", name: "alpha", args: "{}" },
+            { index: 1, id: "a2", name: "alpha", args: "{}" },
+            { index: 2, id: "b1", name: "beta", args: "{}" },
+          ],
+        },
+      ],
+    ]);
+
+    const recordOverlap = async (toolName: string) => {
+      totalActive += 1;
+      totalPeak = Math.max(totalPeak, totalActive);
+      startedTools.add(toolName);
+      if (startedTools.has("alpha") && startedTools.has("beta")) {
+        releaseBoth();
+      }
+      await Promise.race([
+        bothStarted,
+        new Promise((resolve) => setTimeout(resolve, 25)),
+      ]);
+      totalActive -= 1;
+      return `${toolName}-ok`;
+    };
+
+    const alphaTool = {
+      type: "function" as const,
+      function: { name: "alpha", parameters: { type: "object" } },
+    };
+    const betaTool = {
+      type: "function" as const,
+      function: { name: "beta", parameters: { type: "object" } },
+    };
+
+    const outcome = await runToolRounds(
+      base({
+        client,
+        availableTools: [alphaTool, betaTool],
+        toolConcurrency: { alpha: 1, beta: 1 },
+        handlers: {
+          alpha: async () => {
+            alphaActive += 1;
+            alphaPeak = Math.max(alphaPeak, alphaActive);
+            try {
+              return await recordOverlap("alpha");
+            } finally {
+              alphaActive -= 1;
+            }
+          },
+          beta: async () => recordOverlap("beta"),
+        },
+      }),
+    );
+
+    expect(alphaPeak).toBe(1);
+    expect(totalPeak).toBe(2);
+    const toolResults = (outcome.finalRequest?.messages ?? [])
+      .filter((message) => message.role === "tool")
+      .map((message) => message.content);
+    expect(toolResults).toEqual(["alpha-ok", "alpha-ok", "beta-ok"]);
+  });
+
   it("numbers repeated calls of one tool in order", async () => {
     const emit = vi.fn<(event: AgentEvent) => void>();
     const { client } = scriptedClient([

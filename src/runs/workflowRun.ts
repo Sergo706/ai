@@ -1,6 +1,7 @@
 import { Logger } from "../config/configSchema";
 import { loadCheckpoint, saveCheckpoint } from "../models/runCheckpoint";
 import {
+  INSTANCE_ID,
   claimRun,
   finishRun,
   releaseRun,
@@ -180,6 +181,7 @@ export async function runWorkflow<TData>(
       status: aborted ? "aborted" : resumable ? "interrupted" : "failed",
       error: err instanceof Error ? err.message : String(err),
       finished: true,
+      owner: INSTANCE_ID,
     }).catch(() => {
       // A failed bookkeeping write must not mask the original error.
     });

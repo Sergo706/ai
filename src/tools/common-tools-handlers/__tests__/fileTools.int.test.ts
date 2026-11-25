@@ -253,6 +253,26 @@ describe("pdfCreator", () => {
     );
   });
 
+  it("attaches the file id to a custom downloadPath on both cache miss and cache hit", async () => {
+    const handler = mod.pdf.pdfCreator("/downloads/reports/");
+
+    const created = (await handler(ONE_PAGE, ctx)) as {
+      downloadUrl: string;
+    };
+    const cached = (await handler(ONE_PAGE, ctx)) as {
+      downloadUrl: string;
+    };
+
+    expect(created.downloadUrl).toMatch(/^\/downloads\/reports\/[0-9a-f]{64}$/);
+    expect(cached.downloadUrl).toBe(created.downloadUrl);
+
+    const fileId = created.downloadUrl.slice("/downloads/reports/".length);
+    const stored = JSON.parse(await readWritten(`file:${fileId}`)) as {
+      filename: string;
+    };
+    expect(stored.filename).toBe("report.pdf");
+  });
+
   it("refuses to run against the in-memory store", async () => {
     // Re-configure this process onto `MiniCache`, which is what a chat-only
     // deployment gets. The handler is constructed after that switch.
@@ -409,6 +429,26 @@ describe("createStyledSpreadsheet", () => {
       { err: expect.any(Error) as Error },
       "Failed to create spreadsheet.",
     );
+  });
+
+  it("attaches the file id to a custom downloadPath on both cache miss and cache hit", async () => {
+    const handler = mod.sheet.createStyledSpreadsheet("/v2/exports///");
+
+    const created = (await handler({ data: DATA }, ctx)) as {
+      downloadUrl: string;
+    };
+    const cached = (await handler({ data: DATA }, ctx)) as {
+      downloadUrl: string;
+    };
+
+    expect(created.downloadUrl).toMatch(/^\/v2\/exports\/[0-9a-f]{64}$/);
+    expect(cached.downloadUrl).toBe(created.downloadUrl);
+
+    const fileId = created.downloadUrl.slice("/v2/exports/".length);
+    const stored = JSON.parse(await readWritten(`file:${fileId}`)) as {
+      filename: string;
+    };
+    expect(stored.filename).toBe("spreadsheet.xlsx");
   });
 
   it("refuses to run against the in-memory store", async () => {

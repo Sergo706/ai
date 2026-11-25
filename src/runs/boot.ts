@@ -19,6 +19,7 @@ import { startRunRecovery } from "./runRecovery";
 export function startRuns(): () => void {
   const log = getConfiguration().logger;
   let stop: (() => void) | undefined;
+  let stopped = false;
 
   void (async () => {
     try {
@@ -33,6 +34,9 @@ export function startRuns(): () => void {
       log.error({ err }, "[runs] Could not reconcile interrupted runs");
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (stopped) return;
+
     const kinds = listRunResumers().map((r) => r.kind);
     log.info(
       { instance: INSTANCE_ID, kinds },
@@ -43,6 +47,7 @@ export function startRuns(): () => void {
   })();
 
   return () => {
+    stopped = true;
     stop?.();
   };
 }

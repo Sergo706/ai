@@ -428,6 +428,32 @@ describe("cross-replica cancellation", () => {
     );
     expect((await readRun("abort-race-1")).status).toBe("aborted");
   });
+
+  it("refuses finishRun from a zombie replica after another replica claimed the lease", async () => {
+    const a = await bootReplica("A");
+    const b = await bootReplica("B");
+    replicas.push(a, b);
+    await newRun({
+      id: "zombie-finish-1",
+      owner: a.models.lease.INSTANCE_ID,
+      claimedAt: longAgo(),
+    });
+
+    expect(await b.models.lease.claimRun("zombie-finish-1")).toBe(true);
+    expect(
+      await a.models.lease.finishRun({
+        runId: "zombie-finish-1",
+        stopReason: "stale",
+        partial: { from: "zombie" },
+      }),
+    ).toBe(false);
+
+    const row = await readRun("zombie-finish-1");
+    expect(row.status).toBe("running");
+    expect(row.owner).toBe(b.models.lease.INSTANCE_ID);
+    expect(row.stop_reason).toBeNull();
+    expect(row.partial).toBeNull();
+  });
 });
 
 describe("recovery sweeper adopting abandoned work", () => {

@@ -8,7 +8,7 @@ import type { RunHandle } from "../types.js";
  * tell an ordered queue from an unordered fire-and-forget loop.
  */
 const appendEventMock = vi.hoisted(() =>
-  vi.fn<(id: string, event: unknown) => Promise<void>>(),
+  vi.fn<(runId: string, eventId: string, event: unknown) => Promise<void>>(),
 );
 
 vi.mock("../eventStore", async (importOriginal) => ({
@@ -249,7 +249,7 @@ describe("publish mirrors into Redis", () => {
   it("keeps append order identical to publish order", async () => {
     const order: string[] = [];
     appendEventMock.mockImplementation(
-      async (_id: string, event: unknown) => {
+      async (_runId: string, _eventId: string, event: unknown) => {
         // A slow first append is what would reorder a naive fire-and-forget loop.
         await new Promise((resolve) => {
           setTimeout(resolve, order.length === 0 ? 15 : 0);

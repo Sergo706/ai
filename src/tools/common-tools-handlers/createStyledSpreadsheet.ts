@@ -25,11 +25,14 @@ const AGENT_GENERATED_FILE_TTL = envInt("AGENT_GENERATED_FILE_TTL", 86_400, {
  * @returns A handler that takes the sheet options and returns a URL to the file.
  * Requires a Redis store; returns `TOOL_DISABLED` with the memory store.
  */
-export function createStyledSpreadsheet(): ToolHandler {
+export function createStyledSpreadsheet(
+  downloadPath = "/api/files",
+): ToolHandler {
   const config = getConfiguration();
   const log = config.logger;
   const store = getStorage();
   const isMemoryStore = store instanceof MiniCache;
+  const basePath = downloadPath.replace(/\/+$/, "");
   
   return async (args) => {
     log.debug({ args }, "agent ran tool createStyledSpreadsheet");
@@ -63,7 +66,7 @@ export function createStyledSpreadsheet(): ToolHandler {
             success: true,
             message: "Spreadsheet created successfully.",
             filename: existing.filename,
-            downloadUrl: `/api/files/${fileId}`,
+            downloadUrl: `${basePath}/${fileId}`,
             sizeBytes:
               existing.sizeBytes ??
               Buffer.byteLength(existing.base64Data, "base64"),
@@ -101,7 +104,7 @@ export function createStyledSpreadsheet(): ToolHandler {
         success: true,
         message: "Spreadsheet created successfully.",
         filename,
-        downloadUrl: `/api/files/${fileId}`,
+        downloadUrl: `${basePath}/${fileId}`,
         sizeBytes: result.buffer.length,
       };
     } catch (err) {

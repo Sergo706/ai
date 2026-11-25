@@ -144,7 +144,7 @@ export const configSchema = z.object({
       /** Sampling temperature for the summarisation call. */
       llmTemperature: z.number().min(0).max(2).default(0.2),
       /** Model used to condense an extracted body. */
-      llmModel: z.string().default("deepseek-flash"),
+      llmModel: z.string().min(1).optional(),
       /** Default summary length preset when a call does not pick one. */
       llmLength: z
         .enum(["short", "medium", "long", "xl", "xxl"])

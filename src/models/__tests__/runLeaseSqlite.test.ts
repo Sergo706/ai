@@ -238,6 +238,23 @@ describe("checkpoints on better-sqlite3", () => {
     );
   });
 
+  it("refuses finishRun from a zombie replica after another peer took over", async () => {
+    await seedRun({ id: "sqlite-zombie-finish", owner: "peer:2:y" });
+
+    expect(
+      await harness.lease.finishRun({
+        runId: "sqlite-zombie-finish",
+        stopReason: "complete",
+        partial: { stale: true },
+      }),
+    ).toBe(false);
+
+    const row = await readRun("sqlite-zombie-finish");
+    expect(row.status).toBe("running");
+    expect(row.owner).toBe("peer:2:y");
+    expect(row.partial).toBeNull();
+  });
+
   it("reports a missing run instead of the lease message", async () => {
     await harness.checkpoints.saveCheckpoint({
       runId: "sqlite-nothing",

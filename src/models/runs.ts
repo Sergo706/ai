@@ -49,11 +49,11 @@ export async function updateRun(args: UpdateRunArgs): Promise<void> {
   if (args.finished === true) patch.finished_at = timestamp();
 
   if (Object.keys(patch).length === 0) return;
-  await getDb()
-    .updateTable("runs")
-    .set(patch)
-    .where("id", "=", args.id)
-    .execute();
+  let query = getDb().updateTable("runs").set(patch).where("id", "=", args.id);
+  if (args.owner !== undefined) {
+    query = query.where("owner", "=", args.owner);
+  }
+  await query.execute();
 }
 
 /**

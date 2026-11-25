@@ -1,7 +1,14 @@
-import type { ChatCompletion, ChatCompletionMessageParam } from "openai/resources";
+import type {
+  ChatCompletion,
+  ChatCompletionMessageParam,
+} from "openai/resources";
 import type { z } from "zod";
-import { executeToolLoop } from "../tools/execution";
-import type { Chat, ToolLoopClient, ToolLoopOptions } from "../types/ToolExecutionTypes";
+import { RequestAbortedError, executeToolLoop } from "../tools/execution";
+import type {
+  Chat,
+  ToolLoopClient,
+  ToolLoopOptions,
+} from "../types/ToolExecutionTypes";
 import type { TraceCollector } from "../chat/traceCollector";
 import type { TerminalStatus } from "../runs/types";
 import { llmSchemaParser } from "../utils/llmSchemaParser";
@@ -33,6 +40,7 @@ export async function runJsonTurn<TStructured>(args: {
     extra: { error?: string; structured?: TStructured },
   ) => Promise<ChatTurnResult<TStructured>>;
   conversationId: number | undefined;
+  stopHeartbeat?: (() => void) | undefined;
 }): Promise<ChatStream<TStructured>> {
   const {
     loopOptions,
@@ -44,49 +52,73 @@ export async function runJsonTurn<TStructured>(args: {
     trace,
     finish,
     conversationId,
+    stopHeartbeat,
   } = args;
 
-  const completion: ChatCompletion = await executeToolLoop({
-    ...loopOptions,
-    stream: false,
-    body: { ...loopOptions.body, response_format: { type: "json_object" } },
-  });
-
-  const raw = completion.choices.at(0)?.message.content ?? "";
-
-  const structured = await llmSchemaParser(json.schema, completion, {
-    agent: "agent",
-    messages,
-    ...(json.schemaName === undefined ? {} : { schemaName: json.schemaName }),
-    ...(json.maxRetries === undefined ? {} : { maxRetries: json.maxRetries }),
-    ...(json.includeSchemaInPrompt === undefined
-      ? {}
-      : { includeSchemaInPrompt: json.includeSchemaInPrompt }),
-    retry: (request) =>
-      client.chat.completions.create({
-        model,
-        messages: request.messages,
-        temperature: chat.temperature,
-        max_tokens: chat.maxTokens,
-        stream: false,
-        ...(request.response_format === undefined
-          ? {}
-          : { response_format: request.response_format }),
-      }),
-  });
-
-  if (raw !== "") trace.apply({ type: "chunk", text: raw });
-
-  const result = await finish("finished", {
-    structured: structured as TStructured,
-  });
-
-  return {
-    frames: framesOf([
-      { type: "init", conversationId },
-      ...(raw === "" ? [] : [{ type: "chunk", text: raw }]),
-      { type: "done" },
-    ]),
-    done: Promise.resolve(result),
+  let heartbeatStopped = false;
+  const stopLeaseHeartbeat = (): void => {
+    if (heartbeatStopped) return;
+    heartbeatStopped = true;
+    stopHeartbeat?.();
   };
+
+  try {
+    const completion: ChatCompletion = await executeToolLoop({
+      ...loopOptions,
+      stream: false,
+      body: { ...loopOptions.body, response_format: { type: "json_object" } },
+    });
+
+    const raw = completion.choices.at(0)?.message.content ?? "";
+
+    const structured = await llmSchemaParser(json.schema, completion, {
+      agent: "agent",
+      messages,
+      ...(json.schemaName === undefined ? {} : { schemaName: json.schemaName }),
+      ...(json.maxRetries === undefined ? {} : { maxRetries: json.maxRetries }),
+      ...(json.includeSchemaInPrompt === undefined
+        ? {}
+        : { includeSchemaInPrompt: json.includeSchemaInPrompt }),
+      retry: (request) =>
+        client.chat.completions.create({
+          model,
+          messages: request.messages,
+          temperature: chat.temperature,
+          max_tokens: chat.maxTokens,
+          stream: false,
+          ...(request.response_format === undefined
+            ? {}
+            : { response_format: request.response_format }),
+        }),
+    });
+
+    if (raw !== "") trace.apply({ type: "chunk", text: raw });
+
+    stopLeaseHeartbeat();
+    const result = await finish("finished", {
+      structured: structured as TStructured,
+    });
+
+    return {
+      frames: framesOf([
+        { type: "init", conversationId },
+        ...(raw === "" ? [] : [{ type: "chunk", text: raw }]),
+        { type: "done" },
+      ]),
+      done: Promise.resolve(result),
+    };
+  } catch (err) {
+    stopLeaseHeartbeat();
+    const aborted =
+      err instanceof RequestAbortedError ||
+      loopOptions.signal?.aborted === true;
+    const status: TerminalStatus = aborted ? "aborted" : "failed";
+    const error = err instanceof Error ? err.message : String(err);
+    await finish(status, aborted ? {} : { error }).catch(() => {
+      // Bookkeeping must not mask the original failure.
+    });
+    throw err;
+  } finally {
+    stopLeaseHeartbeat();
+  }
 }

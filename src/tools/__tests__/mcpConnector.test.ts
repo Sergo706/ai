@@ -554,4 +554,72 @@ describe("createMcpToolset", () => {
     expect(live.map((spec) => spec.name)).toEqual(["first"]);
     await toolset.close();
   });
+
+  it("extracts text from embedded resources and resource links while ignoring binary blocks", async () => {
+    const server = track(
+      await startMcpServer({
+        tools: [
+          {
+            name: "mixed",
+            content: [
+              { type: "text", text: "summary line" },
+              {
+                type: "resource",
+                resource: {
+                  uri: "file:///docs/readme.md",
+                  mimeType: "text/markdown",
+                  text: "hello from resource",
+                },
+              },
+              {
+                type: "resource_link",
+                uri: "https://example.com/spec",
+                name: "API Spec",
+                description: "REST endpoints",
+              },
+              {
+                type: "image",
+                data: "iVBORw0KGgoAAAANSUhEUg==",
+                mimeType: "image/png",
+              },
+              {
+                type: "audio",
+                data: "SUQzAwAAAAAA",
+                mimeType: "audio/mpeg",
+              },
+              {
+                type: "resource",
+                resource: {
+                  uri: "file:///docs/archive.bin",
+                  mimeType: "application/octet-stream",
+                  blob: "AQIDBA==",
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    const { createMcpToolset } = await boot();
+
+    const toolset = await createMcpToolset([{ url: server.url }]);
+    const handler = toolset.specs[0].make({ userId: "u" });
+
+    const output = await handler(
+      {},
+      { toolCallId: "c1", callIndex: 1, callTotal: 1 },
+    );
+
+    expect(output).toBe(
+      [
+        "summary line",
+        "hello from resource",
+        "API Spec https://example.com/spec: REST endpoints",
+      ].join("\n"),
+    );
+    expect(String(output)).not.toContain("iVBORw0KGgo");
+    expect(String(output)).not.toContain("SUQzAw");
+    expect(String(output)).not.toContain("AQIDBA");
+    await toolset.close();
+  });
 });

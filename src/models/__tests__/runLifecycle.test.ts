@@ -3,7 +3,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Kysely } from "kysely";
 
 import type { Database, RunKind, RunStatus } from "~/db/schema.js";
-import { toJson } from "~/db/utils.js";
+import { fromJson, toJson } from "~/db/utils.js";
 import { loadConfig, type LoadedConfig } from "~~/test/test-utils/config";
 import { libLog, libLogger } from "~~/test/test-utils/logger";
 
@@ -127,7 +127,7 @@ describe("createRun", () => {
     expect(row.query).toBe("what is up");
     expect(row.status).toBe("running");
     expect(row.user_id).toBe("u-1");
-    expect(row.input).toEqual({ name: "named" });
+    expect(fromJson(row.input)).toEqual({ name: "named" });
     expect(row.attempts).toBe(0);
     expect(row.owner).toBeNull();
   });
@@ -172,7 +172,7 @@ describe("updateRun", () => {
     });
 
     const row = await readRun(db, "run-1");
-    expect(row.partial).toEqual({ text: "half" });
+    expect(fromJson(row.partial)).toEqual({ text: "half" });
     expect(row.error).toBe("boom");
     expect(row.stop_reason).toBe("max-rounds");
     expect(row.message_id).toBe(3);
@@ -533,7 +533,7 @@ describe("reopenRunForRetry", () => {
 describe("finishRun", () => {
   it("records the outcome of a running run", async () => {
     const { db, lease } = harness;
-    await seedRun(db, { id: "run-1" });
+    await seedRun(db, { id: "run-1", owner: lease.INSTANCE_ID });
 
     expect(
       await lease.finishRun({
@@ -554,21 +554,82 @@ describe("finishRun", () => {
 
   it("never overwrites a stop the user asked for", async () => {
     const { db, lease } = harness;
-    await seedRun(db, { id: "run-1", status: "aborted" });
+    await seedRun(db, {
+      id: "run-1",
+      status: "aborted",
+      owner: lease.INSTANCE_ID,
+    });
 
     expect(await lease.finishRun({ runId: "run-1" })).toBe(false);
     expect((await readRun(db, "run-1")).status).toBe("aborted");
   });
 
+  it("refuses to finish a run now owned by another replica", async () => {
+    const { db, lease } = harness;
+    await seedRun(db, {
+      id: "run-1",
+      status: "running",
+      owner: "other-host:1:abc",
+    });
+
+    expect(
+      await lease.finishRun({
+        runId: "run-1",
+        stopReason: "zombie",
+        partial: { text: "stale" },
+      }),
+    ).toBe(false);
+
+    const row = await readRun(db, "run-1");
+    expect(row.status).toBe("running");
+    expect(row.owner).toBe("other-host:1:abc");
+    expect(row.stop_reason).toBeNull();
+    expect(row.partial).toBeNull();
+  });
+
   it("defaults stop_reason and partial to null", async () => {
     const { db, lease } = harness;
-    await seedRun(db, { id: "run-1" });
+    await seedRun(db, { id: "run-1", owner: lease.INSTANCE_ID });
 
     await lease.finishRun({ runId: "run-1" });
 
     const row = await readRun(db, "run-1");
     expect(row.stop_reason).toBeNull();
     expect(row.partial).toBeNull();
+  });
+
+  it("fences updateRun when owner does not match the current holder", async () => {
+    const { db, lease, runs } = harness;
+    await seedRun(db, {
+      id: "run-fenced",
+      status: "running",
+      owner: "other-host:2:xyz",
+    });
+
+    await runs.updateRun({
+      id: "run-fenced",
+      status: "failed",
+      error: "stale failure",
+      finished: true,
+      owner: lease.INSTANCE_ID,
+    });
+
+    const unchanged = await readRun(db, "run-fenced");
+    expect(unchanged.status).toBe("running");
+    expect(unchanged.error).toBeNull();
+    expect(unchanged.finished_at).toBeNull();
+
+    await runs.updateRun({
+      id: "run-fenced",
+      status: "failed",
+      error: "real failure",
+      finished: true,
+      owner: "other-host:2:xyz",
+    });
+
+    const updated = await readRun(db, "run-fenced");
+    expect(updated.status).toBe("failed");
+    expect(updated.error).toBe("real failure");
   });
 });
 
@@ -929,11 +990,11 @@ describe("lease constants", () => {
       overrides: { runs: { leaseTtlMs: 10_000, heartbeatIntervalMs: 9_000 } },
     });
     try {
-      const { LEASE_TTL_MS, HEARTBEAT_INTERVAL_MS } = await import(
+      const { getLeaseTtlMs, getHeartbeatIntervalMs } = await import(
         "../runLease.js"
       );
-      expect(LEASE_TTL_MS).toBe(10_000);
-      expect(HEARTBEAT_INTERVAL_MS).toBe(5_000);
+      expect(getLeaseTtlMs()).toBe(10_000);
+      expect(getHeartbeatIntervalMs()).toBe(5_000);
     } finally {
       await env.cleanup();
     }

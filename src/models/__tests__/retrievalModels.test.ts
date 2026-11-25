@@ -231,6 +231,44 @@ describe("fetchRelevantChunks", () => {
 
     expect(page).toHaveLength(1);
   });
+
+  it("filters chunks by userId when provided and returns all users when omitted", async () => {
+    const { db, models } = harness;
+    await insertDocument(db, {
+      title: "alice doc",
+      userId: "alice",
+      chunks: [{ index: 0, text: "alice secret", embedding: axis(0) }],
+    });
+    await insertDocument(db, {
+      title: "bob doc",
+      userId: "bob",
+      chunks: [{ index: 0, text: "bob secret", embedding: axis(0) }],
+    });
+
+    const aliceOnly = await models.fetchRelevantChunks(
+      axis(0),
+      10,
+      0,
+      0.5,
+      "alice",
+    );
+    expect(aliceOnly.map((c) => c.chunkText)).toEqual(["alice secret"]);
+
+    const bobOnly = await models.fetchRelevantChunks(
+      axis(0),
+      10,
+      0,
+      0.5,
+      "bob",
+    );
+    expect(bobOnly.map((c) => c.chunkText)).toEqual(["bob secret"]);
+
+    const everyone = await models.fetchRelevantChunks(axis(0), 10, 0, 0.5);
+    expect(everyone.map((c) => c.chunkText).sort()).toEqual([
+      "alice secret",
+      "bob secret",
+    ]);
+  });
 });
 
 describe("searchDbDocs", () => {
@@ -286,6 +324,40 @@ describe("searchDbDocs", () => {
     const parsed = searchParams.parse({ query: "q", limit: "3" });
 
     expect(parsed).toEqual({ query: "q", limit: 3, offset: 0, similarity: 0.9 });
+  });
+
+  it("scopes searchDbDocs results when userId is provided", async () => {
+    const { db, models } = harness;
+    const query = "tenant specific policy";
+    const vec = embeddingVector(query, DIMENSIONS);
+    await insertDocument(db, {
+      title: "u1",
+      userId: "u-1",
+      chunks: [{ index: 0, text: "u1 policy", embedding: vec }],
+    });
+    await insertDocument(db, {
+      title: "u2",
+      userId: "u-2",
+      chunks: [{ index: 0, text: "u2 policy", embedding: vec }],
+    });
+
+    const u1Results = await models.searchDbDocs(
+      { query, limit: 5, offset: 0, similarity: 0.5 },
+      "u-1",
+    );
+    expect(Array.isArray(u1Results)).toBe(true);
+    expect((u1Results as { chunkText: string }[]).map((r) => r.chunkText)).toEqual([
+      "u1 policy",
+    ]);
+
+    const u3Miss = await models.searchDbDocs(
+      { query, limit: 5, offset: 0, similarity: 0.5 },
+      "u-3",
+    );
+    expect(u3Miss).toMatchObject({
+      ok: false,
+      reason: "No available chunks found",
+    });
   });
 });
 

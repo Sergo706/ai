@@ -701,6 +701,73 @@ describe("buildAgent — option plumbing", () => {
     }
   });
 
+  it("finishes and fails managed run rows for validated JSON turns", async () => {
+    const schema = z.object({ answer: z.string() });
+
+    const okFake = completionFake(chatCompletion('{"answer":"ok"}'));
+    const okEnv = await boot(okFake);
+    try {
+      const agent = await okEnv.buildAgent({
+        ...baseConfig(),
+        conversation: { persist: true },
+        runs: { kind: "chat", name: "jsonAgent" },
+      } as never);
+
+      const result = await agent.complete({
+        message: "hi",
+        userId: "u-1",
+        json: { validate: true, schema },
+      });
+
+      if (result.runId === undefined) {
+        throw new Error("expected runId for managed validated JSON turn");
+      }
+      const run = await okEnv.db
+        .selectFrom("runs")
+        .select(["id", "status", "error", "finished_at"])
+        .where("id", "=", result.runId)
+        .executeTakeFirstOrThrow();
+      expect(run.status).toBe("finished");
+      expect(run.error).toBeNull();
+      expect(typeof run.finished_at).toBe("string");
+
+      await agent.close();
+    } finally {
+      await okEnv.cleanup();
+    }
+
+    const failFake = completionFake(chatCompletion("not-json"));
+    const failEnv = await boot(failFake);
+    try {
+      const agent = await failEnv.buildAgent({
+        ...baseConfig(),
+        conversation: { persist: true },
+        runs: { kind: "chat", name: "jsonAgent" },
+      } as never);
+
+      await expect(
+        agent.complete({
+          message: "hi",
+          userId: "u-1",
+          json: { validate: true, schema, maxRetries: 0 },
+        }),
+      ).rejects.toThrow();
+
+      const run = await failEnv.db
+        .selectFrom("runs")
+        .select(["status", "error", "finished_at"])
+        .executeTakeFirstOrThrow();
+      expect(run.status).toBe("failed");
+      expect(typeof run.error).toBe("string");
+      expect((run.error ?? "").length).toBeGreaterThan(0);
+      expect(typeof run.finished_at).toBe("string");
+
+      await agent.close();
+    } finally {
+      await failEnv.cleanup();
+    }
+  });
+
   it("surfaces a provider failure as an error frame and empty text", async () => {
     // A tool has to be advertised for the loop to call the provider at all, so
     // this suite needs one to reach a mid-stream failure. `streamFinalAnswer`

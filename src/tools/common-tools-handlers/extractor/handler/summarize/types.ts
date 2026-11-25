@@ -54,4 +54,6 @@ export interface SummarizeWithLlmOptions {
   minCharactersToSummarize?: number;
   /** Extra instruction appended to the prompt, e.g. a focus area. */
   promptOverride?: string;
+  /** Model id to use for this call; overrides `config.extractor.llmModel`. */
+  model?: string;
 }

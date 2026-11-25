@@ -104,7 +104,7 @@ describe("registerRunResumer", () => {
     registerRunResumer(resumer("chat"));
     expect(() => {
       registerRunResumer(resumer("chat"));
-    }).toThrow(/research/);
+    }).toThrow(/chat/);
   });
 
   it("names both kind and name for a named duplicate", () => {

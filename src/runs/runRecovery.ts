@@ -1,36 +1,34 @@
 import { envInt } from "@riavzon/utils/server";
 import { findRunResumer, listRunResumers } from "./resumerRegistry";
-import { findResumableRuns, INSTANCE_ID, LEASE_TTL_MS } from "../models/runLease";
+import {
+  findResumableRuns,
+  getLeaseTtlMs,
+  INSTANCE_ID,
+} from "../models/runLease";
 import { updateRun } from "../models/runs";
 import { getConfiguration } from "../config/config";
+import { fromJson } from "../db/utils";
 
 const recoveryConfig = () => getConfiguration().runs.recovery;
 
-/**
- * How often to look for abandoned runs.
- *
- * Defaults to half the lease, so a run is adopted somewhere between half a lease
- * and a full lease after its owner dies: fast enough that a crash is not
- * noticed a minute late, slow enough that a rolling deploy does not scan
- * constantly. Deriving it means changing the lease never leaves the sweep
- * looking too late or too eagerly; the env var is there for tests, which set a
- * sub-second lease and need the sweep to keep up.
- */
-const SWEEP_INTERVAL_MS = envInt(
-  "RUNS_SWEEP_INTERVAL_MS",
-  recoveryConfig().sweepIntervalMs ||
-    Math.max(1_000, Math.floor(LEASE_TTL_MS / 2)),
-  {
-    min: 100,
-  },
-);
+function getSweepIntervalMs(): number {
+  return envInt(
+    "RUNS_SWEEP_INTERVAL_MS",
+    recoveryConfig().sweepIntervalMs ||
+      Math.max(1_000, Math.floor(getLeaseTtlMs() / 2)),
+    {
+      min: 100,
+    },
+  );
+}
 
-/** How many runs one sweep will try to adopt, so a mass crash cannot stampede. */
-const MAX_ADOPT_PER_SWEEP = envInt(
-  "RUNS_MAX_ADOPT_PER_SWEEP",
-  recoveryConfig().maxAdoptPerSweep,
-  { min: 1 },
-);
+function getMaxAdoptPerSweep(): number {
+  return envInt(
+    "RUNS_MAX_ADOPT_PER_SWEEP",
+    recoveryConfig().maxAdoptPerSweep,
+    { min: 1 },
+  );
+}
 
 /**
  * How many times one run may be resumed after its owner died.
@@ -40,40 +38,45 @@ const MAX_ADOPT_PER_SWEEP = envInt(
  *
  * @default config.runs.recovery.maxResumeAttempts
  */
-export const MAX_RESUME_ATTEMPTS = envInt(
-  "RUNS_MAX_RESUME_ATTEMPTS",
-  recoveryConfig().maxResumeAttempts,
-  { min: 0 },
-);
+export function getMaxResumeAttempts(): number {
+  return envInt(
+    "RUNS_MAX_RESUME_ATTEMPTS",
+    recoveryConfig().maxResumeAttempts,
+    { min: 0 },
+  );
+}
 
-/**
- * How long a row with no registered runner is left `running` before it is closed.
- *
- * Without this the sweep would skip such a row on every pass and never write
- * anything, so the row would stay `running` indefinitely: a client reattached to
- * it would wait forever, and it would keep occupying one of
- * `RUNS_MAX_ADOPT_PER_SWEEP` slots that a real candidate needed.
- *
- * The grace period exists so a rolling deploy works. Boot the new build, its
- * sweep resolves the name, and the run resumes from its checkpoint — but only if
- * the old build has not already given up on it. Ten minutes covers a normal
- * rollout; set it to `0` to close orphans on the first pass.
- */
-const UNCLAIMED_GRACE_MS = envInt(
-  "RUNS_UNCLAIMED_GRACE_MS",
-  recoveryConfig().unclaimedGraceMs,
-  { min: 0 },
-);
+function getUnclaimedGraceMs(): number {
+  return envInt(
+    "RUNS_UNCLAIMED_GRACE_MS",
+    recoveryConfig().unclaimedGraceMs,
+    { min: 0 },
+  );
+}
 
 let sweeping = false;
 
-/** The settings the recovery sweep runs with, as resolved at module load. */
-export const RUN_RECOVERY_SETTINGS = {
-  sweepIntervalMs: SWEEP_INTERVAL_MS,
-  maxAdoptPerSweep: MAX_ADOPT_PER_SWEEP,
-  maxResumeAttempts: MAX_RESUME_ATTEMPTS,
-  unclaimedGraceMs: UNCLAIMED_GRACE_MS,
-};
+/** The settings the recovery sweep runs with, resolved lazily from config/env. */
+export function getRunRecoverySettings(): {
+  sweepIntervalMs: number;
+  maxAdoptPerSweep: number;
+  maxResumeAttempts: number;
+  unclaimedGraceMs: number;
+} {
+  return {
+    sweepIntervalMs: getSweepIntervalMs(),
+    maxAdoptPerSweep: getMaxAdoptPerSweep(),
+    maxResumeAttempts: getMaxResumeAttempts(),
+    unclaimedGraceMs: getUnclaimedGraceMs(),
+  };
+}
+
+function parseRunInput(raw: unknown): { name?: string } {
+  const parsed = fromJson<unknown>(raw);
+  return parsed !== null && typeof parsed === "object"
+    ? (parsed)
+    : {};
+}
 
 /**
  * Adopts runs whose owner stopped renewing its lease.
@@ -110,8 +113,9 @@ async function sweepOnce(): Promise<void> {
       return;
     }
 
+    const settings = getRunRecoverySettings();
     for (const kind of new Set(registered.map((r) => r.kind))) {
-      const candidates = await findResumableRuns(MAX_ADOPT_PER_SWEEP, kind);
+      const candidates = await findResumableRuns(settings.maxAdoptPerSweep, kind);
       if (candidates.length === 0) continue;
 
       log.warn(
@@ -120,12 +124,12 @@ async function sweepOnce(): Promise<void> {
       );
 
       for (const row of candidates) {
-        const input = (row.input ?? {}) as { name?: string };
+        const input = parseRunInput(row.input);
         const resumer = findRunResumer(row.kind, input.name);
         if (!resumer) {
           const abandonedSince = row.claimed_at ?? row.started_at;
           const ageMs = Date.now() - new Date(abandonedSince).getTime();
-          if (ageMs < UNCLAIMED_GRACE_MS) {
+          if (ageMs < settings.unclaimedGraceMs) {
             log.debug(
               {
                 runId: row.id,
@@ -153,7 +157,7 @@ async function sweepOnce(): Promise<void> {
           continue;
         }
 
-        if (row.attempts >= MAX_RESUME_ATTEMPTS) {
+        if (row.attempts >= settings.maxResumeAttempts) {
           await updateRun({
             id: row.id,
             status: "failed",
@@ -207,7 +211,7 @@ export function startRunRecovery(): () => void {
   void sweepOnce();
   const timer = setInterval(() => {
     void sweepOnce();
-  }, SWEEP_INTERVAL_MS);
+  }, getSweepIntervalMs());
   timer.unref();
   return () => {
     clearInterval(timer);

@@ -43,7 +43,12 @@ export async function summarizeWithLlm(
   }
 
   const { extractor } = getConfiguration();
-  const model = extractor?.llmModel ?? "deepseek-flash";
+  const model = options.model ?? extractor?.llmModel;
+  if (!model) {
+    throw new Error(
+      "LLM summarization requires config.extractor.llmModel or options.model to be configured.",
+    );
+  }
 
   const length = resolveLength(options.length);
   const threshold =

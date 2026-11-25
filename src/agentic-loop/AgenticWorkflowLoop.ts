@@ -180,7 +180,7 @@ export class AgenticWorkflowLoop<
         await this.localPhase.run(bindStage(sink, "local"), {
           startBatch: resume?.localSearches ?? 0,
           onBatchComplete: () => {
-            this.saveCheckpoint(["seeds", "local"]);
+            this.saveCheckpoint(["seeds"]);
           },
         });
         this.saveCheckpoint(["seeds", "local"]);
@@ -190,7 +190,9 @@ export class AgenticWorkflowLoop<
       }
 
       if (
+        !done.has("external") &&
         this.state.evidenceSet.length === 0 &&
+        this.state.externalRounds === 0 &&
         this.config.budgets.maxExternalRounds > 0
       ) {
         throwIfAborted(sink.signal, this.config.name);
@@ -216,7 +218,7 @@ export class AgenticWorkflowLoop<
         await this.externalPhase.runRounds(bindStage(sink, "external"), {
           startRound: resume?.externalRounds ?? 0,
           onRoundComplete: () => {
-            this.saveCheckpoint(["seeds", "local", "external"]);
+            this.saveCheckpoint(["seeds", "local"]);
           },
         });
         this.saveCheckpoint(["seeds", "local", "external"]);

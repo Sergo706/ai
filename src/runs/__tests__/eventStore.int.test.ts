@@ -137,7 +137,7 @@ describe("eventStore — real Redis", () => {
 
     const ttl = await env.redis.ttl(env.shared.streamKey(RUN));
     expect(ttl).toBeGreaterThan(0);
-    expect(ttl).toBeLessThanOrEqual(env.shared.STREAM_TTL_SECONDS);
+    expect(ttl).toBeLessThanOrEqual(env.shared.getStreamTtlSeconds());
   });
 
   it("refreshes the TTL on touch", async () => {

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type OpenAI from "openai";
 
@@ -57,6 +57,11 @@ beforeAll(async () => {
   harness = await boot();
 });
 
+beforeEach(() => {
+  harness.fake.inputs.length = 0;
+  harness.fake.client.embeddings.create.mockClear();
+});
+
 afterAll(async () => {
   await harness.env.cleanup();
 });
@@ -68,6 +73,10 @@ describe("generateEmbedding", () => {
     const vector = await embedding.generateEmbedding("hello");
 
     expect(fake.inputs).toEqual(["hello"]);
+    expect(fake.client.embeddings.create).toHaveBeenCalledWith({
+      model: "test-retrieval",
+      input: "hello",
+    });
     expect(vector).toHaveLength(DIMENSIONS);
     expect(vector).toEqual(embeddingVector("hello", DIMENSIONS));
   });
@@ -106,14 +115,17 @@ describe("generateMatchingEmbedding", () => {
   it("uses the matching model rather than the retrieval one", async () => {
     const { embedding, fake } = harness;
 
-    await embedding.generateMatchingEmbedding("a query");
+    const vector = await embedding.generateMatchingEmbedding("a query");
 
     expect(fake.inputs).toEqual(["a query"]);
+    expect(fake.client.embeddings.create).toHaveBeenCalledWith({
+      model: "test-matching",
+      input: "a query",
+    });
     // The vector comes back at the configured width, so a caller can rely on it
     // without re-checking; the mismatch case below is what enforces that.
-    expect(await embedding.generateMatchingEmbedding("a query")).toHaveLength(
-      DIMENSIONS,
-    );
+    expect(vector).toHaveLength(DIMENSIONS);
+    expect(vector).toEqual(embeddingVector("a query", DIMENSIONS));
   });
 
   it("throws on a width mismatch", async () => {

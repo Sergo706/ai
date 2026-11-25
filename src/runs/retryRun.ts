@@ -1,17 +1,19 @@
 import { getConfiguration } from "../config/config";
+import { fromJson } from "../db/utils";
 import { reopenRunForRetry } from "../models/runLease";
 import { getRunById } from "../models/runs";
 import { StoredRun } from "../types/RunModel";
 import { findRunResumer } from "./resumerRegistry";
-import { MAX_RESUME_ATTEMPTS } from "./runRecovery";
+import { getMaxResumeAttempts } from "./runRecovery";
 import { getRun } from "./runRegistry";
 import type { RetryOutcome } from "./types";
 
-
-
 function workflowName(row: StoredRun): string | undefined {
-  const input = (row.input ?? {}) as { name?: string };
-  return input.name;
+  const parsed = fromJson<unknown>(
+    row.input,
+  );
+  if (parsed === null || typeof parsed !== "object") return undefined;
+  return (parsed as { name?: string }).name;
 }
 
 /**
@@ -67,11 +69,12 @@ export async function retryRun(runId: string): Promise<RetryOutcome> {
     };
   }
 
-  if (row.attempts >= MAX_RESUME_ATTEMPTS) {
+  const maxResumeAttempts = getMaxResumeAttempts();
+  if (row.attempts >= maxResumeAttempts) {
     return {
       ok: false,
       reason: "attempts_exhausted",
-      message: `This run has already used all ${String(MAX_RESUME_ATTEMPTS)} resumes. Start a new run instead of retrying this one.`,
+      message: `This run has already used all ${String(maxResumeAttempts)} resumes. Start a new run instead of retrying this one.`,
       status: row.status,
       attempts: row.attempts,
     };

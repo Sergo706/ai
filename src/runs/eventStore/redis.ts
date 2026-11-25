@@ -1,10 +1,10 @@
 import type Redis from "ioredis";
 import type { StoredEvent } from "../../types/Chat";
 import {
-  BLOCK_MS,
-  MAX_STREAM_LEN,
-  REPLAY_BATCH,
-  STREAM_TTL_SECONDS,
+  getBlockMs,
+  getMaxStreamLen,
+  getReplayBatch,
+  getStreamTtlSeconds,
   streamKey,
   type EventPage,
 } from "./shared";
@@ -55,11 +55,12 @@ export async function appendRedis(
 ): Promise<void> {
   const key = streamKey(runId);
   const payload = JSON.stringify(event);
-
+  const maxStreamLen = getMaxStreamLen();
+  const streamTtlSeconds = getStreamTtlSeconds();
   const results = await redis
     .pipeline()
-    .xadd(key, "MAXLEN", "~", String(MAX_STREAM_LEN), id, "event", payload)
-    .expire(key, STREAM_TTL_SECONDS)
+    .xadd(key, "MAXLEN", "~", String(maxStreamLen), id, "event", payload)
+    .expire(key, streamTtlSeconds)
     .publish(wakeChannel(runId), id)
     .exec();
 
@@ -71,12 +72,12 @@ export async function appendRedis(
     key,
     "MAXLEN",
     "~",
-    String(MAX_STREAM_LEN),
+    String(maxStreamLen),
     "*",
     "event",
     payload,
   );
-  await redis.expire(key, STREAM_TTL_SECONDS);
+  await redis.expire(key, streamTtlSeconds);
   await redis.publish(wakeChannel(runId), String(minted));
 }
 
@@ -127,13 +128,13 @@ export async function waitForRedisNext(
 
   // Checked before sleeping so an append that landed between the previous read
   // and this call is not missed.
-  const immediate = await readRedisPage(redis, runId, afterId, REPLAY_BATCH);
+  const replayBatch = getReplayBatch();
+  const immediate = await readRedisPage(redis, runId, afterId, replayBatch);
   if (immediate.events.length > 0) return immediate;
 
   await new Promise<void>((resolve) => {
     let settled = false;
     const set = waiters.get(runId) ?? new Set<() => void>();
-
     const wake = (): void => {
       if (settled) return;
       settled = true;
@@ -142,15 +143,13 @@ export async function waitForRedisNext(
       if (set.size === 0 && waiters.get(runId) === set) waiters.delete(runId);
       resolve();
     };
-
-    const timer = setTimeout(wake, BLOCK_MS);
+    const timer = setTimeout(wake, getBlockMs());
     (timer as { unref?: () => void }).unref?.();
-
     set.add(wake);
     waiters.set(runId, set);
   });
 
-  const page = await readRedisPage(redis, runId, afterId, REPLAY_BATCH);
+  const page = await readRedisPage(redis, runId, afterId, replayBatch);
   return page.events.length === 0 ? null : page;
 }
 
@@ -220,7 +219,7 @@ export async function lastRedisId(
  * @param runId - The run to keep alive.
  */
 export async function touchRedis(redis: Redis, runId: string): Promise<void> {
-  await redis.expire(streamKey(runId), STREAM_TTL_SECONDS);
+  await redis.expire(streamKey(runId), getStreamTtlSeconds());
 }
 
 /**

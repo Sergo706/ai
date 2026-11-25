@@ -306,6 +306,33 @@ describe("checkChatSemanticCache", () => {
     // The first assistant turn after the question is the answer to it.
     expect(hit).toMatchObject({ hit: true, content: "the right answer" });
   });
+
+  it("scopes cache hits to userId when provided and stays unscoped when omitted", async () => {
+    const { db, model } = harness;
+    const question = "what is my account balance";
+    await seedExchange(db, {
+      userId: "user-a",
+      question,
+      answer: "Alice balance is 42",
+    });
+
+    const vector = embeddingVector(question, DIMENSIONS);
+
+    // Another user must not receive user-a's cached answer when userId is passed.
+    expect(
+      await model.checkChatSemanticCache(vector, 0.9, 24, [], "user-b"),
+    ).toEqual({ hit: false });
+
+    // The owning user gets their own cached answer.
+    expect(
+      await model.checkChatSemanticCache(vector, 0.9, 24, [], "user-a"),
+    ).toMatchObject({ hit: true, content: "Alice balance is 42" });
+
+    // Omitting userId preserves cross-user lookup for shared caches.
+    expect(
+      await model.checkChatSemanticCache(vector, 0.9, 24, []),
+    ).toMatchObject({ hit: true, content: "Alice balance is 42" });
+  });
 });
 
 describe("tryCachedReply", () => {
