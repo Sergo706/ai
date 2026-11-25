@@ -70,8 +70,7 @@ export default defineAppConfig({
     },
     pageHero: {
       slots: {
-        title: 'font-serif italic',
-        description: 'text-muted',
+        description: 'text-muted text-balance',
       },
     },
     prose: {

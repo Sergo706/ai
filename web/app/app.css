@@ -4,6 +4,17 @@
 @theme {
   --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Newsreader", ui-serif, Georgia, serif;
+  --color-ink: #ededed;
+  --color-ink-muted: #8a8a8a;
+  --color-ink-dim: #5c5c5c;
+  --color-line: #232323;
+  --color-raised: #121212;
+  --color-code-key: #a78bfa;
+  --color-code-str: #7dd3a0;
+  --color-code-fn: #7cb7ff;
+  --color-code-num: #f0b37e;
+  --color-code-const: #e5e5e5;
+  --color-code-comment: #5c5c5c;
 }
 
 :root {

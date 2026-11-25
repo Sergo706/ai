@@ -15,7 +15,7 @@ const ariaLabel = appConfig.header?.title || site.name
     <AppHeaderLogo class="h-6 w-auto shrink-0" />
     <span
       v-if="appConfig.header?.title"
-      class="truncate text-base font-medium text-highlighted"
+      class="truncate font-serif text-lg italic leading-none text-highlighted"
     >
       {{ appConfig.header?.title }}
     </span>
