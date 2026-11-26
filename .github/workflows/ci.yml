@@ -20,7 +20,7 @@ jobs:
       - name: node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: Dependencies
         run: npm install
@@ -29,7 +29,7 @@ jobs:
         run: |
           npm run format:check
           npx tsc --noEmit
-          npm run lint:fix
+          npm run lint
 
       - name: Test
         run: npm test
