@@ -275,6 +275,9 @@ export default defineNuxtConfig({
     cloudflare: {
       deployConfig: true,
       nodeCompat: true,
+      wrangler: {
+        name: "ai",
+      },
     },
   },
   experimental: {

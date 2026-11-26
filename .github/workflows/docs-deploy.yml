@@ -63,4 +63,4 @@ jobs:
           apiToken: ${{ secrets.CF_TOKEN }}
           accountId: ${{ secrets.CF_ACC_ID }}
           workingDirectory: web
-          command: pages deploy .output/public --project-name ai
+          command: pages deploy dist --project-name ai

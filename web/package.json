@@ -1,5 +1,6 @@
 {
   "name": "ai",
+  "type": "module",
   "scripts": {
     "dev": "nuxt dev",
     "build": "nuxt build",
@@ -7,6 +8,7 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
+    "@modelcontextprotocol/server": "^2.4.0",
     "agents": "^0.34.1",
     "better-sqlite3": "^12.11.1",
     "docus": "latest",

@@ -3,7 +3,8 @@ logs/*
 *.log
 dist/*
 coverage/*
-
+web/dist
+web/.wrangler
 .nuxt
 .output
 .nitro
