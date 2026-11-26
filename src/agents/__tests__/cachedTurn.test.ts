@@ -1,6 +1,8 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { toJson, toVec } from "~/db/utils.js";
+import { fromJson, toJson, toVec } from "~/db/utils.js";
+import { clearRuns, registerRun } from "~/runs/runRegistry.js";
+import { streamFromRun } from "~/runs/streamFromRun.js";
 import { libLog, libLogger, resetLibLogger } from "~~/test/test-utils/logger.js";
 import { loadConfig, type LoadedConfig } from "~~/test/test-utils/config.js";
 import {
@@ -102,6 +104,10 @@ beforeEach(async () => {
   fake.inputs.length = 0;
 });
 
+afterEach(() => {
+  clearRuns();
+});
+
 describe("cachedTurn", () => {
   it("returns null when semantic caching is not configured", async () => {
     const conversationId = await newConversation();
@@ -112,7 +118,6 @@ describe("cachedTurn", () => {
         hasFiles: false,
         message: "hello",
         log: libLogger,
-        managed: false,
       }),
     ).toBeNull();
     // The cheap guards run before the provider is ever called.
@@ -127,7 +132,6 @@ describe("cachedTurn", () => {
         hasFiles: false,
         message: "hello",
         log: libLogger,
-        managed: false,
       }),
     ).toBeNull();
     expect(fake.inputs).toEqual([]);
@@ -142,26 +146,133 @@ describe("cachedTurn", () => {
         hasFiles: true,
         message: "hello",
         log: libLogger,
-        managed: false,
       }),
     ).toBeNull();
     // Attachment text is inlined into the stored message, so caching is unsafe.
     expect(fake.inputs).toEqual([]);
   });
 
-  it("returns null when the turn belongs to a managed run", async () => {
+  it("creates a finished run row and replayable RunHandle on a managed cache hit", async () => {
+    const source = await newConversation("u-run");
+    const target = await newConversation("u-run");
+    const message = "what is the capital of France";
+    await seedExchange({ conversationId: source, question: message, answer: "Paris" });
+
+    const run = registerRun({
+      id: "run-cached-1",
+      kind: "chat",
+      conversationId: target,
+      status: "running",
+      startedAt: Date.now(),
+    });
+
+    const stream = await cachedTurn({
+      options: {},
+      conversationId: target,
+      userId: "u-run",
+      hasFiles: false,
+      message,
+      log: libLogger,
+      run,
+      runName: "supportAgent",
+    });
+
+    if (stream === null) throw new Error("expected a managed cached stream");
+
+    const frames: unknown[] = [];
+    for await (const frame of stream.frames) frames.push(frame);
+    expect(frames).toEqual([
+      { type: "init", conversationId: target },
+      { type: "chunk", text: "Paris" },
+      { type: "done" },
+    ]);
+
+    expect(await stream.done).toEqual({
+      runId: "run-cached-1",
+      conversationId: target,
+      text: "Paris",
+      toolsUsed: [],
+      trace: null,
+      cached: true,
+    });
+
+    expect(run.status).toBe("finished");
+    expect(run.events).toEqual([
+      { type: "chunk", text: "Paris" },
+      { type: "done" },
+    ]);
+    expect(run.eventIds).toHaveLength(2);
+    expect(run.disposal).toBeTypeOf("function");
+
+    const row = await db
+      .selectFrom("runs")
+      .selectAll()
+      .where("id", "=", "run-cached-1")
+      .executeTakeFirstOrThrow();
+    expect(row.kind).toBe("chat");
+    expect(row.query).toBe(message);
+    expect(row.user_id).toBe("u-run");
+    expect(row.conversation_id).toBe(target);
+    expect(row.status).toBe("finished");
+    expect(row.finished_at).not.toBeNull();
+    expect(row.owner).toBeNull();
+    expect(row.claimed_at).toBeNull();
+    expect(fromJson<{ name: string }>(row.input as { name: string } | null)).toEqual({
+      name: "supportAgent",
+    });
+    expect(fromJson<{ text: string }>(row.partial as { text: string } | null)).toEqual({
+      text: "Paris",
+    });
+
+    // Reattaching via streamFromRun replays the cached run and closes cleanly.
+    const replayStream = streamFromRun({
+      run,
+      conversationId: target,
+      runId: run.id,
+      log: libLogger,
+    });
+    const reader = replayStream.getReader();
+    const decoder = new TextDecoder();
+    let sse = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      sse += decoder.decode(value, { stream: true });
+    }
+    expect(sse).toContain(`"runId":"run-cached-1"`);
+    expect(sse).toContain(`"type":"chunk","text":"Paris"`);
+    expect(sse).toContain(`"type":"done"`);
+  });
+
+  it("leaves a managed run untouched when the cache misses", async () => {
     const conversationId = await newConversation();
+    const run = registerRun({
+      id: "run-miss-1",
+      kind: "chat",
+      conversationId,
+      status: "running",
+      startedAt: Date.now(),
+    });
+
     expect(
       await cachedTurn({
         options: {},
         conversationId,
         hasFiles: false,
-        message: "hello",
+        message: "never asked before",
         log: libLogger,
-        managed: true,
+        run,
       }),
     ).toBeNull();
-    expect(fake.inputs).toEqual([]);
+
+    expect(run.status).toBe("running");
+    expect(run.events).toEqual([]);
+    const row = await db
+      .selectFrom("runs")
+      .select("id")
+      .where("id", "=", "run-miss-1")
+      .executeTakeFirst();
+    expect(row).toBeUndefined();
   });
 
   it("returns null when nothing similar is cached", async () => {
@@ -173,7 +284,6 @@ describe("cachedTurn", () => {
         hasFiles: false,
         message: "a question nobody asked before",
         log: libLogger,
-        managed: false,
       }),
     ).toBeNull();
     // It did look, because none of the guards applied.
@@ -192,7 +302,6 @@ describe("cachedTurn", () => {
       hasFiles: false,
       message,
       log: libLogger,
-      managed: false,
     });
 
     if (stream === null) throw new Error("expected a cached stream");
@@ -234,7 +343,6 @@ describe("cachedTurn", () => {
         hasFiles: false,
         message,
         log: libLogger,
-        managed: false,
       }),
     ).toBeNull();
 
@@ -257,7 +365,6 @@ describe("cachedTurn", () => {
         hasFiles: false,
         message,
         log: libLogger,
-        managed: false,
       }),
     ).not.toBeNull();
   });
@@ -281,7 +388,6 @@ describe("cachedTurn", () => {
         hasFiles: false,
         message,
         log: libLogger,
-        managed: false,
       }),
     ).not.toBeNull();
 
@@ -294,7 +400,6 @@ describe("cachedTurn", () => {
         hasFiles: false,
         message,
         log: libLogger,
-        managed: false,
       }),
     ).toBeNull();
   });
@@ -317,7 +422,6 @@ describe("cachedTurn", () => {
         hasFiles: false,
         message,
         log: libLogger,
-        managed: false,
       }),
     ).not.toBeNull();
   });
@@ -336,7 +440,6 @@ describe("cachedTurn", () => {
       hasFiles: false,
       message,
       log: libLogger,
-      managed: false,
     });
 
     // The user question and the replayed answer are written into the *target*
@@ -374,7 +477,6 @@ describe("cachedTurn", () => {
         hasFiles: false,
         message,
         log: libLogger,
-        managed: false,
       }),
     ).not.toBeNull();
   });
@@ -399,7 +501,6 @@ describe("cachedTurn", () => {
         hasFiles: false,
         message,
         log: libLogger,
-        managed: false,
       }),
     ).toBeNull();
 
@@ -411,7 +512,6 @@ describe("cachedTurn", () => {
       hasFiles: false,
       message,
       log: libLogger,
-      managed: false,
     });
     if (hit === null) throw new Error("expected alice to hit her own cache");
     expect((await hit.done).text).toBe("Alice private answer");

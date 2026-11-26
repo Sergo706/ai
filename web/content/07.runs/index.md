@@ -21,7 +21,7 @@ Browser tabs reload, mobile connections drop, and container orchestrators restar
 HTTP Request ──► Replica A
                    ├─ Creates row in `runs` (status="running", owner=INSTANCE_ID)
                    ├─ Heartbeats `runs.claimed_at` every 15s (lease TTL = 60s)
-                   ├─ Publishes frames to local RunRegistry + Redis Stream (`ai:run:events:<runId>`)
+                   ├─ Publishes frames to local RunRegistry + Redis Stream (`run:<runId>:events`)
                    └─ Writes checkpoints to `runs.checkpoint` between workflow stages
 
 Client Reconnects ──► Replica B (with Last-Event-ID)
@@ -47,7 +47,7 @@ import {
 
 // 1. Initialize database, Redis, and AI clients
 await configuration({
-  // ...database, redis, aiClient, embeddingConfig
+  // ...db, redis, openAiConfig, embeddingConfig
 });
 
 // 2. Register all custom workflow resumers before starting recovery

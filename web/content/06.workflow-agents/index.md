@@ -12,14 +12,15 @@ Standard single-prompt tool loops are great for interactive chat, but deep resea
 
 ## Lifecycle stages
 
-Every `AgenticWorkflowLoop` run progresses through up to five deterministic stages, stopping early as soon as the `evaluator` declares evidence sufficient, a budget hits its ceiling, no new sources remain, or `signal` aborts:
+Every `AgenticWorkflowLoop` run progresses through six deterministic steps, stopping early as soon as the `evaluator` declares evidence sufficient, a budget hits its ceiling, no new sources remain, or `signal` aborts:
 
 ```text [Execution Flow]
-1. seeds     ─► Execute optional pre-seeded targets (seedTargets) → evaluate
-2. local     ─► Page through localKnowledge batches → evaluate after each batch
-3. external  ─► Discover intents via externalDiscovery → executeBatch() → evaluate
-4. critic    ─► Optional review of accumulated state; can request follow-up external intents
-5. final     ─► Optional finalAnswer.synthesize(result) → returns typed report
+1. seeds      ─► Execute optional pre-seeded targets (seedTargets) → evaluate → early exit if sufficient
+2. local      ─► Page through localKnowledge batches (skipped if skipLocal: true) → evaluate → early exit if sufficient
+3. cold start ─► Only if evidenceSet is empty and maxExternalRounds > 0: evaluate(..., coldStart = true) to generate initial intents (falls back to [transformIntent(query) ?? query])
+4. external   ─► Discover intents via externalDiscovery → executeBatch() → evaluate each round
+5. critic     ─► Skipped if evidenceSet is empty; can request at most ONE refinement pass (resets contextIsSufficient = false first)
+6. final      ─► Skipped automatically when context, localItems, and externalArtifacts are all empty (leaving report undefined)
 ```
 
 Each stage records progress into `WorkflowState`, emits structured `WorkflowProgressEvent` updates via `onProgress`, and snapshots resumable `WorkflowCheckpoint` payloads via `onCheckpoint`.
@@ -126,7 +127,7 @@ export async function runResearch(query: string, signal?: AbortSignal) {
 
 ## Run result (`WorkflowRunResult`)
 
-`loop.run()` always resolves to a structured `WorkflowRunResult<TLocalItem, TExternalArtifact, TReport>` (except when aborted and throwing `WorkflowAbortedError`):
+`loop.run()` always resolves to a structured `WorkflowRunResult<TLocalItem, TExternalArtifact, TReport>` — including when aborted (`stopReason: "aborted"`). Internally, the loop and adapters abort via `context.signal?.throwIfAborted()` or `WorkflowAbortedError`, which `loop.run()` catches to mark state aborted and return cleanly with all evidence collected so far:
 
 | Field | Type | Description |
 | --- | --- | --- |
@@ -195,5 +196,14 @@ export function streamResearch(query: string): Response {
   to: /workflow-agents/checkpoints-and-resume
   ---
   Persist `WorkflowCheckpoint` snapshots via `onCheckpoint`, restore with `resumeFrom`, and handle `WorkflowAbortedError`.
+  :::
+
+  :::card
+  ---
+  icon: i-lucide-flask-conical
+  title: Complete Research Workflow
+  to: /workflow-agents/complete-research-workflow
+  ---
+  A complete runnable `AgenticWorkflowLoop` wiring local vector search, live extraction, adaptive filtering, LLM schema validation, critic review, and SSE streaming.
   :::
 ::

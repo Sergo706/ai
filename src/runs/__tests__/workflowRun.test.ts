@@ -69,13 +69,15 @@ const baseOptions = {
 
 const execution = {
   data: { answer: "ok" },
-  source: "fresh",
-  promptId: 42,
-  generatedDocumentIds: ["doc-1"],
-  isSufficient: true,
   stopReason: "sufficient",
-  missingSearchTerms: ["price"],
-  urls: ["https://a.example"],
+  source: "fresh",
+  isSufficient: true,
+  missingIntents: ["price"],
+  meta: {
+    promptId: 42,
+    generatedDocumentIds: ["doc-1"],
+    urls: ["https://a.example"],
+  },
 };
 
 beforeEach(() => {
@@ -106,14 +108,16 @@ describe("runWorkflow", () => {
 
     expect(result).toEqual({
       success: true,
-      source: "fresh",
-      promptId: 42,
-      generatedDocumentIds: ["doc-1"],
-      isSufficient: true,
-      stopReason: "sufficient",
-      missingSearchTerms: ["price"],
-      urls: ["https://a.example"],
       data: { answer: "ok" },
+      stopReason: "sufficient",
+      source: "fresh",
+      isSufficient: true,
+      missingIntents: ["price"],
+      meta: {
+        promptId: 42,
+        generatedDocumentIds: ["doc-1"],
+        urls: ["https://a.example"],
+      },
     });
   });
 
@@ -214,18 +218,44 @@ describe("runWorkflow", () => {
         report: { answer: "ok" },
         isSufficient: true,
         missingIntents: ["price"],
+        meta: {
+          promptId: 42,
+          generatedDocumentIds: ["doc-1"],
+          urls: ["https://a.example"],
+        },
       },
     });
   });
 
-  it("hands the prompt id back to the caller rather than persisting it", async () => {
-    // `finishRun` writes the row's terminal state; the prompt id belongs to the
-    // returned payload, so it must not leak into the persisted shape.
-    const result = await runWorkflow(baseOptions, async () => execution, log);
+  it("supports minimal workflows without optional research fields or meta", async () => {
+    let runId = "";
 
-    const args = h.finishRun.mock.calls[0]?.[0] as Record<string, unknown>;
-    expect(args).not.toHaveProperty("promptId");
-    expect(result.promptId).toBe(42);
+    const result = await runWorkflow(
+      {
+        ...baseOptions,
+        onRunStarted: (id) => {
+          runId = id;
+        },
+      },
+      async () => ({
+        data: { count: 3 },
+        stopReason: "completed",
+      }),
+      log,
+    );
+
+    expect(result).toEqual({
+      success: true,
+      data: { count: 3 },
+      stopReason: "completed",
+    });
+    expect(h.finishRun).toHaveBeenCalledWith({
+      runId,
+      stopReason: "completed",
+      partial: {
+        report: { count: 3 },
+      },
+    });
   });
 
   it("marks a transient failure as interrupted when a checkpoint exists", async () => {

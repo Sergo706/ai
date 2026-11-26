@@ -1,6 +1,9 @@
 import { tryCachedReply } from "../chat/semanticCacheReply";
 import { generateMatchingEmbedding } from "../rag/embedding";
 import type { Logger } from "../config/configSchema";
+import { createRun, updateRun } from "../models/runs";
+import { publish, scheduleDisposal } from "../runs/runRegistry";
+import type { RunHandle } from "../runs/types";
 import type { SseFrame } from "../types/Chat";
 import { framesOf } from "./frames";
 import type { ChatStream, ChatTurnResult, SemanticCacheOptions } from "./types";
@@ -9,9 +12,12 @@ import type { ChatStream, ChatTurnResult, SemanticCacheOptions } from "./types";
  * Answers from a near-identical earlier exchange, when it is safe to.
  *
  * Returns `null` whenever the cache cannot be trusted for this turn: no
- * conversation to search, attached files (their content is inlined into the
- * stored message and would poison a later text-only ask), or runs being on,
- * because a managed run must exist for the client to reattach to.
+ * conversation to search, or attached files (their content is inlined into the
+ * stored message and would poison a later text-only ask).
+ *
+ * When a managed `run` is active, a cache hit still creates and finishes its
+ * run row, publishes the cached reply and `done` to the `RunHandle`, and
+ * schedules disposal so clients can replay or inspect the `runId`.
  */
 export async function cachedTurn<TStructured>(args: {
   options: SemanticCacheOptions | undefined;
@@ -20,12 +26,21 @@ export async function cachedTurn<TStructured>(args: {
   hasFiles: boolean;
   message: string;
   log: Logger;
-  managed: boolean;
+  run?: RunHandle;
+  runName?: string;
 }): Promise<ChatStream<TStructured> | null> {
-  const { options, conversationId, userId, hasFiles, message, log, managed } =
-    args;
+  const {
+    options,
+    conversationId,
+    userId,
+    hasFiles,
+    message,
+    log,
+    run,
+    runName,
+  } = args;
   if (options === undefined || conversationId === undefined) return null;
-  if (hasFiles || managed) return null;
+  if (hasFiles) return null;
 
   const embedding = await generateMatchingEmbedding(message);
   const cached = await tryCachedReply(
@@ -46,6 +61,28 @@ export async function cachedTurn<TStructured>(args: {
   if (cached === null || !("hit" in cached) || !cached.hit) return null;
 
   const text = cached.content ?? "";
+
+  if (run !== undefined) {
+    await createRun({
+      id: run.id,
+      kind: run.kind,
+      query: message,
+      userId: userId ?? null,
+      conversationId,
+      ...(runName === undefined ? {} : { input: { name: runName } }),
+    });
+    await updateRun({
+      id: run.id,
+      status: "finished",
+      partial: { text },
+      finished: true,
+    });
+    if (text !== "") publish(run, { type: "chunk", text });
+    publish(run, { type: "done" });
+    run.status = "finished";
+    scheduleDisposal(run);
+  }
+
   const frames: SseFrame[] = [
     { type: "init", conversationId },
     { type: "chunk", text },
@@ -55,7 +92,7 @@ export async function cachedTurn<TStructured>(args: {
   return {
     frames: framesOf(frames),
     done: Promise.resolve({
-      runId: undefined,
+      runId: run?.id,
       conversationId,
       text,
       toolsUsed: [],

@@ -99,7 +99,7 @@ Configure only the subsystems your agent needs. Omitting `conversation` creates 
   :::
 
   :::field{name="embedding" type="EmbeddingOptions"}
-  Per-agent overrides for `retrievalModel`, `matchingModel`, or `dimensions`.
+  Reserved per-agent embedding override type (`retrievalModel`, `matchingModel`, `dimensions`). Currently, agent turns use the global `embeddingConfig` supplied to `configuration()`.
   :::
 
   :::field{name="meta" type="TMeta"}
@@ -181,10 +181,40 @@ Every call to `agent.chat()` or `agent.complete()` accepts these request-scoped 
 - **`files`**: attached `File[]` objects parsed via `parseFiles()` and prepended as Markdown.
 - **`runId`**: explicit run identifier when `runs` is enabled (generated via `crypto.randomUUID()` when omitted).
 - **`signal`**: `AbortSignal` merged with the run's internal stop signal.
-- **`model`**: per-turn overrides for `model`, `temperature`, `maxTokens`, `thinking`, `tools`, or `body` (`request` remains agent-wide).
+- **`model`**: per-turn overrides for `model`, `temperature`, `maxTokens`, `thinkingEffort`, `tools`, or `body` (`request` remains agent-wide).
 - **`meta`**: partial metadata merged over `AgentConfig.meta` for this turn's tool factories.
 - **`user`**: optional context (`locale`, `timezone`, `currentDate`, `geo`, `other`) appended to the system prompt for this turn.
 - **`json`**: requests raw JSON mode or schema-validated structured output.
+
+### Transport-level request options (`model.request`)
+
+Use `model.request` (`ModelRequestOptions`) to attach OpenAI SDK transport options — such as custom headers, timeouts, retries, or query parameters — to every completion call made by the agent. It is bound once on the agent's client at construction (`createAgent()`) and applies uniformly across all turns and compaction calls (it cannot be overridden per turn via `input.model`):
+
+```ts [src/agents/request-options.ts]
+import { createAgent } from "@riavzon/ai";
+
+export const gatewayAgent = await createAgent({
+  model: {
+    model: "gpt-4o-mini",
+    request: {
+      timeout: 45_000,
+      maxRetries: 3,
+      headers: {
+        "X-App-Name": "support-portal",
+        "X-Region": "eu-central-1",
+      },
+    },
+  },
+  systemInstructions: "You are a concise support assistant.",
+});
+```
+
+### Streaming vs. validated JSON error handling
+
+Error handling intentionally differs between streaming turns and validated JSON turns:
+
+- **Streaming turns** (`agent.chat()` without `json.validate`, or `agent.complete()`): unexpected failures are caught inside the turn, emitted as a terminal `{ type: "error", message }` frame, recorded on the `runs` row when `runs` is enabled, and surfaced on `ChatTurnResult.error` so SSE responses terminate cleanly.
+- **Validated JSON turns** (`json: { validate: true, schema }`): if parsing, schema validation, or the provider fails after all repair retries, the turn marks any active run `aborted` or `failed` and **rethrows** so callers never receive unvalidated data typed as `z.output<S>`.
 
 ## Releasing resources with `agent.close()`
 
@@ -240,5 +270,14 @@ Every agent exposes `readonly config: AgentConfig<TMeta>` so you can inspect the
   to: /agents/agent-runs
   ---
   Back every agent turn with a database lease, Redis event stream, and client reattach support.
+  :::
+
+  :::card
+  ---
+  icon: i-lucide-layers
+  title: Production Agent & Streaming Recipes
+  to: /agents/production-agent-and-streaming
+  ---
+  End-to-end kitchen-sink agent plus complete CLI, Web/Node HTTP server, and frontend SSE client consumers.
   :::
 ::

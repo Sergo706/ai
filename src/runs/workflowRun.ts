@@ -10,6 +10,7 @@ import {
 import { createRun, updateRun } from "../models/runs";
 import { runWasAborted } from "./abortSignals";
 import { isTransientError } from "./transientErrors";
+import type { RunPartial } from "../types/RunModel";
 import type {
   WorkflowExecution,
   WorkflowPayload,
@@ -40,11 +41,13 @@ import type {
  * );
  * ```
  */
-export async function runWorkflow<TData>(
+export async function runWorkflow<TData, TMeta = unknown>(
   options: WorkflowRunOptions,
-  execute: (ctx: WorkflowRunContext) => Promise<WorkflowExecution<TData>>,
+  execute: (
+    ctx: WorkflowRunContext,
+  ) => Promise<WorkflowExecution<TData, TMeta>>,
   log: Logger,
-): Promise<WorkflowPayload<TData>> {
+): Promise<WorkflowPayload<TData, TMeta>> {
   const {
     kind,
     name,
@@ -125,27 +128,42 @@ export async function runWorkflow<TData>(
       emitProgress: (event) => options.onProgress?.(event),
     });
 
+    const partial: RunPartial = { report: execution.data };
+    if (execution.isSufficient !== undefined) {
+      partial.isSufficient = execution.isSufficient;
+    }
+    if (execution.missingIntents !== undefined) {
+      partial.missingIntents = execution.missingIntents;
+    }
+    if (execution.meta !== undefined) {
+      partial.meta = execution.meta;
+    }
+
     await finishRun({
       runId,
       stopReason: execution.stopReason,
-      partial: {
-        report: execution.data,
-        isSufficient: execution.isSufficient,
-        missingIntents: execution.missingSearchTerms,
-      },
+      partial,
     });
 
-    return {
+    const payload: WorkflowPayload<TData, TMeta> = {
       success: true,
-      source: execution.source,
-      promptId: execution.promptId,
-      generatedDocumentIds: execution.generatedDocumentIds,
-      isSufficient: execution.isSufficient,
-      stopReason: execution.stopReason,
-      missingSearchTerms: execution.missingSearchTerms,
-      urls: execution.urls,
       data: execution.data,
+      stopReason: execution.stopReason,
     };
+    if (execution.source !== undefined) {
+      payload.source = execution.source;
+    }
+    if (execution.isSufficient !== undefined) {
+      payload.isSufficient = execution.isSufficient;
+    }
+    if (execution.missingIntents !== undefined) {
+      payload.missingIntents = execution.missingIntents;
+    }
+    if (execution.meta !== undefined) {
+      payload.meta = execution.meta;
+    }
+
+    return payload;
   } catch (err) {
     const aborted = runWasAborted({
       error: err,

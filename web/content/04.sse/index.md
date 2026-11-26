@@ -58,6 +58,20 @@ Every streaming turn emits a discriminated union of typed frames on `data:`:
 | `error` | `message: string` | Terminal error message safe to display to end users. |
 | `done` | *(none)* | Terminal frame signaling a completed stream. |
 
+## Choosing the right streaming helper
+
+`@riavzon/ai` provides seven streaming builders covering everything from simple chat routes to cross-replica crash-resumable workflows:
+
+| Helper | Input | Default heartbeat | `id:` cursors | Durable / reattach | Client disconnect behavior | Best for |
+| --- | --- | --- | --- | --- | --- | --- |
+| `framesToStream()` | `AsyncIterable<SseFrame>` from `agent.chat()` | `10_000` ms | No | Yes when `AgentConfig.runs` is on (omit `onCancel`) | Calls `onCancel()` if provided | Any route backed by `createAgent()` |
+| `runAgentStream()` | `AsyncIterable<AgentEvent>` + `EventSink` + `TraceCollector` | None (add via custom wrapper if needed) | No | No | Cancels via `RequestAbort` / `signal` | Custom low-level chat pipelines without `createAgent()` |
+| `workflowStream()` | `execute(emit) => Promise<SseFrame>` | `15_000` ms | No | No | Closes response (work runs to completion unless you pass a signal) | Simple streaming workflows that do not need client reconnect |
+| `workflowStreamWithRegistry()` | `runId`, `kind`, `execute({ emit, signal })` | `10_000` ms | Yes (via registry) | Yes (`streamFromRun` / `streamFromStore`) | Detaches reader while work keeps running until stopped via `run.controller` | Durable workflows launched from an HTTP request with reattach + stop button |
+| `streamFromRun()` | Local `RunHandle` from `getRun(runId)` | `10_000` ms | Yes | Yes (same-process replay + live tail) | Unsubscribes reader; run keeps executing | Fast-path reattach when the run lives on this replica |
+| `streamFromStore()` | `runId`, `since`, `isRunAlive` | `10_000` ms | Yes | Yes (cross-replica Redis Streams replay + live tail) | Stops tail loop; run keeps executing | Reattach when the request lands on another replica or after restart |
+| `staticReplyStream()` | `(conversationId, text)` | None | No | No | Closes immediately after `done` | Instant replay of semantically cached or static chat replies |
+
 ## Streaming helpers
 
 Pick the streaming builder that matches your use case — from high-level `agent.chat()` streams down to custom workflow streams and static cache replays.

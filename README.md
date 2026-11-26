@@ -344,7 +344,7 @@ mirror those settings as `RUNS_*` for deployments that prefer them.
 
 ## Documentation
 
-Full documentation at https://ai.riavzon.com
+Full documentation, guides & examples at https://ai.riavzon.com
 
 ## License
 

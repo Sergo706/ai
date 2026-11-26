@@ -50,7 +50,7 @@ export default defineAppConfig({
 
   ui: {
     colors: {
-      primary: 'emerald',
+      primary: 'neutral',
       neutral: 'neutral',
     },
 
@@ -68,18 +68,39 @@ export default defineAppConfig({
         highlightColor: 'neutral',
       },
     },
+    pageHeader: {
+      slots: {
+        headline: 'text-xs font-medium tracking-[0.14em] uppercase text-muted',
+      },
+    },
     pageHero: {
       slots: {
         description: 'text-muted text-balance',
       },
     },
     prose: {
-      h1: { slots: { base: 'font-serif italic text-highlighted' } },
-      h2: { slots: { base: 'font-serif italic text-highlighted' } },
-      h3: { slots: { base: 'font-serif text-highlighted' } },
-      h4: { slots: { base: 'font-serif text-highlighted' } },
+      h1: {
+        slots: {
+          base: 'font-sans not-italic font-medium leading-[1.1] tracking-tight text-highlighted [&_code]:font-medium',
+        },
+      },
+      h2: {
+        slots: {
+          base: 'font-serif tracking-tight text-highlighted [&_code]:font-medium',
+        },
+      },
+      h3: {
+        slots: {
+          base: 'font-serif tracking-tight text-highlighted [&_code]:font-medium',
+        },
+      },
+      h4: {
+        slots: {
+          base: 'font-serif tracking-tight text-highlighted [&_code]:font-medium',
+        },
+      },
       a: {
-        base: 'font-medium transition-colors hover:text-primary/90',
+        base: 'text-highlighted font-medium border-b border-primary/35 hover:border-primary hover:text-primary transition-colors',
       },
     },
   },

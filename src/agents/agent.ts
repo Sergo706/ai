@@ -119,7 +119,8 @@ export async function buildAgent<TMeta = unknown>(
       hasFiles: attachments.hasFiles,
       message: attachments.message,
       log,
-      managed: run !== undefined,
+      run,
+      runName: config.runs?.name,
     });
     if (cacheHit !== null) return cacheHit;
 

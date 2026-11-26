@@ -19,9 +19,13 @@
 
 :root {
   --ui-container: 90rem;
+  --ui-primary: var(--ui-color-neutral-900);
 }
 
 html.dark {
+  --ui-primary: #ffffff;
+  --ui-text-inverted: #0a0a0a;
+
   --ui-text: #ededed;
   --ui-text-muted: #808080;
   --ui-text-dimmed: #707070;

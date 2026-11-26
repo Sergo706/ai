@@ -817,4 +817,69 @@ describe("buildAgent — option plumbing", () => {
       await env.cleanup();
     }
   });
+
+  it("serves a full run-backed semantic cache hit when both runs and semanticCache are enabled", async () => {
+    const fake = streamFake([delta("Cached managed reply", "stop")]);
+    const env = await boot(fake);
+    try {
+      const { getRun, clearRuns } = await import("~/runs/runRegistry.js");
+      try {
+        const agent = await env.buildAgent({
+          ...baseConfig(),
+          conversation: { persist: true },
+          runs: { kind: "chat", name: "faqAgent" },
+          semanticCache: { similarity: 0.9, windowHours: 24 },
+        });
+
+        const first = await agent.complete({
+          message: "What is our refund window?",
+          userId: "u-cache-run",
+          runId: "run-live-1",
+        });
+        expect(first.cached).toBe(false);
+        expect(first.runId).toBe("run-live-1");
+        const callsAfterFirst = fake.calls.length;
+
+        const second = await agent.complete({
+          message: "What is our refund window?",
+          userId: "u-cache-run",
+          runId: "run-cached-2",
+        });
+        expect(second.cached).toBe(true);
+        expect(second.runId).toBe("run-cached-2");
+        expect(second.text).toBe("Cached managed reply");
+        // No new LLM call was made on the cached turn.
+        expect(fake.calls).toHaveLength(callsAfterFirst);
+
+        const cachedRow = await env.db
+          .selectFrom("runs")
+          .select(["id", "status", "owner", "claimed_at", "finished_at", "input", "partial"])
+          .where("id", "=", "run-cached-2")
+          .executeTakeFirstOrThrow();
+        expect(cachedRow.status).toBe("finished");
+        expect(cachedRow.owner).toBeNull();
+        expect(cachedRow.claimed_at).toBeNull();
+        expect(cachedRow.finished_at).not.toBeNull();
+        expect(fromJson<{ name: string }>(cachedRow.input as { name: string } | null)).toEqual({
+          name: "faqAgent",
+        });
+        expect(fromJson<{ text: string }>(cachedRow.partial as { text: string } | null)).toEqual({
+          text: "Cached managed reply",
+        });
+
+        const handle = getRun("run-cached-2");
+        expect(handle?.status).toBe("finished");
+        expect(handle?.events).toEqual([
+          { type: "chunk", text: "Cached managed reply" },
+          { type: "done" },
+        ]);
+
+        await agent.close();
+      } finally {
+        clearRuns();
+      }
+    } finally {
+      await env.cleanup();
+    }
+  });
 });

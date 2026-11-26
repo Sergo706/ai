@@ -16,6 +16,8 @@ export interface RunPartial {
   isSufficient?: boolean;
   /** Intents the run never got to. */
   missingIntents?: string[];
+  /** Workflow-specific metadata saved alongside the terminal payload. */
+  meta?: unknown;
 }
 
 /** Input payload stored on a run row, so a resume can replay the request. */

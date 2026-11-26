@@ -16,28 +16,24 @@ export type RunKind = KindOf;
 /**
  * The envelope a long workflow returns to its route.
  *
- * Shared across workflows so each one can keep its own `data` type.
+ * Shared across workflows so each one can keep its own `data` and optional
+ * `meta` types.
  */
-export interface WorkflowPayload<TData> {
+export interface WorkflowPayload<TData, TMeta = unknown> {
   /** `true` when the run completed without throwing. */
   success: true;
-  /** Where the evidence came from, e.g. `"local"` or `"mixed"`.
-   */
-  source: string;
-  /** Id of the prompt that drove the run, when one was stored. */
-  promptId?: number;
-  /** Files the run generated, by id. */
-  generatedDocumentIds?: string[];
-  /** Whether the run gathered enough evidence to answer. */
-  isSufficient: boolean;
-  /** Why the run stopped. */
-  stopReason: string;
-  /** Intents the run never got to. */
-  missingSearchTerms: string[];
-  /** Pages the run visited. */
-  urls: string[];
   /** The workflow's own answer, typed by the caller. */
   data: TData;
+  /** Why the run stopped. */
+  stopReason: string;
+  /** Where the evidence came from, e.g. `"local"` or `"mixed"`, when applicable. */
+  source?: string;
+  /** Whether the run gathered enough evidence to answer, when applicable. */
+  isSufficient?: boolean;
+  /** Intents the run never got to, when applicable. */
+  missingIntents?: string[];
+  /** Workflow-specific metadata (e.g. visited URLs, generated file IDs, metrics). */
+  meta?: TMeta;
 }
 
 /**
@@ -405,21 +401,17 @@ export interface WorkflowRunContext<TProgress = WorkflowProgressUpdate> {
 }
 
 /** What a workflow returns when it succeeds. */
-export interface WorkflowExecution<TData> {
+export interface WorkflowExecution<TData, TMeta = unknown> {
   /** Terminal payload of the run. */
   data: TData;
-  /** Where the evidence came from. */
-  source: string;
-  /** Id of the prompt used, when one was stored. */
-  promptId?: number;
-  /** Files the run generated, by id. */
-  generatedDocumentIds?: string[];
-  /** Whether the run gathered enough evidence to answer. */
-  isSufficient: boolean;
   /** Why the run stopped. */
   stopReason: string;
-  /** Intents the run never got to. */
-  missingSearchTerms: string[];
-  /** Pages the run visited. */
-  urls: string[];
+  /** Where the evidence came from, when applicable. */
+  source?: string;
+  /** Whether the run gathered enough evidence to answer, when applicable. */
+  isSufficient?: boolean;
+  /** Intents the run never got to, when applicable. */
+  missingIntents?: string[];
+  /** Workflow-specific metadata forwarded on the payload and stored in `runs.partial`. */
+  meta?: TMeta;
 }

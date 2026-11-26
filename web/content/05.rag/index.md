@@ -33,7 +33,7 @@ Many modern embedding families (such as Nomic, BGE, Cohere, and Voyage) distingu
 import { configuration } from "@riavzon/ai";
 
 await configuration({
-  // ...database & aiClient
+  // ...db & openAiConfig
   embeddingConfig: {
     retrievalModel: "text-embedding-3-small", // Used when embedding document chunks
     matchingModel: "text-embedding-3-small",  // Used when embedding queries & dedupe vectors
@@ -103,5 +103,14 @@ export const docsAgent = await createAgent({
   to: /rag/adaptive-filtering
   ---
   Score freshly scraped chunks against a query and drop near-duplicates before inserting using `filterAdaptiveChunks()`.
+  :::
+
+  :::card
+  ---
+  icon: i-lucide-workflow
+  title: End-to-End RAG Recipes
+  to: /rag/end-to-end-rag-recipes
+  ---
+  Complete upload-to-chat multi-tenant RAG endpoints and crawl-filter-persist ingestion loops.
   :::
 ::

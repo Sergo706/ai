@@ -52,6 +52,15 @@ Combine any mix of built-in tools, custom specs, and MCP servers inside `createA
   ---
   Run the streaming or non-streaming tool loop directly in your own AI client without `createAgent()`.
   :::
+
+  :::card
+  ---
+  icon: i-lucide-chef-hat
+  title: Tool Recipes & Standalone Client
+  to: /tools/tool-recipes
+  ---
+  Full custom tool recipe (Zod, caching, Markdown serialization, sub-progress) plus a standalone `executeToolLoop()` + MCP client.
+  :::
 ::
 
 ## How the tool middleware chain works

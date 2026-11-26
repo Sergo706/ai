@@ -63,7 +63,7 @@ onBeforeUnmount(() => clearTimeout(resetTimer))
 
       <div class="mt-9 flex flex-wrap gap-3">
         <UButton
-          to="/getting-started/installation"
+          to="/getting-started/introduction"
           size="lg"
           trailing-icon="i-lucide-arrow-right"
           class="border-white bg-white font-medium text-[#0a0a0a] hover:border-[#e6e6e6] hover:bg-[#e6e6e6]"
