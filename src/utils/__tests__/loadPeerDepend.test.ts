@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import { loadPeer } from "~/utils/loadPeerDepend.js";
 
-
 describe("loadPeer", () => {
   it("returns the real module when the peer is installed", async () => {
     const peer = await loadPeer<typeof import("zod")>("zod", "some feature");
@@ -25,9 +24,7 @@ describe("loadPeer", () => {
     );
 
     expect(typeof peer.join).toBe("function");
-    expect((peer.join as (...parts: string[]) => string)("a", "b")).toBe(
-      "a/b",
-    );
+    expect((peer.join as (...parts: string[]) => string)("a", "b")).toBe("a/b");
   });
 
   it("names the package and the feature when the peer is missing", async () => {

@@ -129,20 +129,20 @@ export async function runResearch(query: string, signal?: AbortSignal) {
 
 `loop.run()` always resolves to a structured `WorkflowRunResult<TLocalItem, TExternalArtifact, TReport>` — including when aborted (`stopReason: "aborted"`). Internally, the loop and adapters abort via `context.signal?.throwIfAborted()` or `WorkflowAbortedError`, which `loop.run()` catches to mark state aborted and return cleanly with all evidence collected so far:
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `isSufficient` | `boolean` | `true` when `evaluator` judged gathered evidence sufficient. |
-| `source` | `"local" \| "external" \| "mixed" \| "none"` | Origin of accepted evidence. |
-| `stopReason` | `"sufficient" \| "budget_exhausted" \| "no_new_sources" \| "aborted"` | Exact reason the loop terminated. |
-| `context` | `string` | Concatenated accepted evidence blocks passed to final synthesis. |
-| `localItems` | `TLocalItem[]` | Accepted items returned by `localKnowledge`. |
-| `externalArtifacts` | `TExternalArtifact[]` | Raw artifacts pushed by `targetExecutor`. |
-| `missingIntents` | `string[]` | Remaining unanswered intents when `isSufficient` is `false`. |
-| `localSearches` | `number` | Number of local batches actually executed. |
-| `externalRounds` | `number` | Number of external discovery rounds executed. |
-| `criticNotes` | `string \| undefined` | Review notes from `critic`, if configured. |
-| `errors` | `string[]` | Recoverable errors collected during discovery or execution. |
-| `report` | `TReport \| undefined` | Output returned by `finalAnswer.synthesize()`, if configured. |
+| Field               | Type                                                                  | Description                                                      |
+| ------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `isSufficient`      | `boolean`                                                             | `true` when `evaluator` judged gathered evidence sufficient.     |
+| `source`            | `"local" \| "external" \| "mixed" \| "none"`                          | Origin of accepted evidence.                                     |
+| `stopReason`        | `"sufficient" \| "budget_exhausted" \| "no_new_sources" \| "aborted"` | Exact reason the loop terminated.                                |
+| `context`           | `string`                                                              | Concatenated accepted evidence blocks passed to final synthesis. |
+| `localItems`        | `TLocalItem[]`                                                        | Accepted items returned by `localKnowledge`.                     |
+| `externalArtifacts` | `TExternalArtifact[]`                                                 | Raw artifacts pushed by `targetExecutor`.                        |
+| `missingIntents`    | `string[]`                                                            | Remaining unanswered intents when `isSufficient` is `false`.     |
+| `localSearches`     | `number`                                                              | Number of local batches actually executed.                       |
+| `externalRounds`    | `number`                                                              | Number of external discovery rounds executed.                    |
+| `criticNotes`       | `string \| undefined`                                                 | Review notes from `critic`, if configured.                       |
+| `errors`            | `string[]`                                                            | Recoverable errors collected during discovery or execution.      |
+| `report`            | `TReport \| undefined`                                                | Output returned by `finalAnswer.synthesize()`, if configured.    |
 
 ## Stream workflow progress over SSE
 
@@ -180,30 +180,36 @@ export function streamResearch(query: string): Response {
 ## Explore workflow agents
 
 ::card-group
-  :::card
-  ---
-  icon: i-lucide-sliders
-  title: Adapters & Budgets
-  to: /workflow-agents/adapters-and-budgets
-  ---
-  Detailed reference for all 6 typed adapters, intent fingerprinting, and all 10 termination budget caps.
-  :::
+:::card
+---
 
-  :::card
-  ---
-  icon: i-lucide-rotate-ccw
-  title: Checkpoints & Resume
-  to: /workflow-agents/checkpoints-and-resume
-  ---
-  Persist `WorkflowCheckpoint` snapshots via `onCheckpoint`, restore with `resumeFrom`, and handle `WorkflowAbortedError`.
-  :::
+icon: i-lucide-sliders
+title: Adapters & Budgets
+to: /workflow-agents/adapters-and-budgets
+---
 
-  :::card
-  ---
-  icon: i-lucide-flask-conical
-  title: Complete Research Workflow
-  to: /workflow-agents/complete-research-workflow
-  ---
-  A complete runnable `AgenticWorkflowLoop` wiring local vector search, live extraction, adaptive filtering, LLM schema validation, critic review, and SSE streaming.
-  :::
+Detailed reference for all 6 typed adapters, intent fingerprinting, and all 10 termination budget caps.
+:::
+
+:::card
+---
+
+icon: i-lucide-rotate-ccw
+title: Checkpoints & Resume
+to: /workflow-agents/checkpoints-and-resume
+---
+
+Persist `WorkflowCheckpoint` snapshots via `onCheckpoint`, restore with `resumeFrom`, and handle `WorkflowAbortedError`.
+:::
+
+:::card
+---
+
+icon: i-lucide-flask-conical
+title: Complete Research Workflow
+to: /workflow-agents/complete-research-workflow
+---
+
+A complete runnable `AgenticWorkflowLoop` wiring local vector search, live extraction, adaptive filtering, LLM schema validation, critic review, and SSE streaming.
+:::
 ::

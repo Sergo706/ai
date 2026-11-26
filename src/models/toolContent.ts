@@ -4,13 +4,10 @@ import { getDb } from "../config/config";
 import { documentParams } from "../tools/common-tools-handlers/schemas";
 import { envInt } from "@riavzon/utils/server";
 
-
-
-
 function truncateToTokens(
   text: string | null,
   maxTokens: number,
-  CHARS_PER_TOKEN = 4
+  CHARS_PER_TOKEN = 4,
 ): { text: string; truncated: boolean } {
   if (!text) return { text: "", truncated: false };
 
@@ -19,7 +16,6 @@ function truncateToTokens(
 
   return { text: text.slice(0, limit).trimEnd(), truncated: true };
 }
-
 
 /**
  * Read one stored document for the model, truncated to a token budget.
@@ -36,12 +32,12 @@ export async function readToolDocument(
   userId: string,
   args: z.infer<typeof documentParams>,
   CHARS_PER_TOKEN = 4,
- /** Whole-document ceiling, in tokens. */
+  /** Whole-document ceiling, in tokens. */
   MAX_DOC_TOKENS = envInt("DOCUMENT_MAX_TOKENS", 3000),
-/** Per-chunk ceiling; chunks are produced before this cap exists. */
+  /** Per-chunk ceiling; chunks are produced before this cap exists. */
   CHUNK_TOKEN_CAP = envInt("DOCUMENT_CHUNK_TOKENS", 1000),
-/** Chunks returned by one read. The tool schema allows at most 10. */
-  MAX_CHUNKS_PER_READ = 10
+  /** Chunks returned by one read. The tool schema allows at most 10. */
+  MAX_CHUNKS_PER_READ = 10,
 ) {
   const MAX_INLINE_CHARS = MAX_DOC_TOKENS * CHARS_PER_TOKEN * 2;
   const { documentId, chunkStart, chunkEnd } = args;
@@ -50,11 +46,7 @@ export async function readToolDocument(
   const document = await getDb()
     .selectFrom("documents as d")
     .leftJoin("document_chunks as c", "c.document_id", "d.id")
-    .select([
-      "d.id as id",
-      "d.title as title",
-      "d.created_at as createdAt",
-    ])
+    .select(["d.id as id", "d.title as title", "d.created_at as createdAt"])
     .select(
       isChunkedRequest
         ? sql<string>`''`.as("rawContent")
@@ -65,9 +57,9 @@ export async function readToolDocument(
     .select(
       // Typed as the union because the comparison is dialect-dependent: Postgres
       // yields `true`/`false`, SQLite yields `1`/`0`.
-      sql<boolean | number>`length(d.raw_content) > ${sql.lit(MAX_INLINE_CHARS)}`.as(
-        "isLargeFile",
-      ),
+      sql<
+        boolean | number
+      >`length(d.raw_content) > ${sql.lit(MAX_INLINE_CHARS)}`.as("isLargeFile"),
     )
     .select(sql<number>`count(c.id)`.as("chunkCount"))
     .where("d.id", "=", documentId)
@@ -83,7 +75,7 @@ export async function readToolDocument(
     const { text: safeContent, truncated } = truncateToTokens(
       document.rawContent,
       MAX_DOC_TOKENS,
-      CHARS_PER_TOKEN
+      CHARS_PER_TOKEN,
     );
 
     return {
@@ -124,7 +116,11 @@ export async function readToolDocument(
     chunkStart,
     chunkEnd,
     chunks: rawChunks.map((chunk) => {
-      const tokenized = truncateToTokens(chunk.content, CHUNK_TOKEN_CAP, CHARS_PER_TOKEN);
+      const tokenized = truncateToTokens(
+        chunk.content,
+        CHUNK_TOKEN_CAP,
+        CHARS_PER_TOKEN,
+      );
       return {
         index: chunk.index,
         content: tokenized.text,

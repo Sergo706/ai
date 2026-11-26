@@ -1,5 +1,3 @@
-
-
 export async function loadPeer<T>(pkg: string, feature: string): Promise<T> {
   try {
     return (await import(pkg)) as T;

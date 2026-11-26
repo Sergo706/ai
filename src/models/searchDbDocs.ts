@@ -37,12 +37,12 @@ export async function searchDbDocs(conf: SearchDbParams, userId?: string) {
     similarity,
     userId,
   );
-    if (res.length === 0) {
-      return {
-        ok: false,
-        date: new Date().toISOString(),
-        reason: "No available chunks found",
-      };
-    }
-    return res;
+  if (res.length === 0) {
+    return {
+      ok: false,
+      date: new Date().toISOString(),
+      reason: "No available chunks found",
+    };
+  }
+  return res;
 }

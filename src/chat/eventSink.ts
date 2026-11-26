@@ -1,6 +1,5 @@
 import { AgentEvent } from "../types/ToolExecutionTypes";
 
-
 /**
  * Buffers agent events until something is ready to consume them.
  *

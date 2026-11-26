@@ -52,7 +52,6 @@ export function trimmedOrNull(value: string | null | undefined): string | null {
   return trimmedOr(value, null);
 }
 
-
 const VALID_LENGTHS: readonly SummaryLength[] = [
   "short",
   "medium",

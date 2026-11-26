@@ -139,7 +139,8 @@ describe("extractWithSummarize", () => {
       }),
     );
 
-    const result = await extractWithSummarize("https://youtube.com/watch?v=abc",
+    const result = await extractWithSummarize(
+      "https://youtube.com/watch?v=abc",
     );
 
     expect(result.content).toHaveLength(900);
@@ -182,8 +183,7 @@ describe("extractWithSummarize", () => {
   it("falls back to the URL when the page has no title", async () => {
     h.fetchLinkContent.mockResolvedValue(extracted({ title: "   " }));
 
-    const result = await extractWithSummarize("https://example.com/page",
-    );
+    const result = await extractWithSummarize("https://example.com/page");
 
     expect(result.title).toBe("https://example.com/page");
   });
@@ -222,9 +222,7 @@ describe("extractWithSummarize", () => {
     const failure = new Error("dns blocked");
     h.fetchLinkContent.mockRejectedValue(failure);
 
-    await expect(extractWithSummarize("https://x.com")).rejects.toBe(
-      failure,
-    );
+    await expect(extractWithSummarize("https://x.com")).rejects.toBe(failure);
   });
 });
 
@@ -236,8 +234,10 @@ describe("extractManyWithSummarize", () => {
         : Promise.resolve(extracted({ url, content: "" })),
     );
 
-    const outcomes = await extractManyWithSummarize(["https://good.com", "https://bad.com"],
-    );
+    const outcomes = await extractManyWithSummarize([
+      "https://good.com",
+      "https://bad.com",
+    ]);
 
     expect(outcomes[0]).toMatchObject({ url: "https://good.com", ok: true });
     expect(outcomes[1]).toMatchObject({ url: "https://bad.com", ok: false });
@@ -258,7 +258,8 @@ describe("extractWithSummarize — binary payloads", () => {
       new AssetLikeHtmlFetchError("content-type", "application/pdf"),
     );
 
-    const error = await extractWithSummarize("https://example.com/paper.pdf",
+    const error = await extractWithSummarize(
+      "https://example.com/paper.pdf",
     ).catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(NotExtractableError);
@@ -273,7 +274,8 @@ describe("extractWithSummarize — binary payloads", () => {
       new AssetLikeHtmlFetchError("binary-payload"),
     );
 
-    const error = await extractWithSummarize("https://example.com/dl?id=9",
+    const error = await extractWithSummarize(
+      "https://example.com/dl?id=9",
     ).catch((caught: unknown) => caught);
 
     expect((error as NotExtractableError).reason).toBe("binary-payload");
@@ -283,9 +285,7 @@ describe("extractWithSummarize — binary payloads", () => {
     const failure = new TypeError("fetch failed");
     h.fetchLinkContent.mockRejectedValue(failure);
 
-    await expect(extractWithSummarize("https://x.com")).rejects.toBe(
-      failure,
-    );
+    await expect(extractWithSummarize("https://x.com")).rejects.toBe(failure);
   });
 
   it("counts a binary payload as a routing signal, not a warning", async () => {
@@ -293,8 +293,7 @@ describe("extractWithSummarize — binary payloads", () => {
       new AssetLikeHtmlFetchError("content-type", "image/png"),
     );
 
-    const outcomes = await extractManyWithSummarize(["https://x.com/a.png"],
-    );
+    const outcomes = await extractManyWithSummarize(["https://x.com/a.png"]);
 
     expect(outcomes[0]).toMatchObject({
       url: "https://x.com/a.png",
@@ -398,9 +397,9 @@ describe("extractWithSummarize — deadline", () => {
   it("passes the deadline on through the batch helper", async () => {
     h.fetchLinkContent.mockReturnValue(new Promise(() => undefined));
 
-    const outcomes = await extractManyWithSummarize(["https://example.com/a"],
-      { deadlineMs: 10 },
-    );
+    const outcomes = await extractManyWithSummarize(["https://example.com/a"], {
+      deadlineMs: 10,
+    });
 
     expect(outcomes[0]).toMatchObject({ ok: false });
     expect(!outcomes[0]?.ok && outcomes[0].error).toBeInstanceOf(

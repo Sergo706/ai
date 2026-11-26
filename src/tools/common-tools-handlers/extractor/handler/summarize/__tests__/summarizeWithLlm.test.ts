@@ -59,7 +59,7 @@ async function boot(
       extractor,
     },
   });
-  const mod = (await import("../summarizeWithLlm.js"));
+  const mod = await import("../summarizeWithLlm.js");
   const errors = await import("../summarizeErrors.js");
 
   return {
@@ -439,9 +439,9 @@ describe("summarizeWithLlm", () => {
     const env = await boot(llm);
 
     try {
-      await expect(
-        env.summarizeWithLlm(extraction(), log.logger),
-      ).rejects.toBe(failure);
+      await expect(env.summarizeWithLlm(extraction(), log.logger)).rejects.toBe(
+        failure,
+      );
     } finally {
       await env.cleanup();
     }

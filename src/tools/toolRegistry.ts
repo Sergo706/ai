@@ -1,5 +1,8 @@
 import type { ChatCompletionTool } from "openai/resources";
-import type { ToolHandler, ToolStreamPolicy } from "../types/ToolExecutionTypes";
+import type {
+  ToolHandler,
+  ToolStreamPolicy,
+} from "../types/ToolExecutionTypes";
 import { withToolCache } from "./execution/toolCacher";
 import { limitTool, trackTool } from "./toolWrappers";
 
@@ -120,5 +123,5 @@ export function buildToolRegistry<TMeta>(
     if (spec.concurrency !== undefined)
       toolConcurrency[spec.name] = spec.concurrency;
   }
-  return { handlers, definitions, toolStreaming, toolConcurrency, usedTools, };
+  return { handlers, definitions, toolStreaming, toolConcurrency, usedTools };
 }

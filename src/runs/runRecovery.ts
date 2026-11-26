@@ -23,11 +23,9 @@ function getSweepIntervalMs(): number {
 }
 
 function getMaxAdoptPerSweep(): number {
-  return envInt(
-    "RUNS_MAX_ADOPT_PER_SWEEP",
-    recoveryConfig().maxAdoptPerSweep,
-    { min: 1 },
-  );
+  return envInt("RUNS_MAX_ADOPT_PER_SWEEP", recoveryConfig().maxAdoptPerSweep, {
+    min: 1,
+  });
 }
 
 /**
@@ -47,11 +45,9 @@ export function getMaxResumeAttempts(): number {
 }
 
 function getUnclaimedGraceMs(): number {
-  return envInt(
-    "RUNS_UNCLAIMED_GRACE_MS",
-    recoveryConfig().unclaimedGraceMs,
-    { min: 0 },
-  );
+  return envInt("RUNS_UNCLAIMED_GRACE_MS", recoveryConfig().unclaimedGraceMs, {
+    min: 0,
+  });
 }
 
 let sweeping = false;
@@ -73,9 +69,7 @@ export function getRunRecoverySettings(): {
 
 function parseRunInput(raw: unknown): { name?: string } {
   const parsed = fromJson<unknown>(raw);
-  return parsed !== null && typeof parsed === "object"
-    ? (parsed)
-    : {};
+  return parsed !== null && typeof parsed === "object" ? parsed : {};
 }
 
 /**
@@ -115,7 +109,10 @@ async function sweepOnce(): Promise<void> {
 
     const settings = getRunRecoverySettings();
     for (const kind of new Set(registered.map((r) => r.kind))) {
-      const candidates = await findResumableRuns(settings.maxAdoptPerSweep, kind);
+      const candidates = await findResumableRuns(
+        settings.maxAdoptPerSweep,
+        kind,
+      );
       if (candidates.length === 0) continue;
 
       log.warn(

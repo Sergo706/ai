@@ -22,7 +22,6 @@ export const toJson = (val: unknown) =>
 export const fromJson = <T>(val: T | string | null): T | null =>
   typeof val === "string" ? (JSON.parse(val) as T) : val;
 
-
 export function isPg(): boolean {
   const { db } = getConfiguration();
   return typeof db !== "string" && "connect" in db && "query" in db;
@@ -64,7 +63,6 @@ export function toVec(vec: number[] | null | undefined) {
     ? `[${vec.join(",")}]`
     : new Uint8Array(new Float32Array(vec).buffer);
 }
-
 
 /**
  * A dialect-portable distance expression for the query embedding.

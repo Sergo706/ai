@@ -3,7 +3,6 @@ import { PreparedChunk } from "../types/PrepareScrape";
 import { calculateCosineSimilarity } from "../utils/vectorMath";
 import { generateMatchingEmbedding } from "./embedding";
 
-
 /** Tuning for {@link filterAdaptiveChunks}. */
 export interface AdaptiveFilterConfig<C> {
   /** Chunks kept for de-duplication after the coverage filter. */
@@ -58,7 +57,7 @@ export async function filterAdaptiveChunks<C>(
   queryVector: number[],
   incomingChunks: PreparedChunk<C>[],
   accumulatedMatchingVectors: number[][],
-  config: AdaptiveFilterConfig<C>
+  config: AdaptiveFilterConfig<C>,
 ): Promise<AdaptiveFilterResult<C>> {
   const acceptedChunks: AcceptedAdaptiveChunk<C>[] = [];
   const newMatchingVectors: number[][] = [];
@@ -118,9 +117,8 @@ export async function filterAdaptiveChunks<C>(
     let bypassDedupe = false;
 
     if (config.byPassAuthorityDedupe) {
-        bypassDedupe = config.byPassAuthorityDedupe(chunk);
+      bypassDedupe = config.byPassAuthorityDedupe(chunk);
     }
-
 
     if (isDuplicate && !bypassDedupe) {
       rejectedAsDuplicate++;

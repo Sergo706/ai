@@ -92,7 +92,10 @@ import {
   SSE_HEADERS,
 } from "@riavzon/ai";
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } },
+) {
   const runId = params.id;
   const since =
     req.headers.get("last-event-id") ??
@@ -157,19 +160,19 @@ export async function retryHandler(runId: string) {
 
 When a replica dies mid-run, its lease expires after `RUNS_LEASE_TTL_MS`. Any surviving replica running `startRuns()` marks stale runs `interrupted`, finds resumable rows, matches `(row.kind, row.input?.name)` against `registerRunResumer()`, claims the row atomically, and invokes `adopt(row)`.
 
-| Environment Variable | Purpose |
-| --- | --- |
-| `RUNS_LEASE_TTL_MS` | Lease duration before a silent owner is considered dead (overriding `config.runs.leaseTtlMs`) |
-| `RUNS_HEARTBEAT_INTERVAL_MS` | How often the owning replica renews its lease and checks for remote abort |
-| `RUNS_SWEEP_INTERVAL_MS` | How often `startRuns()` sweeps for `interrupted` / expired runs |
-| `RUNS_MAX_ADOPT_PER_SWEEP` | Maximum stale runs adopted per recovery sweep tick |
-| `RUNS_MAX_RESUME_ATTEMPTS` | Maximum crash-recovery resume attempts before permanently failing a run |
-| `RUNS_UNCLAIMED_GRACE_MS` | Grace window before an unclaimed `running` row is considered stale |
-| `RUNS_RETAIN_FINISHED_MS` | How long completed `RunHandle`s remain cached in `RunRegistry` before disposal |
-| `RUNS_STREAM_TTL_SECONDS` | Redis Streams TTL for stored run events |
-| `RUNS_STREAM_MAX_LEN` | Maximum event cap trimmed per Redis Stream |
-| `RUNS_STREAM_BLOCK_MS` | Redis `XREAD` block timeout for live `tailRun` readers |
-| `RUNS_STREAM_REPLAY_BATCH` | Batch size read per Redis `XRANGE` replay call |
+| Environment Variable         | Purpose                                                                                       |
+| ---------------------------- | --------------------------------------------------------------------------------------------- |
+| `RUNS_LEASE_TTL_MS`          | Lease duration before a silent owner is considered dead (overriding `config.runs.leaseTtlMs`) |
+| `RUNS_HEARTBEAT_INTERVAL_MS` | How often the owning replica renews its lease and checks for remote abort                     |
+| `RUNS_SWEEP_INTERVAL_MS`     | How often `startRuns()` sweeps for `interrupted` / expired runs                               |
+| `RUNS_MAX_ADOPT_PER_SWEEP`   | Maximum stale runs adopted per recovery sweep tick                                            |
+| `RUNS_MAX_RESUME_ATTEMPTS`   | Maximum crash-recovery resume attempts before permanently failing a run                       |
+| `RUNS_UNCLAIMED_GRACE_MS`    | Grace window before an unclaimed `running` row is considered stale                            |
+| `RUNS_RETAIN_FINISHED_MS`    | How long completed `RunHandle`s remain cached in `RunRegistry` before disposal                |
+| `RUNS_STREAM_TTL_SECONDS`    | Redis Streams TTL for stored run events                                                       |
+| `RUNS_STREAM_MAX_LEN`        | Maximum event cap trimmed per Redis Stream                                                    |
+| `RUNS_STREAM_BLOCK_MS`       | Redis `XREAD` block timeout for live `tailRun` readers                                        |
+| `RUNS_STREAM_REPLAY_BATCH`   | Batch size read per Redis `XRANGE` replay call                                                |
 
 ## Transient Error Classification
 

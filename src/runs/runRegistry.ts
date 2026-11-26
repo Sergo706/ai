@@ -1,4 +1,9 @@
-import type { PumpRunArgs, RunHandle, RunHandleInit, TerminalStatus } from "./types";
+import type {
+  PumpRunArgs,
+  RunHandle,
+  RunHandleInit,
+  TerminalStatus,
+} from "./types";
 import {
   appendEvent,
   getMaxStreamLen,

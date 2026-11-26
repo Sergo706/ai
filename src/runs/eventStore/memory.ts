@@ -8,7 +8,6 @@ import {
   type EventPage,
 } from "./shared";
 
-
 const memoryLogs = new MiniCache<MemoryLog>(5_000);
 const waiters = new Map<string, Set<() => void>>();
 
@@ -16,7 +15,6 @@ interface MemoryLog {
   ids: string[];
   events: StoredEvent[];
 }
-
 
 /**
  * Wake every reader parked on a run's log.

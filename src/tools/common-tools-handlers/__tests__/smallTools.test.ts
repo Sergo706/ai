@@ -5,9 +5,7 @@ import type { Kysely } from "kysely";
 
 import type { Database } from "~/db/schema.js";
 import { toVec } from "~/db/utils.js";
-import {
-  calculateCosineSimilarity,
-} from "~/utils/vectorMath.js";
+import { calculateCosineSimilarity } from "~/utils/vectorMath.js";
 import {
   DEFAULT_CHECKPOINT_VERSION,
   checkpoint,
@@ -316,12 +314,15 @@ describe("searchDb tool", () => {
       chunks: [{ index: 3, text: "the chunk", embedding: vector }],
     });
 
-    const result = await tools.searchDb()({
-      query,
-      limit: 5,
-      offset: 0,
-      similarity: 0.5,
-    }, ctx);
+    const result = await tools.searchDb()(
+      {
+        query,
+        limit: 5,
+        offset: 0,
+        similarity: 0.5,
+      },
+      ctx,
+    );
 
     expect(result).toMatchObject({
       results: [
@@ -338,12 +339,15 @@ describe("searchDb tool", () => {
   });
 
   it("returns an empty result list rather than an error on a miss", async () => {
-    const result = await harness.tools.searchDb()({
-      query: "nothing indexed",
-      limit: 5,
-      offset: 0,
-      similarity: 0.99,
-    }, ctx);
+    const result = await harness.tools.searchDb()(
+      {
+        query: "nothing indexed",
+        limit: 5,
+        offset: 0,
+        similarity: 0.99,
+      },
+      ctx,
+    );
 
     expect(result).toEqual({ results: [] });
   });
@@ -354,21 +358,22 @@ describe("searchDb tool", () => {
     expect(toolErrorOf(result).code).toBe("VALIDATION_ERROR");
     // The issues are serialised into the message so the model can self-correct.
     expect(JSON.parse(toolErrorOf(result).message)).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ path: ["limit"] }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ path: ["limit"] })]),
     );
   });
 
   it("reports a search failure instead of throwing", async () => {
     const { tools } = harness;
     // A limit the model rejects as out of range surfaces as a tool error.
-    const result = await tools.searchDb()({
-      query: "q",
-      limit: 500,
-      offset: 0,
-      similarity: 0.5,
-    }, ctx);
+    const result = await tools.searchDb()(
+      {
+        query: "q",
+        limit: 500,
+        offset: 0,
+        similarity: 0.5,
+      },
+      ctx,
+    );
 
     expect(toolErrorOf(result)).toEqual({
       code: "DB_SEARCH_FAILED",
@@ -443,7 +448,10 @@ describe("getDocument tool", () => {
     const { db, tools } = harness;
     const documentId = await seedDocument(db);
 
-    const result = await tools.getDocument("u-1")({ documentId, chunkStart: 0 }, ctx);
+    const result = await tools.getDocument("u-1")(
+      { documentId, chunkStart: 0 },
+      ctx,
+    );
 
     expect(toolErrorOf(result).code).toBe("VALIDATION_ERROR");
     expect(toolErrorOf(result).message).toBe(
@@ -455,11 +463,14 @@ describe("getDocument tool", () => {
     const { db, tools } = harness;
     const documentId = await seedDocument(db);
 
-    const result = await tools.getDocument("u-1")({
-      documentId,
-      chunkStart: 3,
-      chunkEnd: 1,
-    }, ctx);
+    const result = await tools.getDocument("u-1")(
+      {
+        documentId,
+        chunkStart: 3,
+        chunkEnd: 1,
+      },
+      ctx,
+    );
 
     expect(toolErrorOf(result).code).toBe("VALIDATION_ERROR");
   });
@@ -469,11 +480,14 @@ describe("getDocument tool", () => {
     const documentId = await seedDocument(db);
 
     // Ten chunks is the ceiling, so a range spanning eleven is refused.
-    const result = await tools.getDocument("u-1")({
-      documentId,
-      chunkStart: 0,
-      chunkEnd: 10,
-    }, ctx);
+    const result = await tools.getDocument("u-1")(
+      {
+        documentId,
+        chunkStart: 0,
+        chunkEnd: 10,
+      },
+      ctx,
+    );
 
     expect(toolErrorOf(result).code).toBe("VALIDATION_ERROR");
   });
@@ -488,18 +502,24 @@ describe("getDocument tool", () => {
       })),
     });
 
-    const result = await tools.getDocument("u-1")({
-      documentId,
-      chunkStart: 0,
-      chunkEnd: 9,
-    }, ctx);
+    const result = await tools.getDocument("u-1")(
+      {
+        documentId,
+        chunkStart: 0,
+        chunkEnd: 9,
+      },
+      ctx,
+    );
 
     expect(result).toMatchObject({ chunkStart: 0, chunkEnd: 9 });
     expect((result as { chunks: unknown[] }).chunks).toHaveLength(10);
   });
 
   it("reports a validation failure for a non-numeric id", async () => {
-    const result = await harness.tools.getDocument("u-1")({ documentId: "one" }, ctx);
+    const result = await harness.tools.getDocument("u-1")(
+      { documentId: "one" },
+      ctx,
+    );
 
     expect(toolErrorOf(result).code).toBe("VALIDATION_ERROR");
   });

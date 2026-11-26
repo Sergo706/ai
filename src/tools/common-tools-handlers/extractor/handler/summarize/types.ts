@@ -4,7 +4,6 @@ import type {
 } from "@steipete/summarize-core/content";
 import type { SummaryLength } from "@steipete/summarize-core/prompts";
 
-
 export interface SummarizeExtraction {
   url: string;
   title: string;

@@ -20,7 +20,7 @@ function onePixelPng(): Buffer {
   }
   const crc = (buf: Buffer): number => {
     let c = 0xffffffff;
-    for (const byte of buf) c = (crcTable[(c ^ byte) & 0xff]) ^ (c >>> 8);
+    for (const byte of buf) c = crcTable[(c ^ byte) & 0xff] ^ (c >>> 8);
     return (c ^ 0xffffffff) >>> 0;
   };
   const chunk = (type: string, data: Buffer): Buffer => {
@@ -72,9 +72,7 @@ describe("createPdf", () => {
       pages: [
         {
           action: "add",
-          items: [
-            { type: "text", x: 40, y: 700, text: "Hello PDF", size: 18 },
-          ],
+          items: [{ type: "text", x: 40, y: 700, text: "Hello PDF", size: 18 }],
         },
       ],
     });
@@ -163,7 +161,13 @@ describe("createPdf", () => {
             },
             { type: "text", x: 30, y: 620, text: "Times", font: "TimesRoman" },
             { type: "text", x: 30, y: 580, text: "Courier", font: "Courier" },
-            { type: "text", x: 30, y: 540, text: "DejaVuBold", font: "DejaVuBold" },
+            {
+              type: "text",
+              x: 30,
+              y: 540,
+              text: "DejaVuBold",
+              font: "DejaVuBold",
+            },
             {
               type: "rectangle",
               x: 30,
@@ -241,7 +245,10 @@ describe("createPdf", () => {
   it("modifies an existing page from a base64 document", async () => {
     const first = await createPdf({
       pages: [
-        { action: "add", items: [{ type: "text", x: 20, y: 700, text: "Page one" }] },
+        {
+          action: "add",
+          items: [{ type: "text", x: 20, y: 700, text: "Page one" }],
+        },
       ],
     });
 
@@ -292,7 +299,12 @@ describe("createPdf", () => {
 describe("readPdf", () => {
   it("reports the metadata block when asked for it", async () => {
     const { buffer } = await createPdf({
-      pages: [{ action: "add", items: [{ type: "text", x: 10, y: 10, text: "body" }] }],
+      pages: [
+        {
+          action: "add",
+          items: [{ type: "text", x: 10, y: 10, text: "body" }],
+        },
+      ],
     });
 
     const text = await readPdf({ fileBuffer: buffer, includeMetadata: true });
@@ -303,7 +315,12 @@ describe("readPdf", () => {
 
   it("omits the metadata block when asked to", async () => {
     const { buffer } = await createPdf({
-      pages: [{ action: "add", items: [{ type: "text", x: 10, y: 10, text: "body" }] }],
+      pages: [
+        {
+          action: "add",
+          items: [{ type: "text", x: 10, y: 10, text: "body" }],
+        },
+      ],
     });
 
     const text = await readPdf({ fileBuffer: buffer, includeMetadata: false });
@@ -317,7 +334,10 @@ describe("readPdf", () => {
       pages: [
         { action: "add", items: [{ type: "text", x: 10, y: 10, text: "one" }] },
         { action: "add", items: [{ type: "text", x: 10, y: 10, text: "two" }] },
-        { action: "add", items: [{ type: "text", x: 10, y: 10, text: "three" }] },
+        {
+          action: "add",
+          items: [{ type: "text", x: 10, y: 10, text: "three" }],
+        },
       ],
     });
 
@@ -331,7 +351,12 @@ describe("readPdf", () => {
 
   it("reads every page when maxPages exceeds the document", async () => {
     const { buffer } = await createPdf({
-      pages: [{ action: "add", items: [{ type: "text", x: 10, y: 10, text: "solo" }] }],
+      pages: [
+        {
+          action: "add",
+          items: [{ type: "text", x: 10, y: 10, text: "solo" }],
+        },
+      ],
     });
 
     const text = await readPdf({ fileBuffer: buffer, maxPages: 99 });

@@ -1,8 +1,6 @@
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
-
-
 const PROTOCOL_VERSION = "2025-06-18";
 
 export interface McpToolFixture {
@@ -112,7 +110,9 @@ export async function startMcpServer(
 
       if (options.bearer !== undefined) {
         if (req.headers.authorization !== `Bearer ${options.bearer}`) {
-          res.writeHead(401, { "content-type": "text/plain" }).end("unauthorized");
+          res
+            .writeHead(401, { "content-type": "text/plain" })
+            .end("unauthorized");
           return;
         }
       }
@@ -120,7 +120,9 @@ export async function startMcpServer(
       if (options.headers !== undefined) {
         for (const [name, value] of Object.entries(options.headers)) {
           if (req.headers[name.toLowerCase()] !== value) {
-            res.writeHead(403, { "content-type": "text/plain" }).end("forbidden");
+            res
+              .writeHead(403, { "content-type": "text/plain" })
+              .end("forbidden");
             return;
           }
         }
@@ -182,7 +184,8 @@ export async function startMcpServer(
                   properties: {},
                 },
               })),
-              nextCursor: next < options.tools.length ? String(next) : undefined,
+              nextCursor:
+                next < options.tools.length ? String(next) : undefined,
             },
           });
           return;
@@ -190,10 +193,14 @@ export async function startMcpServer(
 
         if (request.method === "tools/call") {
           const name = request.params?.name as string;
-          const tool = options.tools.find((candidate) => candidate.name === name);
+          const tool = options.tools.find(
+            (candidate) => candidate.name === name,
+          );
 
           if (options.callFailWith !== undefined) {
-            res.writeHead(options.callFailWith, { "content-type": "text/plain" });
+            res.writeHead(options.callFailWith, {
+              "content-type": "text/plain",
+            });
             res.end("nope");
             return;
           }
@@ -202,7 +209,9 @@ export async function startMcpServer(
             jsonrpc: "2.0",
             id: request.id,
             result: {
-              content: tool?.content ?? [{ type: "text", text: tool?.result ?? "" }],
+              content: tool?.content ?? [
+                { type: "text", text: tool?.result ?? "" },
+              ],
               ...(tool?.structured === undefined
                 ? {}
                 : { structuredContent: tool.structured }),

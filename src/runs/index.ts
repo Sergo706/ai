@@ -22,7 +22,10 @@ export {
   scheduleDisposal,
 } from "./runRegistry";
 export * from "./eventStore";
-export { attachDetachedWorkflow, workflowStreamWithRegistry } from "./detachedWorkflow";
+export {
+  attachDetachedWorkflow,
+  workflowStreamWithRegistry,
+} from "./detachedWorkflow";
 export { streamFromRun } from "./streamFromRun";
 export { streamFromStore } from "./streamFromStore";
 export { runWorkflow } from "./workflowRun";

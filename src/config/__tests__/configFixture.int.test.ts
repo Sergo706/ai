@@ -2,7 +2,10 @@ import { MiniCache } from "@riavzon/utils";
 import { afterEach, describe, expect, it } from "vitest";
 import { loadConfig, type LoadedConfig } from "~~/test/test-utils/config";
 import { truncateAll } from "~~/test/test-utils/services";
-import { INTEGRATION_PG_URL, INTEGRATION_REDIS_URL } from "~~/test/integration.setup";
+import {
+  INTEGRATION_PG_URL,
+  INTEGRATION_REDIS_URL,
+} from "~~/test/integration.setup";
 
 /**
  * The fixture itself is the thing under test here: every other integration

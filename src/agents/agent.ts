@@ -66,7 +66,6 @@ export async function buildAgent<TMeta = unknown>(
   async function chat<S extends z.ZodType = z.ZodNever>(
     input: JsonChatInput<TMeta, S>,
   ): Promise<ChatStream<Output<S>>> {
-
     if (closed) throw new Error("Agent is closed and cannot start new turns.");
     if (persistsConversation && input.userId === undefined) {
       throw new Error(
@@ -76,7 +75,6 @@ export async function buildAgent<TMeta = unknown>(
 
     const model = turnModel(config.model, input.model);
     const meta = { ...config.meta, ...input.meta } as TMeta;
-
 
     const attachments = await parseFiles(
       input.files === undefined ? undefined : [...input.files],
@@ -93,7 +91,8 @@ export async function buildAgent<TMeta = unknown>(
           )
         : undefined;
 
-    if (resolved !== undefined && !resolved.ok) throw new Error(resolved.reason);
+    if (resolved !== undefined && !resolved.ok)
+      throw new Error(resolved.reason);
 
     const conversationId = resolved?.ok === true ? resolved.id : undefined;
     const history: readonly HistoryMessage[] =
@@ -135,7 +134,9 @@ export async function buildAgent<TMeta = unknown>(
       meta,
     });
 
-    const trace = new TraceCollector<Record<string, unknown>>(config.trace ?? []);
+    const trace = new TraceCollector<Record<string, unknown>>(
+      config.trace ?? [],
+    );
 
     const historyMessages = await buildHistoryMessages({
       history: [...history],
@@ -206,7 +207,6 @@ export async function buildAgent<TMeta = unknown>(
       registry,
       trace,
     });
-
 
     let stopHeartbeat: (() => void) | undefined;
     if (run !== undefined && conversationId !== undefined) {

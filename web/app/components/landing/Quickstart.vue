@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const principles = landingPrinciples
+const principles = landingPrinciples;
 </script>
 
 <template>
@@ -16,7 +16,9 @@ const principles = landingPrinciples
         >
           Two calls and a turn.
         </h2>
-        <p class="mt-4 text-[0.9375rem] leading-[1.75] text-pretty text-ink-muted">
+        <p
+          class="mt-4 text-[0.9375rem] leading-[1.75] text-pretty text-ink-muted"
+        >
           Configure once at startup, then build an agent and run it. The same
           objects work in a script, a queue worker, or an HTTP handler.
         </p>
@@ -37,7 +39,9 @@ const principles = landingPrinciples
       </div>
 
       <LandingCodeWindow filename="turn.ts">
-<pre class="m-0 overflow-x-auto px-[1.15rem] pt-[1.1rem] pb-[1.35rem] font-mono text-[0.7825rem] leading-[1.75] text-[#c9c9c9] tab-2"><code><span class="text-code-key">import</span> OpenAI <span class="text-code-key">from</span> <span class="text-code-str">"openai"</span>;
+        <pre
+          class="m-0 overflow-x-auto px-[1.15rem] pt-[1.1rem] pb-[1.35rem] font-mono text-[0.7825rem] leading-[1.75] text-[#c9c9c9] tab-2"
+        ><code><span class="text-code-key">import</span> OpenAI <span class="text-code-key">from</span> <span class="text-code-str">"openai"</span>;
 <span class="text-code-key">import</span> { configuration, createAgent } <span class="text-code-key">from</span> <span class="text-code-str">"@riavzon/ai"</span>;
 
 <span class="text-code-key">await</span> <span class="text-code-fn">configuration</span>({

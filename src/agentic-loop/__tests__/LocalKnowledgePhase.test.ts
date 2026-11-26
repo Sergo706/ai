@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type {
-  EvaluatorVerdict,
-  LocalKnowledgeAdapter,
-} from "../types.js";
+import type { EvaluatorVerdict, LocalKnowledgeAdapter } from "../types.js";
 import type { LocalItem } from "~~/test/test-utils/agenticLoop.js";
 import { EvaluatorPhase } from "../phases/EvaluatorPhase.js";
 import { LocalKnowledgePhase } from "../phases/LocalKnowledgePhase.js";

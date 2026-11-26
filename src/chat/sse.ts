@@ -1,7 +1,6 @@
 import { SseEvent, SseFrame, WorkflowAgent, WorkflowName } from "../types/Chat";
 import type { WorkflowProgressUpdate } from "../agentic-loop/types";
 
-
 const encoder = new TextEncoder();
 
 /** A comment line that keeps an idle SSE connection open. */
@@ -46,10 +45,10 @@ export function setSseHeaders() {
   const headers: Record<string, string> = {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
-    "Connection": "keep-alive",
+    Connection: "keep-alive",
     "X-Accel-Buffering": "no",
-    "Transfer-Encoding": "chunked"
-  }
+    "Transfer-Encoding": "chunked",
+  };
   return headers;
 }
 
@@ -209,7 +208,13 @@ export function runProgressFrames(
       });
     },
     onProgress: (progress) => {
-      emit(withRunId({ type: "workflow_progress", workflow: meta.workflow, ...progress }));
+      emit(
+        withRunId({
+          type: "workflow_progress",
+          workflow: meta.workflow,
+          ...progress,
+        }),
+      );
     },
 
     onAgentProgress: ({ agent, state }) => {

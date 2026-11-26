@@ -1,4 +1,3 @@
-
 /**
  * `true` when an error means the work was cancelled.
  *
@@ -10,7 +9,6 @@ export function isAbortError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   return err.name === "AbortError" || err.name.endsWith("AbortedError");
 }
-
 
 /**
  * Decide whether a run should be recorded as aborted rather than failed.

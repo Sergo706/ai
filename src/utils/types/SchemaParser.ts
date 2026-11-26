@@ -4,7 +4,6 @@ import type {
   ChatCompletionMessageParam,
 } from "openai/resources";
 
-
 /** A rendered strict response format, from `zodResponseFormat`. */
 export type SchemaFormat = ReturnType<typeof zodResponseFormat>;
 

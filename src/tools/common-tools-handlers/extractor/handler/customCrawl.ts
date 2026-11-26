@@ -36,7 +36,6 @@ function toCrawledPage(extraction: SummarizeExtraction): CrawledPage {
   };
 }
 
-
 export async function crawlPages(
   urls: readonly string[],
   log: Logger,

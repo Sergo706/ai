@@ -3,8 +3,6 @@ import type Redis from "ioredis";
 import type { Pool } from "pg";
 import type OpenAI from "openai";
 
-
-
 const redis = z.custom<Redis>(
   (value) =>
     typeof value === "object" &&
@@ -15,7 +13,6 @@ const redis = z.custom<Redis>(
   { message: "Expected an ioredis client" },
 );
 
-
 const pg = z.custom<Pool>(
   (value) =>
     typeof value === "object" &&
@@ -24,16 +21,15 @@ const pg = z.custom<Pool>(
     typeof (value as { query?: unknown }).query === "function",
   { message: "Expected a pg Pool instance" },
 );
-const sqlitePath = z.string().default(process.cwd())
+const sqlitePath = z.string().default(process.cwd());
 
 const openai = z.custom<OpenAI>(
   (value) =>
     typeof value === "object" &&
     value !== null &&
     typeof (value as { chat?: unknown }).chat === "object" &&
-    typeof (
-      value as { chat?: { completions?: { create?: unknown } } }
-    ).chat?.completions?.create === "function",
+    typeof (value as { chat?: { completions?: { create?: unknown } } }).chat
+      ?.completions?.create === "function",
   { message: "Expected an OpenAI client instance" },
 );
 
@@ -64,9 +60,7 @@ export interface Logger {
  * logger.info({ userId }, "turn started");
  * ```
  */
-export function consoleLogger(
-  bindings: Record<string, unknown> = {},
-): Logger {
+export function consoleLogger(bindings: Record<string, unknown> = {}): Logger {
   const write =
     (level: "debug" | "info" | "warn" | "error") =>
     (obj: unknown, msg?: string) => {
@@ -92,7 +86,6 @@ const loggerSchema = z.custom<Logger>(
     ),
   { message: "logger must implement debug/info/warn/error/child" },
 );
-
 
 export const configSchema = z.object({
   /**
@@ -126,7 +119,8 @@ export const configSchema = z.object({
    * @default consoleLogger()
    */
   logger: loggerSchema.default(consoleLogger()),
-    extractor: z.object({
+  extractor: z
+    .object({
       ytDlpBin: z.string().optional(),
       whisperCppBin: z.string().optional(),
       whisperCppModelPath: z.string().optional(),
@@ -149,12 +143,15 @@ export const configSchema = z.object({
       llmLength: z
         .enum(["short", "medium", "long", "xl", "xxl"])
         .default("medium"),
-    }).optional().prefault({}),
-    /**
-     * Run-lease tuning. These are the defaults the `RUNS_*` environment
-     * variables fall back to, so the lease can be configured without env vars.
-     */
-    runs: z.object({
+    })
+    .optional()
+    .prefault({}),
+  /**
+   * Run-lease tuning. These are the defaults the `RUNS_*` environment
+   * variables fall back to, so the lease can be configured without env vars.
+   */
+  runs: z
+    .object({
       /** How long a claim stays valid without a heartbeat. */
       leaseTtlMs: z.number().int().min(5_000).default(60_000),
       /** How often a live run refreshes `claimed_at`; clamped to half the TTL. */
@@ -166,46 +163,53 @@ export const configSchema = z.object({
        * of events as the event store, because a
        * reader that reattaches must get the same replay window from either copy.
        */
-      registry: z.object({
-        /**
-         * How long a finished run stays readable from the local handle.
-         *
-         * Clamped to the stream TTL at startup: keeping the local copy past the
-         * durable one would gain nothing and leak memory.
-         */
-        retainFinishedMs: z.number().int().min(0).default(600_000),
-      }).prefault({}),
+      registry: z
+        .object({
+          /**
+           * How long a finished run stays readable from the local handle.
+           *
+           * Clamped to the stream TTL at startup: keeping the local copy past the
+           * durable one would gain nothing and leak memory.
+           */
+          retainFinishedMs: z.number().int().min(0).default(600_000),
+        })
+        .prefault({}),
       /** Defaults for the run event log */
-      eventStore: z.object({
-        /** Events kept per run before the oldest are trimmed. */
-        maxStreamLen: z.number().int().min(100).default(5_000),
-        /** How long a finished run's log survives for late readers. */
-        ttlSeconds: z.number().int().min(60).default(3_600),
-        /** One tail wait before the reader re-checks for closure. */
-        blockMs: z.number().int().min(1_000).default(15_000),
-        /** Page size when replaying a long log. */
-        replayBatch: z.number().int().min(1).default(500),
-      }).prefault({}),
+      eventStore: z
+        .object({
+          /** Events kept per run before the oldest are trimmed. */
+          maxStreamLen: z.number().int().min(100).default(5_000),
+          /** How long a finished run's log survives for late readers. */
+          ttlSeconds: z.number().int().min(60).default(3_600),
+          /** One tail wait before the reader re-checks for closure. */
+          blockMs: z.number().int().min(1_000).default(15_000),
+          /** Page size when replaying a long log. */
+          replayBatch: z.number().int().min(1).default(500),
+        })
+        .prefault({}),
       /** Defaults for the recovery sweep (`runs/runRecovery.ts`). */
-      recovery: z.object({
-        /**
-         * How often to look for abandoned runs.
-         *
-         * `0` derives it from the lease as `max(1000, leaseTtlMs / 2)`, which is
-         * the shipped behaviour: fast enough that a crash is noticed promptly,
-         * slow enough that a rolling deploy does not scan constantly. Set it
-         * explicitly for tests, which use a sub-second lease.
-         */
-        sweepIntervalMs: z.number().int().min(0).default(0),
-        /** Runs one sweep will try to adopt, so a mass crash cannot stampede. */
-        maxAdoptPerSweep: z.number().int().min(1).default(3),
-        /** Resumes allowed per run after its owner died. */
-        maxResumeAttempts: z.number().int().min(0).default(5),
-        /** Grace period before a row with no registered runner is closed. */
-        unclaimedGraceMs: z.number().int().min(0).default(600_000),
-      }).prefault({}),
-    }).prefault({}),
-})
+      recovery: z
+        .object({
+          /**
+           * How often to look for abandoned runs.
+           *
+           * `0` derives it from the lease as `max(1000, leaseTtlMs / 2)`, which is
+           * the shipped behaviour: fast enough that a crash is noticed promptly,
+           * slow enough that a rolling deploy does not scan constantly. Set it
+           * explicitly for tests, which use a sub-second lease.
+           */
+          sweepIntervalMs: z.number().int().min(0).default(0),
+          /** Runs one sweep will try to adopt, so a mass crash cannot stampede. */
+          maxAdoptPerSweep: z.number().int().min(1).default(3),
+          /** Resumes allowed per run after its owner died. */
+          maxResumeAttempts: z.number().int().min(0).default(5),
+          /** Grace period before a row with no registered runner is closed. */
+          unclaimedGraceMs: z.number().int().min(0).default(600_000),
+        })
+        .prefault({}),
+    })
+    .prefault({}),
+});
 
 /** The configuration after defaults are applied. */
 export type Configuration = z.infer<typeof configSchema>;

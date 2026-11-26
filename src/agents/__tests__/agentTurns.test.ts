@@ -38,11 +38,11 @@ interface Harness {
 async function boot(): Promise<Harness> {
   const env = await loadConfig({ logger: libLogger });
   return {
-    jsonTurn: (await import("../jsonTurn.js")),
-    streamTurn: (await import("../streamTurn.js")),
-    finish: (await import("../finish.js")),
-    frames: (await import("../frames.js")),
-    types: (await import("../types.js")),
+    jsonTurn: await import("../jsonTurn.js"),
+    streamTurn: await import("../streamTurn.js"),
+    finish: await import("../finish.js"),
+    frames: await import("../frames.js"),
+    types: await import("../types.js"),
     TraceCollector: (await import("../../chat/traceCollector.js"))
       .TraceCollector,
     RequestAbortedError: (await import("../../tools/execution/errors.js"))
@@ -209,19 +209,21 @@ describe("runJsonTurn", () => {
     try {
       const llm = createFakeLlm({ choices: [{ message: { content: null } }] });
 
-      const stream = await env.jsonTurn.runJsonTurn({
-        loopOptions: loopOptions(llm),
-        client: llm.client as never,
-        chat: { temperature: 0.2, maxTokens: 100 },
-        model: "test-model",
-        messages: [{ role: "user", content: "hi" }],
-        json: { schema },
-        trace: new env.TraceCollector(),
-        // A blank answer cannot satisfy the schema, so the repair path runs;
-        // this stub keeps the assertion focused on the frames.
-        finish: () => Promise.resolve({} as never),
-        conversationId: 3,
-      }).catch(() => null);
+      const stream = await env.jsonTurn
+        .runJsonTurn({
+          loopOptions: loopOptions(llm),
+          client: llm.client as never,
+          chat: { temperature: 0.2, maxTokens: 100 },
+          model: "test-model",
+          messages: [{ role: "user", content: "hi" }],
+          json: { schema },
+          trace: new env.TraceCollector(),
+          // A blank answer cannot satisfy the schema, so the repair path runs;
+          // this stub keeps the assertion focused on the frames.
+          finish: () => Promise.resolve({} as never),
+          conversationId: 3,
+        })
+        .catch(() => null);
 
       // The parser rejects the empty body, which is the honest outcome: an
       // unusable answer is an error rather than a made-up empty object.
@@ -296,7 +298,9 @@ describe("runJsonTurn", () => {
   it("reports the finished status to the finisher", async () => {
     const env = await boot();
     try {
-      const llm = createFakeLlm(chatCompletion(JSON.stringify({ answer: "a" })));
+      const llm = createFakeLlm(
+        chatCompletion(JSON.stringify({ answer: "a" })),
+      );
       const finish = vi.fn(() => Promise.resolve({} as never));
 
       await env.jsonTurn.runJsonTurn({
@@ -406,9 +410,9 @@ describe("runJsonTurn", () => {
 
 describe("runStreamTurn", () => {
   /** Streams the frames and returns them. */
-  async function drain(
-    stream: { frames: AsyncIterable<unknown> },
-  ): Promise<unknown[]> {
+  async function drain(stream: {
+    frames: AsyncIterable<unknown>;
+  }): Promise<unknown[]> {
     const seen: unknown[] = [];
     for await (const frame of stream.frames) seen.push(frame);
     return seen;
@@ -515,7 +519,9 @@ describe("runStreamTurn", () => {
       // A tool has to be advertised or `runToolRounds` short-circuits without
       // ever calling the provider, and the loop then finishes as a budget miss
       // rather than a provider failure.
-      const fake = streamFake([], { throwAfter: new Error("provider exploded") });
+      const fake = streamFake([], {
+        throwAfter: new Error("provider exploded"),
+      });
       const finish = vi.fn(() => Promise.resolve({} as never));
 
       const seen = await drain(
@@ -545,7 +551,9 @@ describe("runStreamTurn", () => {
       // user-facing wording, and the turn is reported as failed.
       expect(seen).toContainEqual({
         type: "error",
-        message: expect.stringContaining("reached my internal processing limit"),
+        message: expect.stringContaining(
+          "reached my internal processing limit",
+        ),
       });
       expect(finish).toHaveBeenCalledWith("finished", {});
     } finally {

@@ -187,7 +187,9 @@ describe("fetchRelevantChunks", () => {
   it("rejects a vector of the wrong width", async () => {
     await expect(
       harness.models.fetchRelevantChunks([1, 0, 0], 10, 0, 0.1),
-    ).rejects.toThrow("Expected a non-zero embedding containing 8 finite numbers");
+    ).rejects.toThrow(
+      "Expected a non-zero embedding containing 8 finite numbers",
+    );
   });
 
   it("rejects a vector containing a non-finite number", async () => {
@@ -196,13 +198,17 @@ describe("fetchRelevantChunks", () => {
 
     await expect(
       harness.models.fetchRelevantChunks(vector, 10, 0, 0.1),
-    ).rejects.toThrow("Expected a non-zero embedding containing 8 finite numbers");
+    ).rejects.toThrow(
+      "Expected a non-zero embedding containing 8 finite numbers",
+    );
   });
 
   it("rejects an all-zero vector", async () => {
     await expect(
       harness.models.fetchRelevantChunks(axis(99), 10, 0, 0.1),
-    ).rejects.toThrow("Expected a non-zero embedding containing 8 finite numbers");
+    ).rejects.toThrow(
+      "Expected a non-zero embedding containing 8 finite numbers",
+    );
   });
 
   it("rejects a limit outside 1..100", async () => {
@@ -279,7 +285,11 @@ describe("searchDbDocs", () => {
     const query = "the answer";
     await insertDocument(db, {
       chunks: [
-        { index: 0, text: "the answer", embedding: embeddingVector(query, DIMENSIONS) },
+        {
+          index: 0,
+          text: "the answer",
+          embedding: embeddingVector(query, DIMENSIONS),
+        },
       ],
     });
 
@@ -292,17 +302,22 @@ describe("searchDbDocs", () => {
 
     expect(embedding.inputs).toEqual([query]);
     expect(Array.isArray(results)).toBe(true);
-    expect((results as { chunkText: string }[])[0].chunkText).toBe("the answer");
-    expect((results as { similarity: number }[])[0].similarity).toBeCloseTo(1, 5);
+    expect((results as { chunkText: string }[])[0].chunkText).toBe(
+      "the answer",
+    );
+    expect((results as { similarity: number }[])[0].similarity).toBeCloseTo(
+      1,
+      5,
+    );
   });
 
   it("reports a miss rather than an empty array", async () => {
     const { db } = harness;
     // A hit needs a stored vector that matches the query embedding, so index
     // nothing and ask for a near-exact match.
-    expect(await db.selectFrom("document_chunks").selectAll().execute()).toEqual(
-      [],
-    );
+    expect(
+      await db.selectFrom("document_chunks").selectAll().execute(),
+    ).toEqual([]);
 
     const result = await harness.models.searchDbDocs({
       query: "nothing indexed",
@@ -323,7 +338,12 @@ describe("searchDbDocs", () => {
 
     const parsed = searchParams.parse({ query: "q", limit: "3" });
 
-    expect(parsed).toEqual({ query: "q", limit: 3, offset: 0, similarity: 0.9 });
+    expect(parsed).toEqual({
+      query: "q",
+      limit: 3,
+      offset: 0,
+      similarity: 0.9,
+    });
   });
 
   it("scopes searchDbDocs results when userId is provided", async () => {
@@ -346,9 +366,9 @@ describe("searchDbDocs", () => {
       "u-1",
     );
     expect(Array.isArray(u1Results)).toBe(true);
-    expect((u1Results as { chunkText: string }[]).map((r) => r.chunkText)).toEqual([
-      "u1 policy",
-    ]);
+    expect(
+      (u1Results as { chunkText: string }[]).map((r) => r.chunkText),
+    ).toEqual(["u1 policy"]);
 
     const u3Miss = await models.searchDbDocs(
       { query, limit: 5, offset: 0, similarity: 0.5 },
@@ -403,13 +423,17 @@ describe("readToolDocument", () => {
   });
 
   it("refuses a document that does not exist", async () => {
-    expect(await harness.models.readToolDocument("u-1", { documentId: 4_242 })).toBeNull();
+    expect(
+      await harness.models.readToolDocument("u-1", { documentId: 4_242 }),
+    ).toBeNull();
   });
 
   it("flags a body past the inline ceiling as truncated", async () => {
     const { db, models } = harness;
     // The default ceiling is MAX_DOC_TOKENS(3000) * 4 chars * 2 = 24000 chars.
-    const documentId = await insertDocument(db, { rawContent: "y".repeat(30_000) });
+    const documentId = await insertDocument(db, {
+      rawContent: "y".repeat(30_000),
+    });
 
     const result = await models.readToolDocument("u-1", { documentId });
 
@@ -422,7 +446,9 @@ describe("readToolDocument", () => {
 
   it("honours a custom token ceiling", async () => {
     const { db, models } = harness;
-    const documentId = await insertDocument(db, { rawContent: "y".repeat(200) });
+    const documentId = await insertDocument(db, {
+      rawContent: "y".repeat(200),
+    });
 
     // 5 tokens * 4 chars * 2 = 40 chars inline, and 5*4 = 20 after truncation.
     const result = await models.readToolDocument("u-1", { documentId }, 4, 5);
@@ -454,16 +480,16 @@ describe("readToolDocument", () => {
       nextChunkStart: 2,
     });
     expect(
-      (result as { chunks: { content: string }[] }).chunks.map((c) => c.content),
+      (result as { chunks: { content: string }[] }).chunks.map(
+        (c) => c.content,
+      ),
     ).toEqual(["chunk zero", "chunk one"]);
   });
 
   it("reports no nextChunkStart once the last chunk was read", async () => {
     const { db, models } = harness;
     const documentId = await insertDocument(db, {
-      chunks: [
-        { index: 0, text: "only", embedding: axis(0) },
-      ],
+      chunks: [{ index: 0, text: "only", embedding: axis(0) }],
     });
 
     const result = await models.readToolDocument("u-1", {
@@ -499,9 +525,7 @@ describe("readToolDocument", () => {
   it("truncates a single oversized chunk", async () => {
     const { db, models } = harness;
     const documentId = await insertDocument(db, {
-      chunks: [
-        { index: 0, text: "z".repeat(9_000), embedding: axis(0) },
-      ],
+      chunks: [{ index: 0, text: "z".repeat(9_000), embedding: axis(0) }],
     });
 
     const result = await models.readToolDocument(
@@ -512,8 +536,9 @@ describe("readToolDocument", () => {
       100,
     );
 
-    const [chunk] = (result as { chunks: { content: string; truncated: boolean }[] })
-      .chunks;
+    const [chunk] = (
+      result as { chunks: { content: string; truncated: boolean }[] }
+    ).chunks;
     expect(chunk.truncated).toBe(true);
     expect(chunk.content).toHaveLength(400);
   });
@@ -581,7 +606,9 @@ describe("saveUploadedScrappedFile", () => {
       skippedDuplicates: ["two.md"],
       errors: [],
     });
-    expect(await db.selectFrom("documents").selectAll().execute()).toHaveLength(1);
+    expect(await db.selectFrom("documents").selectAll().execute()).toHaveLength(
+      1,
+    );
   });
 
   it("reports an unsupported extension without touching the database", async () => {
@@ -592,7 +619,9 @@ describe("saveUploadedScrappedFile", () => {
       "u-1",
     );
 
-    expect(results.errors).toEqual(["Skipped script.exe: Unsupported file type"]);
+    expect(results.errors).toEqual([
+      "Skipped script.exe: Unsupported file type",
+    ]);
     expect(await db.selectFrom("documents").selectAll().execute()).toEqual([]);
   });
 

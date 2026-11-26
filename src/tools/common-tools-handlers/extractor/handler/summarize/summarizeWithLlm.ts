@@ -62,8 +62,11 @@ export async function summarizeWithLlm(
     return { summary: content, length, passthrough: true, model };
   }
 
-  const { buildLinkSummaryPrompt, SUMMARY_LENGTH_TO_TOKENS, SUMMARY_SYSTEM_PROMPT } =
-    await summarizePrompts();
+  const {
+    buildLinkSummaryPrompt,
+    SUMMARY_LENGTH_TO_TOKENS,
+    SUMMARY_SYSTEM_PROMPT,
+  } = await summarizePrompts();
 
   const prompt = buildLinkSummaryPrompt({
     url: extraction.url,

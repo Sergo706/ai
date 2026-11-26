@@ -1,4 +1,3 @@
-
 import { workflowStream } from "../chat/sse.js";
 import { publish, registerRun, scheduleDisposal } from "./runRegistry.js";
 import type {
@@ -6,7 +5,6 @@ import type {
   DetachedWorkflowArgs,
   WorkflowStreamWithRegistryArgs,
 } from "./types.js";
-
 
 /**
  * Register a run so its frames can be streamed, replayed and aborted.

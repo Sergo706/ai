@@ -137,7 +137,11 @@ describe("claimRun on better-sqlite3", () => {
   });
 
   it("increments attempts when taking over from a dead replica", async () => {
-    await seedRun({ id: "sqlite-retry", owner: "dead:1:x", claimedAt: longAgo() });
+    await seedRun({
+      id: "sqlite-retry",
+      owner: "dead:1:x",
+      claimedAt: longAgo(),
+    });
 
     expect(await harness.lease.claimRun("sqlite-retry")).toBe(true);
 

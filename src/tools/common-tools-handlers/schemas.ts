@@ -1,4 +1,4 @@
-import z from 'zod'
+import z from "zod";
 
 const colorSchema = z.tuple([
   z.number().min(0).max(1),
@@ -32,7 +32,6 @@ const pdfItemSchema = z.object({
   borderColorRgb: colorSchema.optional(),
   borderWidth: z.number().optional(),
 });
-
 
 const pageSchema = z.object({
   action: z.enum(["add", "modify"]).default("add"),

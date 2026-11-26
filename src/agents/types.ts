@@ -7,7 +7,10 @@ import type { TraceExtension } from "../chat/traceCollector";
 import type { Compaction, HistoryMessage } from "../types/Compaction";
 import type { SseFrame } from "../types/Chat";
 import type { MessageTrace, RunKind } from "../db/schema";
-import type { ModelBodyOptions, ThinkingEffort } from "../types/ToolExecutionTypes";
+import type {
+  ModelBodyOptions,
+  ThinkingEffort,
+} from "../types/ToolExecutionTypes";
 
 /**
  * SDK options that describe *how* a request travels, not what it contains.

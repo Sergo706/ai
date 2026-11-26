@@ -1,4 +1,12 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import type OpenAI from "openai";
 
 import { loadConfig, type LoadedConfig } from "~~/test/test-utils/config";
@@ -108,15 +116,22 @@ describe("prepareScrape", () => {
   });
 
   it("numbers the chunks densely in order and embeds each exactly once", async () => {
-    const body = Array.from({ length: 12 }, (_, i) => `paragraph ${i.toString()}.`)
-      .join("\n\n");
+    const body = Array.from(
+      { length: 12 },
+      (_, i) => `paragraph ${i.toString()}.`,
+    ).join("\n\n");
 
-    const result = await harness.prepareScrape("Long", body, {}, {
-      maxTokens: 20,
-      overlapTokens: 0,
-      charsPerTokenEstimate: 4,
-      embeddingConcurrency: 1,
-    });
+    const result = await harness.prepareScrape(
+      "Long",
+      body,
+      {},
+      {
+        maxTokens: 20,
+        overlapTokens: 0,
+        charsPerTokenEstimate: 4,
+        embeddingConcurrency: 1,
+      },
+    );
 
     expect(result.chunks.length).toBeGreaterThan(1);
     expect(result.chunks.map((chunk) => chunk.chunkIndex)).toEqual(
@@ -148,7 +163,10 @@ describe("prepareScrape", () => {
         maxTokens: 10,
         overlapTokens: 0,
         embeddingConcurrency: 1,
-        chunkMeta: (chunkText, chunkIndex) => ({ chunkIndex, length: chunkText.length }),
+        chunkMeta: (chunkText, chunkIndex) => ({
+          chunkIndex,
+          length: chunkText.length,
+        }),
       },
     );
 
@@ -209,9 +227,7 @@ describe("prepareScrape", () => {
 
     try {
       const mod: PrepareScrape = await import("~/rag/prepareScrape.js");
-      await expect(
-        mod.prepareScrape("Zero", "some text", {}),
-      ).rejects.toThrow(
+      await expect(mod.prepareScrape("Zero", "some text", {})).rejects.toThrow(
         `Expected a non-zero embedding containing ${DIMENSIONS.toString()} finite numbers`,
       );
     } finally {

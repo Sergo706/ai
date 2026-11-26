@@ -1,22 +1,22 @@
 <script setup lang="ts">
-const installCommand = landingInstallCommand
-const repoUrl = landingRepoUrl
+const installCommand = landingInstallCommand;
+const repoUrl = landingRepoUrl;
 
-const copied = ref(false)
-let resetTimer: ReturnType<typeof setTimeout> | undefined
+const copied = ref(false);
+let resetTimer: ReturnType<typeof setTimeout> | undefined;
 
 async function copyInstall() {
   try {
-    await navigator.clipboard.writeText(installCommand)
-    copied.value = true
-    clearTimeout(resetTimer)
-    resetTimer = setTimeout(() => (copied.value = false), 1600)
+    await navigator.clipboard.writeText(installCommand);
+    copied.value = true;
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(() => (copied.value = false), 1600);
   } catch {
-    copied.value = false
+    copied.value = false;
   }
 }
 
-onBeforeUnmount(() => clearTimeout(resetTimer))
+onBeforeUnmount(() => clearTimeout(resetTimer));
 </script>
 
 <template>
@@ -48,7 +48,9 @@ onBeforeUnmount(() => clearTimeout(resetTimer))
         >
           Agents as a library.
         </span>
-        <span class="font-serif text-[#6f6f6f] font-normal italic tracking-[-0.02em]">
+        <span
+          class="font-serif text-[#6f6f6f] font-normal italic tracking-[-0.02em]"
+        >
           Not a framework.
         </span>
       </h1>
@@ -100,7 +102,7 @@ onBeforeUnmount(() => clearTimeout(resetTimer))
             :name="copied ? 'i-lucide-check' : 'i-lucide-copy'"
             class="size-3.5"
           />
-          {{ copied ? 'Copied' : 'Copy' }}
+          {{ copied ? "Copied" : "Copy" }}
         </span>
       </button>
     </div>

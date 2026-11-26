@@ -36,8 +36,8 @@ await configuration({
   // ...db & openAiConfig
   embeddingConfig: {
     retrievalModel: "text-embedding-3-small", // Used when embedding document chunks
-    matchingModel: "text-embedding-3-small",  // Used when embedding queries & dedupe vectors
-    dimensions: 1536,                         // Verified at runtime on every call
+    matchingModel: "text-embedding-3-small", // Used when embedding queries & dedupe vectors
+    dimensions: 1536, // Verified at runtime on every call
   },
 });
 ```
@@ -78,39 +78,47 @@ export const docsAgent = await createAgent({
 ## Explore the RAG modules
 
 ::card-group
-  :::card
-  ---
-  icon: i-lucide-scissors
-  title: Chunking & Embeddings
-  to: /rag/chunking-and-embeddings
-  ---
-  Generate vectors with `generateEmbedding()` / `generateMatchingEmbedding()`, slice text with `chunkByTokens()`, and format scrapes via `prepareScrape()`.
-  :::
+:::card
+---
 
-  :::card
-  ---
-  icon: i-lucide-database-zap
-  title: Ingestion & Vector Search
-  to: /rag/ingestion-and-search
-  ---
-  Persist files with `saveUploadedScrappedFile()` and retrieve matching chunks with `fetchRelevantChunks()` and `searchDbDocs()`.
-  :::
+icon: i-lucide-scissors
+title: Chunking & Embeddings
+to: /rag/chunking-and-embeddings
+---
 
-  :::card
-  ---
-  icon: i-lucide-filter
-  title: Adaptive Chunk Filtering
-  to: /rag/adaptive-filtering
-  ---
-  Score freshly scraped chunks against a query and drop near-duplicates before inserting using `filterAdaptiveChunks()`.
-  :::
+Generate vectors with `generateEmbedding()` / `generateMatchingEmbedding()`, slice text with `chunkByTokens()`, and format scrapes via `prepareScrape()`.
+:::
 
-  :::card
-  ---
-  icon: i-lucide-workflow
-  title: End-to-End RAG Recipes
-  to: /rag/end-to-end-rag-recipes
-  ---
-  Complete upload-to-chat multi-tenant RAG endpoints and crawl-filter-persist ingestion loops.
-  :::
+:::card
+---
+
+icon: i-lucide-database-zap
+title: Ingestion & Vector Search
+to: /rag/ingestion-and-search
+---
+
+Persist files with `saveUploadedScrappedFile()` and retrieve matching chunks with `fetchRelevantChunks()` and `searchDbDocs()`.
+:::
+
+:::card
+---
+
+icon: i-lucide-filter
+title: Adaptive Chunk Filtering
+to: /rag/adaptive-filtering
+---
+
+Score freshly scraped chunks against a query and drop near-duplicates before inserting using `filterAdaptiveChunks()`.
+:::
+
+:::card
+---
+
+icon: i-lucide-workflow
+title: End-to-End RAG Recipes
+to: /rag/end-to-end-rag-recipes
+---
+
+Complete upload-to-chat multi-tenant RAG endpoints and crawl-filter-persist ingestion loops.
+:::
 ::

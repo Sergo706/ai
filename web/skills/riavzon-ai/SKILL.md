@@ -16,20 +16,20 @@ description: Build AI agents, custom and MCP tools, hybrid RAG pipelines, and SS
 
 ## Optional Peer Dependency Matrix
 
-| Feature | Packages to Install |
-| --- | --- |
-| Core runtime (always required) | `@riavzon/ai`, `openai` |
-| SQLite + vector search | `better-sqlite3`, `sqlite-vec` |
-| PostgreSQL + vector search | `pg`, `@types/pg` |
-| Redis cache / cross-replica runs / file tools | `ioredis` |
-| Built-in `calculator` | `mathjs` |
-| Built-in `currencies_convertor` | `easy-currencies` |
-| Built-in `create_styled_spreadsheet` / XLSX & CSV readers | `exceljs` |
-| Built-in `pdf_creator` / `createPdf()` | `pdf-lib`, `@pdf-lib/fontkit` |
-| Built-in `extractor` | `@steipete/summarize-core` |
-| Built-in `get_current_datetime` / `search_db` / `get_document` | Core + DB peer only |
-| MCP client (`tools.mcp` / `createMcpToolset()`) | `@modelcontextprotocol/client` |
-| Exact tokenizer chunking (`PreTrainedTokenizer`) | `@huggingface/transformers` |
+| Feature                                                        | Packages to Install            |
+| -------------------------------------------------------------- | ------------------------------ |
+| Core runtime (always required)                                 | `@riavzon/ai`, `openai`        |
+| SQLite + vector search                                         | `better-sqlite3`, `sqlite-vec` |
+| PostgreSQL + vector search                                     | `pg`, `@types/pg`              |
+| Redis cache / cross-replica runs / file tools                  | `ioredis`                      |
+| Built-in `calculator`                                          | `mathjs`                       |
+| Built-in `currencies_convertor`                                | `easy-currencies`              |
+| Built-in `create_styled_spreadsheet` / XLSX & CSV readers      | `exceljs`                      |
+| Built-in `pdf_creator` / `createPdf()`                         | `pdf-lib`, `@pdf-lib/fontkit`  |
+| Built-in `extractor`                                           | `@steipete/summarize-core`     |
+| Built-in `get_current_datetime` / `search_db` / `get_document` | Core + DB peer only            |
+| MCP client (`tools.mcp` / `createMcpToolset()`)                | `@modelcontextprotocol/client` |
+| Exact tokenizer chunking (`PreTrainedTokenizer`)               | `@huggingface/transformers`    |
 
 ## 1. Runtime Initialization (`configuration`)
 
@@ -78,10 +78,12 @@ const lookupOrder: ToolSpec<{ tenantId: string }> = {
   },
   cache: { ttl: 60, scoped: true },
   maxCalls: 5,
-  make: ({ userId, meta }) => async (args) => {
-    const { orderId } = z.object({ orderId: z.string() }).parse(args);
-    return { orderId, userId, tenantId: meta?.tenantId, status: "shipped" };
-  },
+  make:
+    ({ userId, meta }) =>
+    async (args) => {
+      const { orderId } = z.object({ orderId: z.string() }).parse(args);
+      return { orderId, userId, tenantId: meta?.tenantId, status: "shipped" };
+    },
 };
 
 export const supportAgent = await createAgent<{ tenantId: string }>({
@@ -93,9 +95,15 @@ export const supportAgent = await createAgent<{ tenantId: string }>({
     tools: { maxRounds: 6, maxCalls: 20, temperature: 0.1, maxTokens: 4096 },
     request: { timeout: 60_000, maxRetries: 2 },
   },
-  systemInstructions: "You are a concise support assistant. Use tools before guessing.",
+  systemInstructions:
+    "You are a concise support assistant. Use tools before guessing.",
   tools: {
-    common: ["calculator", "get_current_datetime", "search_db", { name: "get_document", maxCalls: 2 }],
+    common: [
+      "calculator",
+      "get_current_datetime",
+      "search_db",
+      { name: "get_document", maxCalls: 2 },
+    ],
     specs: [lookupOrder],
   },
   conversation: { persist: true },
@@ -122,12 +130,12 @@ export const supportAgent = await createAgent<{ tenantId: string }>({
 
 ### Choosing the Right SSE Helper
 
-| Use Case | Helper |
-| --- | --- |
-| Turn `agent.chat()` frames into a Web `ReadableStream` | `framesToStream(frames, { signal, heartbeatMs })` |
-| Instant canned reply without calling an LLM | `staticReplyStream(text)` |
-| Build a custom chat pipeline without `createAgent()` | `runAgentStream(options)` |
-| Stream a non-durable workflow or background job | `workflowStream(fn, options)` |
+| Use Case                                                                       | Helper                                                                 |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| Turn `agent.chat()` frames into a Web `ReadableStream`                         | `framesToStream(frames, { signal, heartbeatMs })`                      |
+| Instant canned reply without calling an LLM                                    | `staticReplyStream(text)`                                              |
+| Build a custom chat pipeline without `createAgent()`                           | `runAgentStream(options)`                                              |
+| Stream a non-durable workflow or background job                                | `workflowStream(fn, options)`                                          |
 | Stream a durable, reattachable run (see `riavzon-ai-workflows-and-runs` skill) | `streamFromRun()`, `streamFromStore()`, `workflowStreamWithRegistry()` |
 
 Always pair streams with `SSE_HEADERS` (`text/event-stream`, `no-cache`, `X-Accel-Buffering: no`).

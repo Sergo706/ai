@@ -4,17 +4,17 @@
 
 Every SSE event is encoded with `encodeSseFrame(frame)` and sent with `SSE_HEADERS`.
 
-| Event `type` | Emitted When | Key Fields |
-| --- | --- | --- |
-| `init` | Turn starts | `conversationId` (`runId` is sent by `streamFromRun({ runId })`, or obtained from caller `input.runId` / `ChatTurnResult.runId`) |
-| `reasoning` | Model emits reasoning / thinking content | `round`, `delta` |
-| `tool_start` | Tool invocation begins | `id`, `name`, `args?` (governed by `ToolStreamPolicy.emitArgs`), `callIndex`, `callTotal` |
-| `tool_end` | Tool invocation finishes | `id`, `name`, `ok`, `durationMs`, `preview` (governed by `ToolStreamPolicy.emitResult`) |
-| `chunk` | Assistant answer token arrives | `text` |
-| `workflow_start` / `workflow_progress` | `AgenticWorkflowLoop` or `workflowStream()` progress | `workflow`, `stage`, `label?`, `round?`, `intent?`, `custom?` |
-| `agent_progress` | Custom `ctx.emit(...)` sub-progress inside tools | `agent`, `state` (`"running" \| "done" \| "failed"`) |
-| `error` | Recoverable/terminal turn error | `message` |
-| `done` | Stream closes cleanly | Terminal frame |
+| Event `type`                           | Emitted When                                         | Key Fields                                                                                                                       |
+| -------------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `init`                                 | Turn starts                                          | `conversationId` (`runId` is sent by `streamFromRun({ runId })`, or obtained from caller `input.runId` / `ChatTurnResult.runId`) |
+| `reasoning`                            | Model emits reasoning / thinking content             | `round`, `delta`                                                                                                                 |
+| `tool_start`                           | Tool invocation begins                               | `id`, `name`, `args?` (governed by `ToolStreamPolicy.emitArgs`), `callIndex`, `callTotal`                                        |
+| `tool_end`                             | Tool invocation finishes                             | `id`, `name`, `ok`, `durationMs`, `preview` (governed by `ToolStreamPolicy.emitResult`)                                          |
+| `chunk`                                | Assistant answer token arrives                       | `text`                                                                                                                           |
+| `workflow_start` / `workflow_progress` | `AgenticWorkflowLoop` or `workflowStream()` progress | `workflow`, `stage`, `label?`, `round?`, `intent?`, `custom?`                                                                    |
+| `agent_progress`                       | Custom `ctx.emit(...)` sub-progress inside tools     | `agent`, `state` (`"running" \| "done" \| "failed"`)                                                                             |
+| `error`                                | Recoverable/terminal turn error                      | `message`                                                                                                                        |
+| `done`                                 | Stream closes cleanly                                | Terminal frame                                                                                                                   |
 
 ## Web Standard HTTP Adapter (Next.js / Hono / Nitro / Bun)
 
@@ -138,7 +138,9 @@ export async function streamChat(
 ```ts
 import type { AgentEvent, TraceExtension } from "@riavzon/ai";
 
-export function createTimingExtension(): TraceExtension<{ toolDurationMs: number }> {
+export function createTimingExtension(): TraceExtension<{
+  toolDurationMs: number;
+}> {
   let toolDurationMs = 0;
   return {
     apply(event: AgentEvent) {
@@ -154,6 +156,7 @@ export function createTimingExtension(): TraceExtension<{ toolDurationMs: number
 ## Low-Level Chat Primitives
 
 When bypassing `createAgent()`, compose turns manually from the same building blocks:
+
 - `resolveConversation()` — create or fetch conversation thread
 - `compactHistory()` & `historyToMessages()` — rolling summarization and message formatting
 - `tryCachedReply()` — semantic cache lookup

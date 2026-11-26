@@ -1,7 +1,11 @@
 import { getDb } from "../config/config";
 import type { RunKind, RunStatus } from "../db/schema";
 import { timestamp, toJson } from "../db/utils";
-import type { CreateRunArgs, StoredRun, UpdateRunArgs } from "../types/RunModel";
+import type {
+  CreateRunArgs,
+  StoredRun,
+  UpdateRunArgs,
+} from "../types/RunModel";
 
 /**
  * Insert a new run row in the `running` state.
@@ -152,5 +156,3 @@ export async function getUnpersistedRuns(
     .limit(limit)
     .execute();
 }
-
-

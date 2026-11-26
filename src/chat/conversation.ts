@@ -3,7 +3,6 @@ import { loadConversationHistory } from "../models/loadConversationHistory";
 import { AgentPayload } from "../types/Chat";
 import { CompactionState } from "../types/Compaction";
 
-
 /**
  * The turn's conversation, or the reason it could not be resolved.
  *
@@ -24,7 +23,6 @@ export type ResolvedConversation =
       /** Why the conversation could not be loaded. */
       reason: string;
     };
-
 
 /**
  * Find or create the conversation a turn belongs to.

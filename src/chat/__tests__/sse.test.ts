@@ -122,7 +122,11 @@ describe("runProgressFrames", () => {
     onRunStarted("run-1");
     onProgress({
       label: "https://example.com/a",
-      custom: { url: "https://example.com/a", title: "A", favicon: "https://icons.example/a.ico" },
+      custom: {
+        url: "https://example.com/a",
+        title: "A",
+        favicon: "https://icons.example/a.ico",
+      },
       addedEvidence: true,
     });
     onProgress({
@@ -139,8 +143,14 @@ describe("runProgressFrames", () => {
     });
     // The id is repeated so a client that attached mid-run can still abort or
     // retry; without this the page frames are anonymous.
-    expect(sent[1]).toMatchObject({ type: "workflow_progress", runId: "run-1" });
-    expect(sent[2]).toMatchObject({ type: "workflow_progress", runId: "run-1" });
+    expect(sent[1]).toMatchObject({
+      type: "workflow_progress",
+      runId: "run-1",
+    });
+    expect(sent[2]).toMatchObject({
+      type: "workflow_progress",
+      runId: "run-1",
+    });
   });
 
   it("carries the route's workflow name on every progress frame", () => {

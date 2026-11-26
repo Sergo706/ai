@@ -53,7 +53,9 @@ describe("generateStyledSpreadsheet", () => {
   });
 
   it("accepts a custom sheet name", async () => {
-    const result = await generateStyledSpreadsheet(ROWS, { sheetName: "People" });
+    const result = await generateStyledSpreadsheet(ROWS, {
+      sheetName: "People",
+    });
     const markdown = await readXlsxToMarkdown(result.buffer);
     // A single sheet is rendered without its name, so assert via a second
     // sheet later; here just prove the workbook still parses.
@@ -64,13 +66,21 @@ describe("generateStyledSpreadsheet", () => {
     const result = await generateStyledSpreadsheet(ROWS, {
       headerStyle: {
         font: { bold: true, size: 20, color: { argb: "FF000000" } },
-        fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } },
+        fill: {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFFFFF00" },
+        },
         alignment: { vertical: "top", horizontal: "left" },
         border: { top: { style: "medium" } },
       },
       dataStyle: {
         font: { italic: true },
-        fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F0F0" } },
+        fill: {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFF0F0F0" },
+        },
         alignment: { vertical: "bottom", horizontal: "right" },
         border: { bottom: { style: "thick" } },
       },
@@ -123,7 +133,9 @@ describe("generateStyledSpreadsheet", () => {
   });
 
   it("honours defaultColumnWidth for generated columns", async () => {
-    const result = await generateStyledSpreadsheet(ROWS, { defaultColumnWidth: 40 });
+    const result = await generateStyledSpreadsheet(ROWS, {
+      defaultColumnWidth: 40,
+    });
     const { default: exceljs } = await import("exceljs");
     const workbook = new exceljs.Workbook();
     await workbook.xlsx.load(result.buffer as never);

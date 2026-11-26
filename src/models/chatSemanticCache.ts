@@ -2,7 +2,6 @@ import { sql } from "kysely";
 import { getDb } from "../config/config";
 import { getDistance, fromJson, isPg } from "../db/utils";
 
-
 /** A semantic-cache lookup result. */
 export interface CacheHit {
   /** Whether a similar-enough earlier question was found. */
@@ -75,10 +74,9 @@ export async function checkChatSemanticCache(
     return { hit: false };
   }
 
-
-  const hasPoisonTool = (fromJson<string[]>(assistantReply.tools_used) ?? []).some(
-    (tool) => poisonTools.includes(tool),
-  );
+  const hasPoisonTool = (
+    fromJson<string[]>(assistantReply.tools_used) ?? []
+  ).some((tool) => poisonTools.includes(tool));
 
   if (hasPoisonTool) {
     return { hit: false };

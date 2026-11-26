@@ -1,4 +1,3 @@
- 
 import {
   extractorParams,
   type ExtractorCachePrefix,
@@ -13,7 +12,6 @@ import { getConfiguration } from "../../../config/config";
 import { envInt } from "@riavzon/utils/server";
 import { crawlPages } from "./handler/customCrawl";
 
-
 export function extractor(
   limitDataTokens: boolean,
   EXTRACTOR_MAX_CONTENT_TOKENS = envInt(
@@ -24,10 +22,7 @@ export function extractor(
   EXTRACTOR_CACHE_TTL_SECONDS = envInt("EXTRACTOR_CACHE_TTL_SECONDS", 86_400, {
     min: 0,
   }),
-  formatter?: (
-    title: string,
-    rawText: string,
-  ) => string,
+  formatter?: (title: string, rawText: string) => string,
 ): ToolHandler {
   const log = getConfiguration().logger;
 
@@ -91,12 +86,8 @@ export function extractor(
         let fullFormattedContent: string = markdownToProcess;
 
         if (formatter) {
-          fullFormattedContent = formatter(
-            title,
-            markdownToProcess
-          );
+          fullFormattedContent = formatter(title, markdownToProcess);
         }
-
 
         let finalOutput = fullFormattedContent;
         if (limitDataTokens) {

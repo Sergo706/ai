@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const capabilities = landingCapabilities
+const capabilities = landingCapabilities;
 </script>
 
 <template>
@@ -13,7 +13,9 @@ const capabilities = landingCapabilities
       >
         Everything the runtime needs.
       </h2>
-      <p class="mt-4 text-[0.9375rem] leading-[1.75] text-pretty text-ink-muted">
+      <p
+        class="mt-4 text-[0.9375rem] leading-[1.75] text-pretty text-ink-muted"
+      >
         Every layer you would otherwise stitch together yourself, behind one API
         that stays out of the way.
       </p>
@@ -33,7 +35,9 @@ const capabilities = landingCapabilities
         >
           {{ item.title }}
         </h3>
-        <p class="mt-2.5 text-[0.8375rem] leading-[1.7] text-pretty text-ink-muted">
+        <p
+          class="mt-2.5 text-[0.8375rem] leading-[1.7] text-pretty text-ink-muted"
+        >
           {{ item.body }}
         </p>
       </li>

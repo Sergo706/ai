@@ -37,9 +37,9 @@ async function readSource(
   const { name, data } = source;
   if (typeof data === "string") return { filename: name, text: data };
 
-  return { 
+  return {
     filename: name,
-    text: Buffer.from(data).toString("utf-8") 
+    text: Buffer.from(data).toString("utf-8"),
   };
 }
 

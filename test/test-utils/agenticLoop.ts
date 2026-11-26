@@ -112,7 +112,7 @@ export function scriptedEvaluator(
       const verdict =
         verdicts.length === 0
           ? { isSufficient: false, nextIntents: [] }
-          : (verdicts[Math.min(index, verdicts.length - 1)]);
+          : verdicts[Math.min(index, verdicts.length - 1)];
       index++;
       return verdict;
     }),

@@ -122,7 +122,11 @@ describe("readExtractorCache", () => {
 
   it("discards an unparseable entry instead of failing the call", async () => {
     // A corrupt value must cost a re-crawl, not the whole batch.
-    await cacheSet(extractorCacheKey("https://bad.com", LIMITED), "{not json", 60_000);
+    await cacheSet(
+      extractorCacheKey("https://bad.com", LIMITED),
+      "{not json",
+      60_000,
+    );
 
     const result = await readExtractorCache(
       ["https://bad.com", "https://ok.com"],
@@ -218,12 +222,16 @@ describe("writeExtractorCache", () => {
       60,
     );
 
-    expect((await readExtractorCache(["https://a.com"], LIMITED)).resultsByUrl.get(
-      "https://a.com",
-    )?.markdown).toBe("limited body");
-    expect((await readExtractorCache(["https://a.com"], FULL)).resultsByUrl.get(
-      "https://a.com",
-    )?.markdown).toBe("full body");
+    expect(
+      (await readExtractorCache(["https://a.com"], LIMITED)).resultsByUrl.get(
+        "https://a.com",
+      )?.markdown,
+    ).toBe("limited body");
+    expect(
+      (await readExtractorCache(["https://a.com"], FULL)).resultsByUrl.get(
+        "https://a.com",
+      )?.markdown,
+    ).toBe("full body");
   });
 
   it("writes nothing for an empty batch", async () => {

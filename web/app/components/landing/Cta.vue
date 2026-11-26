@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const repoUrl = landingRepoUrl
+const repoUrl = landingRepoUrl;
 </script>
 
 <template>
@@ -17,7 +17,9 @@ const repoUrl = landingRepoUrl
       >
         Start with one file.
       </h2>
-      <p class="mx-auto mt-4 max-w-lg text-[0.9375rem] leading-[1.7] text-pretty text-ink-muted">
+      <p
+        class="mx-auto mt-4 max-w-lg text-[0.9375rem] leading-[1.7] text-pretty text-ink-muted"
+      >
         No daemon, no schema of your own, no account. Point it at a SQLite path
         and the first turn works.
       </p>

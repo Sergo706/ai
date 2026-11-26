@@ -1,47 +1,53 @@
 <script setup lang="ts">
-const appConfig = useAppConfig()
-const { forced: forcedColorMode } = useDocusColorMode()
+const appConfig = useAppConfig();
+const { forced: forcedColorMode } = useDocusColorMode();
 
 interface FooterLink {
-  icon: string
-  to: string
-  target: '_blank'
-  'aria-label': string
+  icon: string;
+  to: string;
+  target: "_blank";
+  "aria-label": string;
 }
-
 
 const iconOverrides: Record<string, string> = {
-  site: 'i-lucide-globe',
-  website: 'i-lucide-globe',
-  blog: 'i-lucide-pen-line',
-  writing: 'i-lucide-pen-line',
-}
+  site: "i-lucide-globe",
+  website: "i-lucide-globe",
+  blog: "i-lucide-pen-line",
+  writing: "i-lucide-pen-line",
+};
 
 const links = computed<FooterLink[]>(() => {
-  const socialLinks = Object.entries(appConfig.socials || {}).flatMap(([key, url]) => {
-    if (typeof url !== 'string' || !url) {
-      return []
-    }
+  const socialLinks = Object.entries(appConfig.socials || {}).flatMap(
+    ([key, url]) => {
+      if (typeof url !== "string" || !url) {
+        return [];
+      }
 
-    return [{
-      'icon': iconOverrides[key] ?? `i-simple-icons-${key}`,
-      'to': url,
-      'target': '_blank' as const,
-      'aria-label': `${key} social link`,
-    }]
-  })
+      return [
+        {
+          icon: iconOverrides[key] ?? `i-simple-icons-${key}`,
+          to: url,
+          target: "_blank" as const,
+          "aria-label": `${key} social link`,
+        },
+      ];
+    },
+  );
 
-  const githubLink = appConfig.github && appConfig.github.url
-    ? [{
-        'icon': 'i-simple-icons-github',
-        'to': appConfig.github.url,
-        'target': '_blank' as const,
-        'aria-label': 'GitHub repository',
-      }]
-    : []
+  const githubLink =
+    appConfig.github && appConfig.github.url
+      ? [
+          {
+            icon: "i-simple-icons-github",
+            to: appConfig.github.url,
+            target: "_blank" as const,
+            "aria-label": "GitHub repository",
+          },
+        ]
+      : [];
 
-  return [...socialLinks, ...githubLink]
-})
+  return [...socialLinks, ...githubLink];
+});
 </script>
 
 <template>

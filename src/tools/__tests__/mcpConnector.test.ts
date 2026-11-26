@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { libLog, libLogger, resetLibLogger } from "~~/test/test-utils/logger.js";
+import {
+  libLog,
+  libLogger,
+  resetLibLogger,
+} from "~~/test/test-utils/logger.js";
 import { loadConfig, type LoadedConfig } from "~~/test/test-utils/config.js";
 import {
   startMcpServer,
@@ -131,7 +135,9 @@ describe("createMcpToolset", () => {
     const toolset = await createMcpToolset([
       { url: server.url, namespace: "ns.with dots" },
     ]);
-    expect(toolset.definitions[0]?.function.name).toBe("ns_with_dots__do_something_odd_now");
+    expect(toolset.definitions[0]?.function.name).toBe(
+      "ns_with_dots__do_something_odd_now",
+    );
     await toolset.close();
   });
 
@@ -243,7 +249,9 @@ describe("createMcpToolset", () => {
     // A caller holding the array must see the new list without re-reading it.
     const before = server.methods.filter((m) => m === "tools/list").length;
     await toolset.refresh();
-    expect(server.methods.filter((m) => m === "tools/list").length).toBe(before + 1);
+    expect(server.methods.filter((m) => m === "tools/list").length).toBe(
+      before + 1,
+    );
     expect(live.map((d) => d.function.name)).toEqual(["first"]);
     await toolset.close();
   });
@@ -258,9 +266,11 @@ describe("createMcpToolset", () => {
       { url: server.url, auth: { type: "bearer", token: "secret-token" } },
     ]);
     expect(toolset.definitions).toHaveLength(1);
-    expect(server.seenHeaders.every((h) => h.authorization === "Bearer secret-token")).toBe(
-      true,
-    );
+    expect(
+      server.seenHeaders.every(
+        (h) => h.authorization === "Bearer secret-token",
+      ),
+    ).toBe(true);
     await toolset.close();
   });
 
@@ -306,7 +316,9 @@ describe("createMcpToolset", () => {
       },
     ]);
     expect(toolset.definitions).toHaveLength(1);
-    expect(server.seenHeaders.every((h) => h["x-custom"] === "value")).toBe(true);
+    expect(server.seenHeaders.every((h) => h["x-custom"] === "value")).toBe(
+      true,
+    );
     await toolset.close();
   });
 
@@ -392,7 +404,10 @@ describe("createMcpToolset", () => {
     const init = server.bodies.find((b) => b.method === "initialize") as {
       params: { clientInfo: { name: string; version: string } };
     };
-    expect(init.params.clientInfo).toEqual({ name: "custom", version: "9.9.9" });
+    expect(init.params.clientInfo).toEqual({
+      name: "custom",
+      version: "9.9.9",
+    });
     await toolset.close();
   });
 
@@ -420,7 +435,10 @@ describe("createMcpToolset", () => {
   it("generates one callable spec per advertised tool", async () => {
     const server = track(
       await startMcpServer({
-        tools: [{ name: "search", description: "Search the web" }, { name: "fetch" }],
+        tools: [
+          { name: "search", description: "Search the web" },
+          { name: "fetch" },
+        ],
       }),
     );
     const { createMcpToolset } = await boot();

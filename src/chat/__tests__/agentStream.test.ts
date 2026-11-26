@@ -156,7 +156,10 @@ describe("runAgentStream — failure", () => {
     const errorFrame = frames(text).find((frame) => frame.type === "error");
     // A provider failure is reported as a frame rather than thrown, so the
     // client always receives a well-formed stream terminator.
-    expect(errorFrame).toEqual({ type: "error", message: expect.any(String) as string });
+    expect(errorFrame).toEqual({
+      type: "error",
+      message: expect.any(String) as string,
+    });
   });
 
   it("does not leak the provider's message to the client", async () => {
@@ -181,9 +184,7 @@ describe("runAgentStream — failure", () => {
 
   it("logs the underlying error", async () => {
     await drain(
-      runAgentStream(
-        params({ agent: throwingAgent([], new Error("boom")) }),
-      ),
+      runAgentStream(params({ agent: throwingAgent([], new Error("boom")) })),
     );
 
     // `runAgentStream` reads its logger from the configuration, so the injected

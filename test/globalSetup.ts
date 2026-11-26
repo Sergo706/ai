@@ -46,7 +46,9 @@ async function waitFor(
 }
 
 async function isPostgresReady(): Promise<boolean> {
-  const out = await run("docker exec ai-test-postgres pg_isready -U ai -d ai_test");
+  const out = await run(
+    "docker exec ai-test-postgres pg_isready -U ai -d ai_test",
+  );
   return String(out.stdout).includes("accepting connections");
 }
 

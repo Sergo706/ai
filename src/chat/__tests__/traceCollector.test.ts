@@ -72,7 +72,9 @@ describe("TraceCollector", () => {
     // the extension hook, so this both documents the hook and keeps the
     // regression it guards (a replayed source losing its metadata).
     const research: Record<string, unknown>[] = [];
-    const collector = new TraceCollector<{ research: Record<string, unknown>[] }>([
+    const collector = new TraceCollector<{
+      research: Record<string, unknown>[];
+    }>([
       {
         apply(event) {
           if (event.type !== "workflow_progress") return;
@@ -110,7 +112,9 @@ describe("TraceCollector", () => {
     // An `undefined` runId in the stored trace serializes to a missing key, but
     // an explicit one must survive so a replayed source can be traced to its run.
     const research: Record<string, unknown>[] = [];
-    const collector = new TraceCollector<{ research: Record<string, unknown>[] }>([
+    const collector = new TraceCollector<{
+      research: Record<string, unknown>[];
+    }>([
       {
         apply(event) {
           if (event.type !== "workflow_progress") return;
@@ -140,7 +144,9 @@ describe("TraceCollector", () => {
 
   it("does not add a runId key when the event had none", () => {
     const research: Record<string, unknown>[] = [];
-    const collector = new TraceCollector<{ research: Record<string, unknown>[] }>([
+    const collector = new TraceCollector<{
+      research: Record<string, unknown>[];
+    }>([
       {
         apply(event) {
           if (event.type !== "workflow_progress") return;

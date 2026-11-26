@@ -61,4 +61,3 @@ afterAll(async () => {
   await getDb().destroy();
   rmSync(tempDir, { recursive: true, force: true });
 });
-

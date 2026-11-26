@@ -275,7 +275,6 @@ describe("llmSchemaParser", () => {
       }),
     );
 
-
     expect(lastMessage(llm.calls[0])).not.toContain("Schema: ");
     // The response format is still sent; only the prompt copy is suppressed.
     expect(callAt(llm.calls, 0).response_format).toMatchObject({

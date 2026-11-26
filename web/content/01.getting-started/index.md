@@ -12,19 +12,19 @@ seo:
 ## Follow the onboarding path
 
 ::card-group
-  :::card{title="Introduction" icon="i-lucide-book-open" to="/getting-started/introduction"}
-  Explore the runtime architecture, subsystem layers, and design principles behind `@riavzon/ai`.
-  :::
-  :::card{title="Installation" icon="i-lucide-download" to="/getting-started/installation"}
-  Install `@riavzon/ai`, `openai`, and only the lazy-loaded peer dependencies your project uses.
-  :::
-  :::card{title="Infrastructure" icon="i-lucide-server" to="/getting-started/infrastructure"}
-  Choose between SQLite + in-memory cache for single-node apps and PostgreSQL + Redis for multi-replica deployments.
-  :::
-  :::card{title="Quickstart" icon="i-lucide-rocket" to="/getting-started/quickstart"}
-  Configure the runtime, create an agent with built-in and custom tools, and stream SSE responses in five minutes.
-  :::
-  :::card{title="AI & LLM Integrations" icon="i-lucide-sparkles" to="/getting-started/ai-integrations"}
-  Connect coding agents and pipelines to these docs via downloadable Agent Skills, MCP, `llms.txt`, raw Markdown, and OpenAPI.
-  :::
+:::card{title="Introduction" icon="i-lucide-book-open" to="/getting-started/introduction"}
+Explore the runtime architecture, subsystem layers, and design principles behind `@riavzon/ai`.
+:::
+:::card{title="Installation" icon="i-lucide-download" to="/getting-started/installation"}
+Install `@riavzon/ai`, `openai`, and only the lazy-loaded peer dependencies your project uses.
+:::
+:::card{title="Infrastructure" icon="i-lucide-server" to="/getting-started/infrastructure"}
+Choose between SQLite + in-memory cache for single-node apps and PostgreSQL + Redis for multi-replica deployments.
+:::
+:::card{title="Quickstart" icon="i-lucide-rocket" to="/getting-started/quickstart"}
+Configure the runtime, create an agent with built-in and custom tools, and stream SSE responses in five minutes.
+:::
+:::card{title="AI & LLM Integrations" icon="i-lucide-sparkles" to="/getting-started/ai-integrations"}
+Connect coding agents and pipelines to these docs via downloadable Agent Skills, MCP, `llms.txt`, raw Markdown, and OpenAPI.
+:::
 ::

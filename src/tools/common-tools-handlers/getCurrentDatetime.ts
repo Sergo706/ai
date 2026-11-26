@@ -1,4 +1,4 @@
-import z from "zod"
+import z from "zod";
 import { ToolHandler } from "../../types/ToolExecutionTypes";
 import { toolError } from "../execution";
 import { getConfiguration } from "../../config/config";

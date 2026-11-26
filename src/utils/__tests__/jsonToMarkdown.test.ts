@@ -187,7 +187,9 @@ describe("arrays", () => {
   });
 
   it("caps a scalar array and says how many were dropped", () => {
-    expect(jsonToMarkdown({ list: [1, 2, 3, 4, 5] }, { maxArrayItems: 2 })).toBe(
+    expect(
+      jsonToMarkdown({ list: [1, 2, 3, 4, 5] }, { maxArrayItems: 2 }),
+    ).toBe(
       ["- **list**: 1, 2", "- **list**: _… 3 more item(s) omitted_"].join("\n"),
     );
   });
@@ -329,7 +331,7 @@ describe("cycles and depth", () => {
 
   it("flattens a subtree that passes maxDepth", () => {
     expect(jsonToMarkdown({ a: { b: 1 } }, { maxDepth: 0 })).toBe(
-      ['## a', "", '- {"b":1}'].join("\n"),
+      ["## a", "", '- {"b":1}'].join("\n"),
     );
   });
 

@@ -5,7 +5,6 @@ import type {
 import { getConfiguration } from "../../../../../config/config";
 import { loadPeer } from "../../../../../utils/loadPeerDepend";
 
-
 type ContentPeer = typeof import("@steipete/summarize-core/content");
 
 async function summarizeContent(): Promise<ContentPeer> {
@@ -15,9 +14,8 @@ async function summarizeContent(): Promise<ContentPeer> {
   );
 }
 
-
 function clientEnv(): Record<string, string | undefined> {
-  const { extractor } = getConfiguration()
+  const { extractor } = getConfiguration();
   const WHISPER_CPP_BINARY = extractor?.whisperCppBin ?? "";
   const WHISPER_CPP_MODEL_PATH = extractor?.whisperCppModelPath ?? "";
   const DISABLE_LOCAL_WHISPER = extractor?.disableLocalWhisper ?? false;
@@ -40,7 +38,7 @@ let cachedClient: LinkPreviewClient | undefined;
 
 export async function summarizeClient(): Promise<LinkPreviewClient> {
   if (cachedClient) return cachedClient;
-  const { extractor } = getConfiguration()
+  const { extractor } = getConfiguration();
 
   const YT_DLP_PATH = extractor?.ytDlpBin;
   const options: LinkPreviewClientOptions = {

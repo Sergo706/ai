@@ -303,8 +303,18 @@ describe("run lookups", () => {
 
   it("defaults to the workflow kind and accepts an override", async () => {
     const { db, runs } = harness;
-    await seedRun(db, { id: "chat-run", kind: "chat", status: "failed", userId: "u-1" });
-    await seedRun(db, { id: "wf-run", kind: "workflow", status: "failed", userId: "u-1" });
+    await seedRun(db, {
+      id: "chat-run",
+      kind: "chat",
+      status: "failed",
+      userId: "u-1",
+    });
+    await seedRun(db, {
+      id: "wf-run",
+      kind: "workflow",
+      status: "failed",
+      userId: "u-1",
+    });
 
     expect((await runs.getUnpersistedRuns("u-1")).map((r) => r.id)).toEqual([
       "wf-run",
@@ -326,7 +336,9 @@ describe("claimRun", () => {
     const row = await readRun(db, "run-1");
     expect(row.owner).toBe(lease.INSTANCE_ID);
     expect(row.status).toBe("running");
-    expect(new Date(row.claimed_at as string).toISOString()).toBe(row.claimed_at);
+    expect(new Date(row.claimed_at as string).toISOString()).toBe(
+      row.claimed_at,
+    );
   });
 
   it("refuses a fresh claim held by another process", async () => {
@@ -410,7 +422,11 @@ describe("claimRun", () => {
 describe("heartbeatRun", () => {
   it("reports alive and refreshes claimed_at for the owner", async () => {
     const { db, lease } = harness;
-    await seedRun(db, { id: "run-1", owner: lease.INSTANCE_ID, claimedAt: longAgo(45_000) });
+    await seedRun(db, {
+      id: "run-1",
+      owner: lease.INSTANCE_ID,
+      claimedAt: longAgo(45_000),
+    });
     const before = (await readRun(db, "run-1")).claimed_at as string;
 
     const state = await lease.heartbeatRun("run-1");
@@ -546,7 +562,9 @@ describe("finishRun", () => {
     const row = await readRun(db, "run-1");
     expect(row.status).toBe("finished");
     expect(row.stop_reason).toBe("complete");
-    expect(JSON.parse(row.partial as unknown as string)).toEqual({ text: "done" });
+    expect(JSON.parse(row.partial as unknown as string)).toEqual({
+      text: "done",
+    });
     expect(new Date(row.finished_at as string).toISOString()).toBe(
       row.finished_at,
     );
@@ -636,7 +654,11 @@ describe("finishRun", () => {
 describe("releaseRun", () => {
   it("drops the lease so another replica may adopt immediately", async () => {
     const { db, lease } = harness;
-    await seedRun(db, { id: "run-1", owner: lease.INSTANCE_ID, claimedAt: new Date().toISOString() });
+    await seedRun(db, {
+      id: "run-1",
+      owner: lease.INSTANCE_ID,
+      claimedAt: new Date().toISOString(),
+    });
 
     await lease.releaseRun("run-1");
 
@@ -707,11 +729,9 @@ describe("saveCheckpoint / loadCheckpoint", () => {
   it("swallows a write failure and logs it", async () => {
     const { db, lease, checkpoints } = harness;
     await seedRun(db, { id: "run-1", owner: lease.INSTANCE_ID });
-    const spy = vi
-      .spyOn(db, "updateTable")
-      .mockImplementation(() => {
-        throw new Error("disk on fire");
-      });
+    const spy = vi.spyOn(db, "updateTable").mockImplementation(() => {
+      throw new Error("disk on fire");
+    });
 
     await expect(
       checkpoints.saveCheckpoint({
@@ -823,12 +843,22 @@ describe("findResumableRuns", () => {
 
   it("scopes to the requested kind and respects the limit", async () => {
     const { db, lease } = harness;
-    await seedRun(db, { id: "wf", kind: "workflow", claimedAt: longAgo(), owner: "x:1:y" });
-    await seedRun(db, { id: "chat", kind: "chat", claimedAt: longAgo(), owner: "x:1:y" });
+    await seedRun(db, {
+      id: "wf",
+      kind: "workflow",
+      claimedAt: longAgo(),
+      owner: "x:1:y",
+    });
+    await seedRun(db, {
+      id: "chat",
+      kind: "chat",
+      claimedAt: longAgo(),
+      owner: "x:1:y",
+    });
 
-    expect((await lease.findResumableRuns(10, "chat")).map((r) => r.id)).toEqual([
-      "chat",
-    ]);
+    expect(
+      (await lease.findResumableRuns(10, "chat")).map((r) => r.id),
+    ).toEqual(["chat"]);
     expect(await lease.findResumableRuns(0, "workflow")).toEqual([]);
   });
 });
@@ -914,9 +944,12 @@ describe("startLeaseHeartbeat", () => {
       .set({ status: "aborted" })
       .where("id", "=", "run-1")
       .execute();
-    await vi.waitFor(() => {
-      expect(states).toEqual(["aborted"]);
-    }, { timeout: 5_000 });
+    await vi.waitFor(
+      () => {
+        expect(states).toEqual(["aborted"]);
+      },
+      { timeout: 5_000 },
+    );
 
     expect(log.debug).toHaveBeenCalledWith(
       { runId: "run-1" },
@@ -935,12 +968,15 @@ describe("startLeaseHeartbeat", () => {
     const log = { warn: vi.fn(), debug: vi.fn() };
 
     const stop = lease.startLeaseHeartbeat("run-1", () => undefined, log);
-    await vi.waitFor(() => {
-      expect(log.warn).toHaveBeenCalledWith(
-        { runId: "run-1" },
-        "[runs] Lease lost; another replica took over",
-      );
-    }, { timeout: 5_000 });
+    await vi.waitFor(
+      () => {
+        expect(log.warn).toHaveBeenCalledWith(
+          { runId: "run-1" },
+          "[runs] Lease lost; another replica took over",
+        );
+      },
+      { timeout: 5_000 },
+    );
 
     stop();
   });
@@ -952,12 +988,15 @@ describe("startLeaseHeartbeat", () => {
     const stop = lease.startLeaseHeartbeat("run-1", () => undefined, log);
     await db.deleteFrom("runs").where("id", "=", "run-1").execute();
 
-    await vi.waitFor(() => {
-      expect(log.warn).toHaveBeenCalledWith(
-        { runId: "run-1" },
-        "[runs] Run row disappeared; stopping",
-      );
-    }, { timeout: 5_000 });
+    await vi.waitFor(
+      () => {
+        expect(log.warn).toHaveBeenCalledWith(
+          { runId: "run-1" },
+          "[runs] Run row disappeared; stopping",
+        );
+      },
+      { timeout: 5_000 },
+    );
 
     stop();
   });
@@ -971,12 +1010,15 @@ describe("startLeaseHeartbeat", () => {
     });
 
     const stop = lease.startLeaseHeartbeat("run-1", () => undefined, log);
-    await vi.waitFor(() => {
-      expect(log.warn).toHaveBeenCalledWith(
-        { err: expect.anything(), runId: "run-1" },
-        "[runs] Heartbeat failed",
-      );
-    }, { timeout: 5_000 });
+    await vi.waitFor(
+      () => {
+        expect(log.warn).toHaveBeenCalledWith(
+          { err: expect.anything(), runId: "run-1" },
+          "[runs] Heartbeat failed",
+        );
+      },
+      { timeout: 5_000 },
+    );
 
     stop();
     spy.mockRestore();
@@ -990,9 +1032,8 @@ describe("lease constants", () => {
       overrides: { runs: { leaseTtlMs: 10_000, heartbeatIntervalMs: 9_000 } },
     });
     try {
-      const { getLeaseTtlMs, getHeartbeatIntervalMs } = await import(
-        "../runLease.js"
-      );
+      const { getLeaseTtlMs, getHeartbeatIntervalMs } =
+        await import("../runLease.js");
       expect(getLeaseTtlMs()).toBe(10_000);
       expect(getHeartbeatIntervalMs()).toBe(5_000);
     } finally {

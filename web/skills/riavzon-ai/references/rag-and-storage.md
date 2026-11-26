@@ -9,6 +9,7 @@
 - `getDistance(column, vector)` builds portable cosine distance expressions (`<=>` on Postgres, `vec_distance_cosine` on SQLite).
 
 Tables managed automatically during `configuration()`:
+
 - `conversations` — conversation threads, rolling compaction summaries, metadata
 - `messages` — user/assistant turns, traces, embeddings for semantic cache
 - `documents` — deduplicated documents (`content_hash` SHA-256, `user_id`, metadata)
@@ -18,7 +19,13 @@ Tables managed automatically during `configuration()`:
 ## Chunking & Embeddings
 
 ```ts
-import { chunkByTokens, countTokens, embedText, embedTexts, prepareScrape } from "@riavzon/ai";
+import {
+  chunkByTokens,
+  countTokens,
+  embedText,
+  embedTexts,
+  prepareScrape,
+} from "@riavzon/ai";
 
 // Heuristic token counting by default; optionally pass a @huggingface/transformers PreTrainedTokenizer
 const tokens = countTokens(markdownText);
@@ -54,17 +61,27 @@ const saved = await saveUploadedScrappedFile(
 ## Tenant-Scoped Vector Search & Full Document Reads
 
 ```ts
-import { embedText, fetchRelevantChunks, searchDbDocs, readToolDocument } from "@riavzon/ai";
+import {
+  embedText,
+  fetchRelevantChunks,
+  searchDbDocs,
+  readToolDocument,
+} from "@riavzon/ai";
 
 // 1. Vector similarity retrieval scoped to a tenant
 const queryVector = await embedText("refund policy");
 const chunks = await fetchRelevantChunks(queryVector, 8, 0, 0.35, userId);
 
 // 2. High-level search helper used by built-in search_db
-const results = await searchDbDocs({ query: "refund policy", limit: 8 }, userId);
+const results = await searchDbDocs(
+  { query: "refund policy", limit: 8 },
+  userId,
+);
 
 // 3. Budget-capped full document read (respects DOCUMENT_* env caps)
-const doc = await readToolDocument(userId, { documentId: chunks[0].documentId });
+const doc = await readToolDocument(userId, {
+  documentId: chunks[0].documentId,
+});
 ```
 
 ## Adaptive Chunk Filtering (`filterAdaptiveChunks`)
@@ -98,6 +115,7 @@ const filtered = await filterAdaptiveChunks(
 ## Key SQL Models
 
 Use exported models directly when building admin UIs, history sidebars, or custom pipelines:
+
 - Conversations & Messages: `getConversations`, `getMessages`, `loadConversationHistory`, `saveUserMessage`, `saveAssistantMessage`, `checkChatSemanticCache`
 - Vector math: `calculateCosineSimilarity(a, b)`
 - Schema & text helpers: `llmSchemaParser`, `stripThinking`, `stripCodeFences`, `jsonToMarkdown`, `safeValidateUrl`

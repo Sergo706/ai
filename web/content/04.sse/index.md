@@ -45,118 +45,120 @@ const headers = setSseHeaders();
 
 Every streaming turn emits a discriminated union of typed frames on `data:`:
 
-| Frame `type` | Payload fields | Meaning |
-| --- | --- | --- |
-| `init` | `conversationId: number`, `runId?: string` | First frame of a chat turn; gives the client the persisted thread and run IDs. |
-| `chunk` | `text: string` | Incremental assistant output token or complete cached text. |
-| `reasoning` | `round: number`, `delta: string` | Reasoning delta emitted by thinking-capable models. |
-| `tool_start` | `id`, `name`, `args?`, `callIndex`, `callTotal` | Tool call began (`args` omitted when `ToolStreamPolicy.emitArgs` is `false`). |
-| `tool_end` | `id`, `name`, `ok`, `durationMs`, `preview`, `callIndex`, `callTotal` | Tool call finished (`preview` trimmed or omitted per `ToolStreamPolicy.emitResult`). |
-| `workflow_start` | `runId`, `workflow`, `query` | Long-running workflow started (emitted via `runProgressFrames()`). |
-| `workflow_progress` | `runId?`, `workflow`, `stage`, `label?`, `addedEvidence`, `round?`, `intent?`, `message?`, `custom?` | Progress event from an `AgenticWorkflowLoop` adapter. |
-| `agent_progress` | `agent`, `state` (`"running" \| "done" \| "failed"`) | Named sub-agent status update inside a workflow. |
-| `error` | `message: string` | Terminal error message safe to display to end users. |
-| `done` | *(none)* | Terminal frame signaling a completed stream. |
+| Frame `type`        | Payload fields                                                                                       | Meaning                                                                              |
+| ------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `init`              | `conversationId: number`, `runId?: string`                                                           | First frame of a chat turn; gives the client the persisted thread and run IDs.       |
+| `chunk`             | `text: string`                                                                                       | Incremental assistant output token or complete cached text.                          |
+| `reasoning`         | `round: number`, `delta: string`                                                                     | Reasoning delta emitted by thinking-capable models.                                  |
+| `tool_start`        | `id`, `name`, `args?`, `callIndex`, `callTotal`                                                      | Tool call began (`args` omitted when `ToolStreamPolicy.emitArgs` is `false`).        |
+| `tool_end`          | `id`, `name`, `ok`, `durationMs`, `preview`, `callIndex`, `callTotal`                                | Tool call finished (`preview` trimmed or omitted per `ToolStreamPolicy.emitResult`). |
+| `workflow_start`    | `runId`, `workflow`, `query`                                                                         | Long-running workflow started (emitted via `runProgressFrames()`).                   |
+| `workflow_progress` | `runId?`, `workflow`, `stage`, `label?`, `addedEvidence`, `round?`, `intent?`, `message?`, `custom?` | Progress event from an `AgenticWorkflowLoop` adapter.                                |
+| `agent_progress`    | `agent`, `state` (`"running" \| "done" \| "failed"`)                                                 | Named sub-agent status update inside a workflow.                                     |
+| `error`             | `message: string`                                                                                    | Terminal error message safe to display to end users.                                 |
+| `done`              | _(none)_                                                                                             | Terminal frame signaling a completed stream.                                         |
 
 ## Choose the right streaming helper
 
 `@riavzon/ai` provides seven streaming builders covering everything from simple chat routes to cross-replica crash-resumable workflows:
 
-| Helper | Input | Default heartbeat | `id:` cursors | Durable / reattach | Client disconnect behavior | Best for |
-| --- | --- | --- | --- | --- | --- | --- |
-| `framesToStream()` | `AsyncIterable<SseFrame>` from `agent.chat()` | `10_000` ms | No | Yes when `AgentConfig.runs` is on (omit `onCancel`) | Calls `onCancel()` if provided | Any route backed by `createAgent()` |
-| `runAgentStream()` | `AsyncIterable<AgentEvent>` + `EventSink` + `TraceCollector` | None (add via custom wrapper if needed) | No | No | Cancels via `RequestAbort` / `signal` | Custom low-level chat pipelines without `createAgent()` |
-| `workflowStream()` | `execute(emit) => Promise<SseFrame>` | `15_000` ms | No | No | Closes response (work runs to completion unless you pass a signal) | Simple streaming workflows that do not need client reconnect |
-| `workflowStreamWithRegistry()` | `runId`, `kind`, `execute({ emit, signal })` | `10_000` ms | Yes (via registry) | Yes (`streamFromRun` / `streamFromStore`) | Detaches reader while work keeps running until stopped via `run.controller` | Durable workflows launched from an HTTP request with reattach + stop button |
-| `streamFromRun()` | Local `RunHandle` from `getRun(runId)` | `10_000` ms | Yes | Yes (same-process replay + live tail) | Unsubscribes reader; run keeps executing | Fast-path reattach when the run lives on this replica |
-| `streamFromStore()` | `runId`, `since`, `isRunAlive` | `10_000` ms | Yes | Yes (cross-replica Redis Streams replay + live tail) | Stops tail loop; run keeps executing | Reattach when the request lands on another replica or after restart |
-| `staticReplyStream()` | `(conversationId, text)` | None | No | No | Closes immediately after `done` | Instant replay of semantically cached or static chat replies |
+| Helper                         | Input                                                        | Default heartbeat                       | `id:` cursors      | Durable / reattach                                   | Client disconnect behavior                                                  | Best for                                                                    |
+| ------------------------------ | ------------------------------------------------------------ | --------------------------------------- | ------------------ | ---------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `framesToStream()`             | `AsyncIterable<SseFrame>` from `agent.chat()`                | `10_000` ms                             | No                 | Yes when `AgentConfig.runs` is on (omit `onCancel`)  | Calls `onCancel()` if provided                                              | Any route backed by `createAgent()`                                         |
+| `runAgentStream()`             | `AsyncIterable<AgentEvent>` + `EventSink` + `TraceCollector` | None (add via custom wrapper if needed) | No                 | No                                                   | Cancels via `RequestAbort` / `signal`                                       | Custom low-level chat pipelines without `createAgent()`                     |
+| `workflowStream()`             | `execute(emit) => Promise<SseFrame>`                         | `15_000` ms                             | No                 | No                                                   | Closes response (work runs to completion unless you pass a signal)          | Simple streaming workflows that do not need client reconnect                |
+| `workflowStreamWithRegistry()` | `runId`, `kind`, `execute({ emit, signal })`                 | `10_000` ms                             | Yes (via registry) | Yes (`streamFromRun` / `streamFromStore`)            | Detaches reader while work keeps running until stopped via `run.controller` | Durable workflows launched from an HTTP request with reattach + stop button |
+| `streamFromRun()`              | Local `RunHandle` from `getRun(runId)`                       | `10_000` ms                             | Yes                | Yes (same-process replay + live tail)                | Unsubscribes reader; run keeps executing                                    | Fast-path reattach when the run lives on this replica                       |
+| `streamFromStore()`            | `runId`, `since`, `isRunAlive`                               | `10_000` ms                             | Yes                | Yes (cross-replica Redis Streams replay + live tail) | Stops tail loop; run keeps executing                                        | Reattach when the request lands on another replica or after restart         |
+| `staticReplyStream()`          | `(conversationId, text)`                                     | None                                    | No                 | No                                                   | Closes immediately after `done`                                             | Instant replay of semantically cached or static chat replies                |
 
 ## Streaming helpers
 
 Pick the streaming builder that matches your use case — from high-level `agent.chat()` streams down to custom workflow streams and static cache replays.
 
 ::tabs
-  :::tabs-item{label="framesToStream (agent.chat)" icon="i-lucide-bot"}
-  Convert the `AsyncIterable<SseFrame>` returned by `agent.chat()` into an HTTP `ReadableStream<Uint8Array>` with automatic keep-alive heartbeats (default `10000` ms) and reader-disconnect cleanup:
+:::tabs-item{label="framesToStream (agent.chat)" icon="i-lucide-bot"}
+Convert the `AsyncIterable<SseFrame>` returned by `agent.chat()` into an HTTP `ReadableStream<Uint8Array>` with automatic keep-alive heartbeats (default `10000` ms) and reader-disconnect cleanup:
 
-  ```ts [src/routes/agent-sse.ts]
-  import { framesToStream, setSseHeaders } from "@riavzon/ai";
+```ts [src/routes/agent-sse.ts]
+import { framesToStream, setSseHeaders } from "@riavzon/ai";
 
-  export async function POST(req: Request): Promise<Response> {
-    const { message, userId, conversationId } = await req.json();
-    const controller = new AbortController();
+export async function POST(req: Request): Promise<Response> {
+  const { message, userId, conversationId } = await req.json();
+  const controller = new AbortController();
 
-    const { frames } = await agent.chat({
-      message,
-      userId,
-      conversationId,
-      signal: controller.signal,
-    });
+  const { frames } = await agent.chat({
+    message,
+    userId,
+    conversationId,
+    signal: controller.signal,
+  });
 
-    return new Response(
-      framesToStream(frames, {
-        heartbeatMs: 10_000,
-        // Pass onCancel for non-durable turns so disconnecting aborts the LLM call.
-        // Omit onCancel when agent runs are enabled so clients can reattach later.
-        onCancel: () => controller.abort(),
-      }),
-      { headers: setSseHeaders() },
-    );
-  }
-  ```
-  :::
+  return new Response(
+    framesToStream(frames, {
+      heartbeatMs: 10_000,
+      // Pass onCancel for non-durable turns so disconnecting aborts the LLM call.
+      // Omit onCancel when agent runs are enabled so clients can reattach later.
+      onCancel: () => controller.abort(),
+    }),
+    { headers: setSseHeaders() },
+  );
+}
+```
 
-  :::tabs-item{label="workflowStream (Long Tasks)" icon="i-lucide-workflow"}
-  Wrap any async workflow in an SSE body with periodic heartbeats (default `15000` ms), automatic terminal payload + `done` emission, and safe error-to-frame conversion:
+:::
 
-  ```ts [src/routes/research-sse.ts]
-  import {
-    runProgressFrames,
-    setSseHeaders,
-    workflowStream,
-  } from "@riavzon/ai";
+:::tabs-item{label="workflowStream (Long Tasks)" icon="i-lucide-workflow"}
+Wrap any async workflow in an SSE body with periodic heartbeats (default `15000` ms), automatic terminal payload + `done` emission, and safe error-to-frame conversion:
 
-  export async function POST(req: Request): Promise<Response> {
-    const { query } = await req.json();
+```ts [src/routes/research-sse.ts]
+import { runProgressFrames, setSseHeaders, workflowStream } from "@riavzon/ai";
 
-    const stream = workflowStream({
-      heartbeatMs: 15_000,
-      execute: async (emit) => {
-        const progress = runProgressFrames(emit, {
-          query,
-          workflow: "research",
-        });
+export async function POST(req: Request): Promise<Response> {
+  const { query } = await req.json();
 
-        progress.onRunStarted(crypto.randomUUID());
-        progress.onAgentProgress({ agent: "planner", state: "running" });
+  const stream = workflowStream({
+    heartbeatMs: 15_000,
+    execute: async (emit) => {
+      const progress = runProgressFrames(emit, {
+        query,
+        workflow: "research",
+      });
 
-        const report = await runMyResearch(query, progress.onProgress);
+      progress.onRunStarted(crypto.randomUUID());
+      progress.onAgentProgress({ agent: "planner", state: "running" });
 
-        progress.onAgentProgress({ agent: "planner", state: "done" });
-        return { type: "research_result", report };
-      },
-      onError: (err) => console.error("Research workflow failed", err),
-    });
+      const report = await runMyResearch(query, progress.onProgress);
 
-    return new Response(stream, { headers: setSseHeaders() });
-  }
-  ```
-  :::
+      progress.onAgentProgress({ agent: "planner", state: "done" });
+      return { type: "research_result", report };
+    },
+    onError: (err) => console.error("Research workflow failed", err),
+  });
 
-  :::tabs-item{label="staticReplyStream (Instant Replay)" icon="i-lucide-zap"}
-  Emit a pre-computed or semantically cached reply in the exact same SSE framing (`init` → single `chunk` → `done`) so clients never need a second parser:
+  return new Response(stream, { headers: setSseHeaders() });
+}
+```
 
-  ```ts [src/routes/cached-sse.ts]
-  import { setSseHeaders, staticReplyStream } from "@riavzon/ai";
+:::
 
-  export function cachedResponse(conversationId: number, answer: string): Response {
-    return new Response(staticReplyStream(conversationId, answer), {
-      headers: setSseHeaders(),
-    });
-  }
-  ```
-  :::
+:::tabs-item{label="staticReplyStream (Instant Replay)" icon="i-lucide-zap"}
+Emit a pre-computed or semantically cached reply in the exact same SSE framing (`init` → single `chunk` → `done`) so clients never need a second parser:
+
+```ts [src/routes/cached-sse.ts]
+import { setSseHeaders, staticReplyStream } from "@riavzon/ai";
+
+export function cachedResponse(
+  conversationId: number,
+  answer: string,
+): Response {
+  return new Response(staticReplyStream(conversationId, answer), {
+    headers: setSseHeaders(),
+  });
+}
+```
+
+:::
 ::
 
 ## Type custom workflow and sub-agent names
@@ -183,21 +185,25 @@ export {};
 ## Explore streaming & chat internals
 
 ::card-group
-  :::card
-  ---
-  icon: i-lucide-blocks
-  title: Low-Level Chat Primitives
-  to: /sse/chat-primitives
-  ---
-  Compose `runAgentStream()`, `createEventSink()`, `resolveConversation()`, `compactHistory()`, and `tryCachedReply()` inside your own custom chat pipeline.
-  :::
+:::card
+---
 
-  :::card
-  ---
-  icon: i-lucide-activity
-  title: Trace Collection & Abort Control
-  to: /sse/trace-and-abort
-  ---
-  Record reasoning and tool steps with `TraceCollector`, extend traces with `TraceExtension`, and handle HTTP disconnects cleanly with `createRequestAbort()`.
-  :::
+icon: i-lucide-blocks
+title: Low-Level Chat Primitives
+to: /sse/chat-primitives
+---
+
+Compose `runAgentStream()`, `createEventSink()`, `resolveConversation()`, `compactHistory()`, and `tryCachedReply()` inside your own custom chat pipeline.
+:::
+
+:::card
+---
+
+icon: i-lucide-activity
+title: Trace Collection & Abort Control
+to: /sse/trace-and-abort
+---
+
+Record reasoning and tool steps with `TraceCollector`, extend traces with `TraceExtension`, and handle HTTP disconnects cleanly with `createRequestAbort()`.
+:::
 ::

@@ -41,7 +41,8 @@ export interface MessageTrace {
 }
 
 /** Terminal and in-flight states a run can be in. */
-export type RunStatus = "running" | "finished" | "aborted" | "failed" | "interrupted";
+export type RunStatus =
+  "running" | "finished" | "aborted" | "failed" | "interrupted";
 
 /**
  * Kinds of run this package knows how to resume.
@@ -55,10 +56,21 @@ export interface RunKindRegistry {
 /** A run kind, i.e. a key of {@link RunKindRegistry}. */
 export type RunKind = keyof RunKindRegistry;
 
-type TimestampCol = ColumnType<Date | string, Date | string | undefined, Date | string>;
-type NullableTimestampCol = ColumnType<Date | string | null, Date | string | null | undefined, Date | string | null>;
-type VectorCol = ColumnType<unknown, string | Uint8Array | null | undefined, string | Uint8Array | null>;
-
+type TimestampCol = ColumnType<
+  Date | string,
+  Date | string | undefined,
+  Date | string
+>;
+type NullableTimestampCol = ColumnType<
+  Date | string | null,
+  Date | string | null | undefined,
+  Date | string | null
+>;
+type VectorCol = ColumnType<
+  unknown,
+  string | Uint8Array | null | undefined,
+  string | Uint8Array | null
+>;
 
 /** A scraped document. Chunks point back at it through `document_id`. */
 export interface DocumentsTable {
@@ -121,13 +133,21 @@ export interface MessagesTable {
   /** The message text. */
   content: string;
   /** Reasoning rounds and tool steps, when the assistant called tools. */
-  trace: JSONColumnType<MessageTrace | null, string | null | undefined, string | null>;
+  trace: JSONColumnType<
+    MessageTrace | null,
+    string | null | undefined,
+    string | null
+  >;
   /** Insert time. */
   created_at: TimestampCol;
   /** Embedding used for retrieval and the semantic cache. */
   embedding: VectorCol;
   /** Names of the tools the assistant called for this turn. */
-  tools_used: JSONColumnType<string[], string | null | undefined, string | null>;
+  tools_used: JSONColumnType<
+    string[],
+    string | null | undefined,
+    string | null
+  >;
 }
 
 /**
@@ -152,9 +172,17 @@ export interface RunsTable {
   /** Owner of the run. */
   user_id: string | null;
   /** Input payload needed to resume. */
-  input: JSONColumnType<object | null, string | null | undefined, string | null>;
+  input: JSONColumnType<
+    object | null,
+    string | null | undefined,
+    string | null
+  >;
   /** Partial output kept while the run is in flight. */
-  partial: JSONColumnType<object | null, string | null | undefined, string | null>;
+  partial: JSONColumnType<
+    object | null,
+    string | null | undefined,
+    string | null
+  >;
   /** Last durable checkpoint written by the runner. */
   checkpoint: JSONColumnType<
     Checkpoint | null,

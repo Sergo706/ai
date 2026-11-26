@@ -14,7 +14,8 @@ import { loadConfig } from "~~/test/test-utils/config";
  */
 
 const h = vi.hoisted(() => ({
-  fetchLinkContent: vi.fn<(url: string, options: unknown) => Promise<unknown>>(),
+  fetchLinkContent:
+    vi.fn<(url: string, options: unknown) => Promise<unknown>>(),
 }));
 
 vi.mock("@steipete/summarize-core/content", async (importOriginal) => {
@@ -43,8 +44,8 @@ interface Harness {
  */
 async function boot(): Promise<Harness> {
   const env = await loadConfig();
-  const mod = (await import("../extractor.js"));
-  const cacheMod = (await import("../extractorCache.js"));
+  const mod = await import("../extractor.js");
+  const cacheMod = await import("../extractorCache.js");
   const store = env.mod.getStorage();
   if (!(store instanceof MiniCache)) {
     throw new Error("Expected the in-memory store for the units project");
@@ -179,9 +180,15 @@ describe("extractor tool — cache", () => {
     try {
       const tool = env.extractor(false);
 
-      const first = (await tool({ urls: ["https://a.com"] }, context)) as ToolResult;
+      const first = (await tool(
+        { urls: ["https://a.com"] },
+        context,
+      )) as ToolResult;
       const callsAfterFirst = h.fetchLinkContent.mock.calls.length;
-      const second = (await tool({ urls: ["https://a.com"] }, context)) as ToolResult;
+      const second = (await tool(
+        { urls: ["https://a.com"] },
+        context,
+      )) as ToolResult;
 
       expect(callsAfterFirst).toBe(1);
       // The second call must not have fetched again: that is the point of the
@@ -201,7 +208,7 @@ describe("extractor tool — cache", () => {
       const key = env.extractorCacheKey("https://a.com", "ext:full:");
       const raw = env.store.get(key) as string | null;
       expect(raw).not.toBeNull();
-    expect(JSON.parse(String(raw))).toEqual({
+      expect(JSON.parse(String(raw))).toEqual({
         url: "https://a.com",
         markdown: expect.stringContaining("Body text"),
       });
@@ -319,7 +326,9 @@ describe("extractor tool — crawl results", () => {
       // markdown is reported with one stable message so the model cannot echo
       // internal failure text back to the user.
       expect(result.results[0]?.url).toBe("https://a.com");
-      expect(result.results[0]?.error).toBe("No usable markdown was extracted.");
+      expect(result.results[0]?.error).toBe(
+        "No usable markdown was extracted.",
+      );
       expect(result.results[0]?.markdown).toBeUndefined();
     } finally {
       await env.cleanup();
@@ -338,7 +347,9 @@ describe("extractor tool — crawl results", () => {
         context,
       )) as ToolResult;
 
-      expect(result.results[0]?.error).toBe("No usable markdown was extracted.");
+      expect(result.results[0]?.error).toBe(
+        "No usable markdown was extracted.",
+      );
     } finally {
       await env.cleanup();
     }
@@ -433,10 +444,7 @@ describe("extractor tool — token limiting", () => {
   it("returns the body untouched when limiting is off", async () => {
     const env = await boot();
     try {
-      const body =
-        "word " +
-        "word ".repeat(199) +
-        "tail";
+      const body = "word " + "word ".repeat(199) + "tail";
       h.fetchLinkContent.mockImplementation((url: string) =>
         Promise.resolve(linkContent(url, { content: body })),
       );
@@ -464,13 +472,15 @@ describe("extractor tool — token limiting", () => {
         Promise.resolve(linkContent(url, { content: "a".repeat(400_000) })),
       );
 
-      const result = (await env.extractor(
-        true,
-        100,
-      )({ urls: ["https://a.com"] }, context)) as ToolResult;
+      const result = (await env.extractor(true, 100)(
+        { urls: ["https://a.com"] },
+        context,
+      )) as ToolResult;
 
       const markdown = result.results[0]?.markdown ?? "";
-      expect(markdown).toContain("[...Content truncated due to length limits...]");
+      expect(markdown).toContain(
+        "[...Content truncated due to length limits...]",
+      );
       // The kept part must be much smaller than the input.
       expect(markdown.length).toBeLessThan(10_000);
     } finally {
@@ -487,10 +497,10 @@ describe("extractor tool — token limiting", () => {
         Promise.resolve(linkContent(url, { content: body })),
       );
 
-      const result = (await env.extractor(
-        true,
-        10_000,
-      )({ urls: ["https://a.com"] }, context)) as ToolResult;
+      const result = (await env.extractor(true, 10_000)(
+        { urls: ["https://a.com"] },
+        context,
+      )) as ToolResult;
 
       expect(result.results[0]?.markdown).toBe(body);
       expect(result.results[0]?.markdown).not.toContain("[...Content");
@@ -504,14 +514,16 @@ describe("extractor tool — formatter", () => {
   it("applies the formatter to the extracted markdown", async () => {
     const env = await boot();
     try {
-      const formatter = vi.fn((title: string, raw: string) =>
-        `# ${title}\n\n${raw}`,
+      const formatter = vi.fn(
+        (title: string, raw: string) => `# ${title}\n\n${raw}`,
       );
 
-      const result = (await env.extractor(false, 50_000, 86_400, formatter)(
-        { urls: ["https://a.com"] },
-        context,
-      )) as ToolResult;
+      const result = (await env.extractor(
+        false,
+        50_000,
+        86_400,
+        formatter,
+      )({ urls: ["https://a.com"] }, context)) as ToolResult;
 
       expect(formatter).toHaveBeenCalledTimes(1);
       expect(formatter.mock.calls[0]?.[0]).toBe("A title");
@@ -527,12 +539,16 @@ describe("extractor tool — formatter", () => {
       h.fetchLinkContent.mockImplementation((url: string) =>
         Promise.resolve(linkContent(url, { title: "" })),
       );
-      const formatter = vi.fn((title: string, raw: string) => `${title}|${raw}`);
-
-      await env.extractor(false, 50_000, 86_400, formatter)(
-        { urls: ["https://a.com"] },
-        context,
+      const formatter = vi.fn(
+        (title: string, raw: string) => `${title}|${raw}`,
       );
+
+      await env.extractor(
+        false,
+        50_000,
+        86_400,
+        formatter,
+      )({ urls: ["https://a.com"] }, context);
 
       // `extractWithSummarize` substitutes the url for a blank title.
       expect(formatter.mock.calls[0]?.[0]).toBe("https://a.com");

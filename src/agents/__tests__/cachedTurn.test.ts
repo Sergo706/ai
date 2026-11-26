@@ -3,7 +3,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { fromJson, toJson, toVec } from "~/db/utils.js";
 import { clearRuns, registerRun } from "~/runs/runRegistry.js";
 import { streamFromRun } from "~/runs/streamFromRun.js";
-import { libLog, libLogger, resetLibLogger } from "~~/test/test-utils/logger.js";
+import {
+  libLog,
+  libLogger,
+  resetLibLogger,
+} from "~~/test/test-utils/logger.js";
 import { loadConfig, type LoadedConfig } from "~~/test/test-utils/config.js";
 import {
   embeddingFake,
@@ -156,7 +160,11 @@ describe("cachedTurn", () => {
     const source = await newConversation("u-run");
     const target = await newConversation("u-run");
     const message = "what is the capital of France";
-    await seedExchange({ conversationId: source, question: message, answer: "Paris" });
+    await seedExchange({
+      conversationId: source,
+      question: message,
+      answer: "Paris",
+    });
 
     const run = registerRun({
       id: "run-cached-1",
@@ -217,10 +225,14 @@ describe("cachedTurn", () => {
     expect(row.finished_at).not.toBeNull();
     expect(row.owner).toBeNull();
     expect(row.claimed_at).toBeNull();
-    expect(fromJson<{ name: string }>(row.input as { name: string } | null)).toEqual({
+    expect(
+      fromJson<{ name: string }>(row.input as { name: string } | null),
+    ).toEqual({
       name: "supportAgent",
     });
-    expect(fromJson<{ text: string }>(row.partial as { text: string } | null)).toEqual({
+    expect(
+      fromJson<{ text: string }>(row.partial as { text: string } | null),
+    ).toEqual({
       text: "Paris",
     });
 
@@ -294,7 +306,11 @@ describe("cachedTurn", () => {
     const source = await newConversation();
     const target = await newConversation();
     const message = "what is the capital of France";
-    await seedExchange({ conversationId: source, question: message, answer: "Paris" });
+    await seedExchange({
+      conversationId: source,
+      question: message,
+      answer: "Paris",
+    });
 
     const stream = await cachedTurn({
       options: {},
@@ -328,7 +344,11 @@ describe("cachedTurn", () => {
     const source = await newConversation();
     const target = await newConversation();
     const message = "a question with a cached answer";
-    await seedExchange({ conversationId: source, question: message, answer: "answer" });
+    await seedExchange({
+      conversationId: source,
+      question: message,
+      answer: "answer",
+    });
 
     const seen: { conversationId: number; message: string }[] = [];
     expect(
@@ -356,7 +376,11 @@ describe("cachedTurn", () => {
     const source = await newConversation();
     const target = await newConversation();
     const message = "still cacheable";
-    await seedExchange({ conversationId: source, question: message, answer: "yes" });
+    await seedExchange({
+      conversationId: source,
+      question: message,
+      answer: "yes",
+    });
 
     expect(
       await cachedTurn({
@@ -430,7 +454,11 @@ describe("cachedTurn", () => {
     const source = await newConversation();
     const target = await newConversation();
     const message = "repeat me";
-    await seedExchange({ conversationId: source, question: message, answer: "repeated" });
+    await seedExchange({
+      conversationId: source,
+      question: message,
+      answer: "repeated",
+    });
 
     expect(await messageCount(target)).toBe(0);
 
@@ -466,7 +494,11 @@ describe("cachedTurn", () => {
     const source = await newConversation();
     const target = await newConversation();
     const message = "how tall is Everest";
-    await seedExchange({ conversationId: source, question: message, answer: "8848 m" });
+    await seedExchange({
+      conversationId: source,
+      question: message,
+      answer: "8848 m",
+    });
 
     // An exact vector match clears any threshold, so a hit proves the plumbing
     // passes the options through rather than ignoring them.

@@ -66,49 +66,49 @@ export async function createSupportAgent() {
 Configure only the subsystems your agent needs. Omitting `conversation` creates a stateless agent that accepts caller-supplied `history` on each turn.
 
 ::field-group
-  :::field{name="model" type="ModelOptions" required}
-  Provider model ID (`model`), answer sampling (`temperature` default `0.4`, `maxTokens` default `8192`), tool-round sampling (`tools.temperature` default `0.1`, `tools.maxTokens` default `4096`, `tools.maxRounds` default `5`, `tools.maxCalls` default `20`), reasoning budget (`thinkingEffort`: `"low" | "medium" | "high" | "max"`, forwarded strictly as OpenAI `reasoning_effort`), extra OpenAI body fields (`body`: `ModelBodyOptions`, such as `top_p`, `seed`, `response_format`, `parallel_tool_calls`, `verbosity`, `service_tier`), and transport options (`request`).
-  :::
+:::field{name="model" type="ModelOptions" required}
+Provider model ID (`model`), answer sampling (`temperature` default `0.4`, `maxTokens` default `8192`), tool-round sampling (`tools.temperature` default `0.1`, `tools.maxTokens` default `4096`, `tools.maxRounds` default `5`, `tools.maxCalls` default `20`), reasoning budget (`thinkingEffort`: `"low" | "medium" | "high" | "max"`, forwarded strictly as OpenAI `reasoning_effort`), extra OpenAI body fields (`body`: `ModelBodyOptions`, such as `top_p`, `seed`, `response_format`, `parallel_tool_calls`, `verbosity`, `service_tier`), and transport options (`request`).
+:::
 
-  :::field{name="systemInstructions" type="string" required}
-  System prompt prepended to every turn ahead of conversation history.
-  :::
+:::field{name="systemInstructions" type="string" required}
+System prompt prepended to every turn ahead of conversation history.
+:::
 
-  :::field{name="tools" type="ToolOptions<TMeta>"}
-  Combines built-in tools (`common`), custom per-request `ToolSpec<TMeta>[]` definitions (`specs`), and MCP server connections (`mcp`).
-  :::
+:::field{name="tools" type="ToolOptions<TMeta>"}
+Combines built-in tools (`common`), custom per-request `ToolSpec<TMeta>[]` definitions (`specs`), and MCP server connections (`mcp`).
+:::
 
-  :::field{name="conversation" type="ConversationOptions"}
-  Enables persisted threads in the `conversations` and `messages` tables (`persist`, default `true` when the object is provided). Omit to keep the agent stateless.
-  :::
+:::field{name="conversation" type="ConversationOptions"}
+Enables persisted threads in the `conversations` and `messages` tables (`persist`, default `true` when the object is provided). Omit to keep the agent stateless.
+:::
 
-  :::field{name="runs" type="RunOptions"}
-  Routes every turn through the durable run system (`runs` table, lease heartbeats, Redis event log, and optional in-process replay registry). Requires `conversation: { persist: true }`.
-  :::
+:::field{name="runs" type="RunOptions"}
+Routes every turn through the durable run system (`runs` table, lease heartbeats, Redis event log, and optional in-process replay registry). Requires `conversation: { persist: true }`.
+:::
 
-  :::field{name="compaction" type="CompactionOptions"}
-  Summarizes older messages into a rolling `compacted_summary` once estimated history tokens exceed `tokenThreshold`. Requires `conversation`.
-  :::
+:::field{name="compaction" type="CompactionOptions"}
+Summarizes older messages into a rolling `compacted_summary` once estimated history tokens exceed `tokenThreshold`. Requires `conversation`.
+:::
 
-  :::field{name="semanticCache" type="SemanticCacheOptions"}
-  Checks recent stored exchanges by cosine similarity before calling the model.
-  :::
+:::field{name="semanticCache" type="SemanticCacheOptions"}
+Checks recent stored exchanges by cosine similarity before calling the model.
+:::
 
-  :::field{name="attachments" type="AttachmentOptions"}
-  Overrides file count, byte size, MIME type, and PDF page limits applied when `input.files` are passed on a turn.
-  :::
+:::field{name="attachments" type="AttachmentOptions"}
+Overrides file count, byte size, MIME type, and PDF page limits applied when `input.files` are passed on a turn.
+:::
 
-  :::field{name="embedding" type="EmbeddingOptions"}
-  Reserved per-agent embedding override type (`retrievalModel`, `matchingModel`, `dimensions`). Currently, agent turns use the global `embeddingConfig` supplied to `configuration()`.
-  :::
+:::field{name="embedding" type="EmbeddingOptions"}
+Reserved per-agent embedding override type (`retrievalModel`, `matchingModel`, `dimensions`). Currently, agent turns use the global `embeddingConfig` supplied to `configuration()`.
+:::
 
-  :::field{name="meta" type="TMeta"}
-  Default host-defined metadata merged with per-turn `input.meta` before calling each tool's `make(ctx)` factory.
-  :::
+:::field{name="meta" type="TMeta"}
+Default host-defined metadata merged with per-turn `input.meta` before calling each tool's `make(ctx)` factory.
+:::
 
-  :::field{name="trace" type="readonly TraceExtension<Record<string, unknown>>[]"}
-  Custom trace extensions that observe every `AgentEvent` and merge extra fields into `ChatTurnResult.trace`.
-  :::
+:::field{name="trace" type="readonly TraceExtension<Record<string, unknown>>[]"}
+Custom trace extensions that observe every `AgentEvent` and merge extra fields into `ChatTurnResult.trace`.
+:::
 ::
 
 ## Run turns: `chat()` vs. `complete()`
@@ -116,65 +116,66 @@ Configure only the subsystems your agent needs. Omitting `conversation` creates 
 Every `Agent<TMeta>` exposes two execution methods plus `close()` and `readonly config`.
 
 ::tabs
-  :::tabs-item{label="agent.chat() (Streaming)" icon="i-lucide-radio"}
-  `agent.chat(input)` returns `{ frames, done }`:
+:::tabs-item{label="agent.chat() (Streaming)" icon="i-lucide-radio"}
+`agent.chat(input)` returns `{ frames, done }`:
 
-  - **`frames`**: an `AsyncIterable<SseFrame>` yielding live events (`init`, `chunk`, `reasoning`, `tool_start`, `tool_end`, `error`, `done`).
-  - **`done`**: a `Promise<ChatTurnResult>` that resolves when the turn finishes, aborts, or fails.
+- **`frames`**: an `AsyncIterable<SseFrame>` yielding live events (`init`, `chunk`, `reasoning`, `tool_start`, `tool_end`, `error`, `done`).
+- **`done`**: a `Promise<ChatTurnResult>` that resolves when the turn finishes, aborts, or fails.
 
-  ```ts [src/stream-turn.ts]
-  const stream = await agent.chat({
-    message: "Summarize our latest Q4 billing report.",
-    userId: "user_123",
-    conversationId: 7,
-    meta: { tenantId: "acme", plan: "enterprise" },
-    user: {
-      locale: "en-US",
-      timezone: "America/New_York",
-      currentDate: "2026-03-15",
-    },
-  });
+```ts [src/stream-turn.ts]
+const stream = await agent.chat({
+  message: "Summarize our latest Q4 billing report.",
+  userId: "user_123",
+  conversationId: 7,
+  meta: { tenantId: "acme", plan: "enterprise" },
+  user: {
+    locale: "en-US",
+    timezone: "America/New_York",
+    currentDate: "2026-03-15",
+  },
+});
 
-  for await (const event of stream.frames) {
-    if (event.type === "chunk") {
-      process.stdout.write(String(event.text));
-    }
+for await (const event of stream.frames) {
+  if (event.type === "chunk") {
+    process.stdout.write(String(event.text));
   }
+}
 
-  const result = await stream.done;
-  console.log("\nTools used:", result.toolsUsed);
-  ```
+const result = await stream.done;
+console.log("\nTools used:", result.toolsUsed);
+```
 
-  ::warning
-  When `runs` is **not** configured, the tool loop starts lazily when the first frame is pulled from `stream.frames`. If you never iterate `stream.frames`, `stream.done` will never resolve. Use `agent.complete()` whenever you only need the final result.
-  ::
-  :::
+::warning
+When `runs` is **not** configured, the tool loop starts lazily when the first frame is pulled from `stream.frames`. If you never iterate `stream.frames`, `stream.done` will never resolve. Use `agent.complete()` whenever you only need the final result.
+::
+:::
 
-  :::tabs-item{label="agent.complete() (Buffered)" icon="i-lucide-check-circle"}
-  `agent.complete(input)` drains the turn internally and resolves directly with `ChatTurnResult`:
+:::tabs-item{label="agent.complete() (Buffered)" icon="i-lucide-check-circle"}
+`agent.complete(input)` drains the turn internally and resolves directly with `ChatTurnResult`:
 
-  ```ts [src/buffered-turn.ts]
-  const result = await agent.complete({
-    message: "What is 15% of 2,400?",
-    userId: "user_123",
-    model: {
-      temperature: 0,
-    },
-  });
+```ts [src/buffered-turn.ts]
+const result = await agent.complete({
+  message: "What is 15% of 2,400?",
+  userId: "user_123",
+  model: {
+    temperature: 0,
+  },
+});
 
-  console.log(result.text);
-  console.log(result.conversationId);
-  console.log(result.cached);
-  console.log(result.trace);
-  ```
-  :::
+console.log(result.text);
+console.log(result.conversationId);
+console.log(result.cached);
+console.log(result.trace);
+```
+
+:::
 ::
 
 ### Per-turn overrides (`ChatInput`)
 
 Every call to `agent.chat()` or `agent.complete()` accepts these request-scoped fields:
 
-- **`message`** *(required)*: the user prompt for this turn.
+- **`message`** _(required)_: the user prompt for this turn.
 - **`userId`**: required whenever `conversation` is configured so rows stay scoped to the owning user.
 - **`conversationId`**: resumes an existing thread; omit to create a new conversation titled from `message`.
 - **`history`**: manual `HistoryMessage[]` list used only for stateless agents (ignored when `conversation` is configured).
@@ -236,48 +237,58 @@ Every agent exposes `readonly config: AgentConfig<TMeta>` so you can inspect the
 ## Explore agent capabilities
 
 ::card-group
-  :::card
-  ---
-  icon: i-lucide-messages-square
-  title: Conversations & Compaction
-  to: /agents/conversations-and-compaction
-  ---
-  Persist multi-turn threads, replay tool traces across turns, and keep long histories inside token budgets.
-  :::
+:::card
+---
 
-  :::card
-  ---
-  icon: i-lucide-braces
-  title: Structured Output
-  to: /agents/structured-output
-  ---
-  Request raw JSON mode or Zod-validated objects with automatic repair retries.
-  :::
+icon: i-lucide-messages-square
+title: Conversations & Compaction
+to: /agents/conversations-and-compaction
+---
 
-  :::card
-  ---
-  icon: i-lucide-paperclip
-  title: Attachments & Semantic Cache
-  to: /agents/attachments-and-caching
-  ---
-  Parse uploaded PDFs, spreadsheets, and text files, and serve near-identical repeated questions from the semantic cache.
-  :::
+Persist multi-turn threads, replay tool traces across turns, and keep long histories inside token budgets.
+:::
 
-  :::card
-  ---
-  icon: i-lucide-shield-check
-  title: Durable Agent Runs
-  to: /agents/agent-runs
-  ---
-  Back every agent turn with a database lease, Redis event stream, and client reattach support.
-  :::
+:::card
+---
 
-  :::card
-  ---
-  icon: i-lucide-layers
-  title: Production Agent & Streaming Recipes
-  to: /agents/production-agent-and-streaming
-  ---
-  End-to-end kitchen-sink agent plus complete CLI, Web/Node HTTP server, and frontend SSE client consumers.
-  :::
+icon: i-lucide-braces
+title: Structured Output
+to: /agents/structured-output
+---
+
+Request raw JSON mode or Zod-validated objects with automatic repair retries.
+:::
+
+:::card
+---
+
+icon: i-lucide-paperclip
+title: Attachments & Semantic Cache
+to: /agents/attachments-and-caching
+---
+
+Parse uploaded PDFs, spreadsheets, and text files, and serve near-identical repeated questions from the semantic cache.
+:::
+
+:::card
+---
+
+icon: i-lucide-shield-check
+title: Durable Agent Runs
+to: /agents/agent-runs
+---
+
+Back every agent turn with a database lease, Redis event stream, and client reattach support.
+:::
+
+:::card
+---
+
+icon: i-lucide-layers
+title: Production Agent & Streaming Recipes
+to: /agents/production-agent-and-streaming
+---
+
+End-to-end kitchen-sink agent plus complete CLI, Web/Node HTTP server, and frontend SSE client consumers.
+:::
 ::

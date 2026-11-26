@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type {
-  EvaluatorAdapter,
-  EvaluatorVerdict,
-} from "../types.js";
+import type { EvaluatorAdapter, EvaluatorVerdict } from "../types.js";
 import { EvaluatorPhase } from "../phases/EvaluatorPhase.js";
 import { WorkflowAbortedError } from "../executionContext.js";
 import {

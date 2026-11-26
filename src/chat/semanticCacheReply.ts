@@ -41,12 +41,12 @@ export async function tryCachedReply(
   if (shouldSkip) return null;
 
   const hit = await checkChatSemanticCache(
-      args.embedding,
-      args.similarity,
-      args.cacheWindowHours,
-      skipOnTools,
-      args.userId,
-    );
+    args.embedding,
+    args.similarity,
+    args.cacheWindowHours,
+    skipOnTools,
+    args.userId,
+  );
 
   if (!hit.hit || !hit.content) return null;
 

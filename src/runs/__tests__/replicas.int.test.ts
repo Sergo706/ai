@@ -134,7 +134,8 @@ async function bootReplica(
     recovery: await import("~/runs/runRecovery.js"),
     resumers: await import("~/runs/resumerRegistry.js"),
     retry: await import("~/runs/retryRun.js"),
-    streamFromStore: (await import("~/runs/streamFromStore.js")).streamFromStore,
+    streamFromStore: (await import("~/runs/streamFromStore.js"))
+      .streamFromStore,
     streamFromRun: (await import("~/runs/streamFromRun.js")).streamFromRun,
     boot: await import("~/runs/boot.js"),
   };
@@ -918,7 +919,8 @@ describe("event replication through Redis", () => {
     ]);
 
     const cursor = first.ids.at(-1);
-    if (cursor === undefined) throw new Error("the replicated page carried no ids");
+    if (cursor === undefined)
+      throw new Error("the replicated page carried no ids");
     const rest = await b.runs.store.readPage("replicated-2", cursor);
     expect(rest.events).toEqual([{ type: "chunk", text: "three" }]);
   });
@@ -1081,9 +1083,7 @@ describe("event replication through Redis", () => {
     // through them cannot skip or repeat.
     const shared = b.runs.shared;
     for (let i = 1; i < page.ids.length; i += 1) {
-      expect(
-        shared.compareIds(page.ids[i], page.ids[i - 1]),
-      ).toBe(1);
+      expect(shared.compareIds(page.ids[i], page.ids[i - 1])).toBe(1);
     }
 
     // The second replica's ids come after the first replica's, which is the
@@ -1427,9 +1427,9 @@ describe("boot reconciliation", () => {
     expect(checkpointed.status).toBe("running");
     expect(checkpointed.owner).toBe("dead-host:1:xxx");
     expect(checkpointed.error).toBeNull();
-    expect(await a.models.checkpoints.loadCheckpoint("boot-checkpointed")).toEqual(
-      { version: 1, phase: "collect", state: { round: 3 } },
-    );
+    expect(
+      await a.models.checkpoints.loadCheckpoint("boot-checkpointed"),
+    ).toEqual({ version: 1, phase: "collect", state: { round: 3 } });
 
     // ...and the live peer's row was never touched at all.
     const live = await readRun("boot-live-peer");

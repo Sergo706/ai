@@ -73,7 +73,7 @@ async function boot(fake: StreamFake): Promise<Harness> {
       },
     },
   });
-  const mod = (await import("../agent.js"));
+  const mod = await import("../agent.js");
   return {
     buildAgent: mod.buildAgent,
     db: env.mod.getDb(),
@@ -84,7 +84,9 @@ async function boot(fake: StreamFake): Promise<Harness> {
 /** The user-facing request among the loop's calls (the last one carries the guard). */
 function userMessages(call: Record<string, unknown>): string[] {
   const messages = call.messages as { role: string; content: string }[];
-  return messages.filter((message) => message.role === "user").map((m) => m.content);
+  return messages
+    .filter((message) => message.role === "user")
+    .map((m) => m.content);
 }
 
 beforeEach(() => {
@@ -186,10 +188,12 @@ describe("buildAgent — a non-persisted turn", () => {
       expect(result.runId).toBeUndefined();
       expect(result.cached).toBe(false);
 
-      expect(await env.db.selectFrom("conversations").select("id").execute()).toEqual(
-        [],
-      );
-      expect(await env.db.selectFrom("messages").select("id").execute()).toEqual([]);
+      expect(
+        await env.db.selectFrom("conversations").select("id").execute(),
+      ).toEqual([]);
+      expect(
+        await env.db.selectFrom("messages").select("id").execute(),
+      ).toEqual([]);
 
       await agent.close();
     } finally {
@@ -413,7 +417,9 @@ describe("buildAgent — a persisted turn", () => {
         const asked = messages.filter((m) => m.role === "user");
         return [
           delta(
-            asked.length > 1 ? "the second turn answer" : "the first turn answer",
+            asked.length > 1
+              ? "the second turn answer"
+              : "the first turn answer",
             "stop",
           ),
         ];
@@ -541,7 +547,9 @@ describe("buildAgent — a persisted turn", () => {
       // `runs.input` is `jsonb` on postgres and `text` on sqlite, so the value
       // comes back either parsed or as a string; `fromJson` is the reader the
       // production code uses for exactly this reason.
-      expect(fromJson<{ name: string }>(run.input as { name: string } | null)).toEqual({
+      expect(
+        fromJson<{ name: string }>(run.input as { name: string } | null),
+      ).toEqual({
         name: "namedAgent",
       });
 
@@ -565,7 +573,10 @@ describe("buildAgent — option plumbing", () => {
 
       await agent.complete({ message: "q", userId: "u-1" });
 
-      const run = await env.db.selectFrom("runs").select("kind").executeTakeFirstOrThrow();
+      const run = await env.db
+        .selectFrom("runs")
+        .select("kind")
+        .executeTakeFirstOrThrow();
       expect(run.kind).toBe("chat");
 
       await agent.close();
@@ -585,7 +596,10 @@ describe("buildAgent — option plumbing", () => {
 
       await agent.complete({ message: "q", userId: "u-1" });
 
-      const run = await env.db.selectFrom("runs").select("input").executeTakeFirstOrThrow();
+      const run = await env.db
+        .selectFrom("runs")
+        .select("input")
+        .executeTakeFirstOrThrow();
       // Not `{name: undefined}`: the column stays empty when nothing was named.
       expect(run.input).toBeNull();
 
@@ -627,7 +641,12 @@ describe("buildAgent — option plumbing", () => {
         ...baseConfig(),
         model: {
           model: "test-model",
-          tools: { temperature: 0.15, maxTokens: 300, maxRounds: 3, maxCalls: 7 },
+          tools: {
+            temperature: 0.15,
+            maxTokens: 300,
+            maxRounds: 3,
+            maxCalls: 7,
+          },
           thinkingEffort: "medium",
         },
       } as never);
@@ -807,7 +826,9 @@ describe("buildAgent — option plumbing", () => {
         "error",
         "done",
       ]);
-      expect(frames[1]?.message).toContain("reached my internal processing limit");
+      expect(frames[1]?.message).toContain(
+        "reached my internal processing limit",
+      );
       expect(frames[1]?.message).not.toContain("provider exploded");
       expect(result.text).toBe("");
       expect(result.error).toBeUndefined();
@@ -853,17 +874,33 @@ describe("buildAgent — option plumbing", () => {
 
         const cachedRow = await env.db
           .selectFrom("runs")
-          .select(["id", "status", "owner", "claimed_at", "finished_at", "input", "partial"])
+          .select([
+            "id",
+            "status",
+            "owner",
+            "claimed_at",
+            "finished_at",
+            "input",
+            "partial",
+          ])
           .where("id", "=", "run-cached-2")
           .executeTakeFirstOrThrow();
         expect(cachedRow.status).toBe("finished");
         expect(cachedRow.owner).toBeNull();
         expect(cachedRow.claimed_at).toBeNull();
         expect(cachedRow.finished_at).not.toBeNull();
-        expect(fromJson<{ name: string }>(cachedRow.input as { name: string } | null)).toEqual({
+        expect(
+          fromJson<{ name: string }>(
+            cachedRow.input as { name: string } | null,
+          ),
+        ).toEqual({
           name: "faqAgent",
         });
-        expect(fromJson<{ text: string }>(cachedRow.partial as { text: string } | null)).toEqual({
+        expect(
+          fromJson<{ text: string }>(
+            cachedRow.partial as { text: string } | null,
+          ),
+        ).toEqual({
           text: "Cached managed reply",
         });
 

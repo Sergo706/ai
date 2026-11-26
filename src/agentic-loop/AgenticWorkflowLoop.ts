@@ -84,7 +84,7 @@ export class AgenticWorkflowLoop<
       throw new Error(`${config.name} query cannot be empty`);
     }
     const logger = getConfiguration().logger;
-    
+
     this.state = new WorkflowState(config.query, config.budgets);
 
     const resume = config.resumeFrom;

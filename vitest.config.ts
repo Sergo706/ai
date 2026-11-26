@@ -3,7 +3,6 @@ import { defineConfig } from "vitest/config";
 
 const root = import.meta.dirname;
 
-
 const alias: Record<string, string> = {
   "~~/": `${path.resolve(root, "./")}/`,
   "~~": path.resolve(root, "./"),

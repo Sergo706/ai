@@ -9,7 +9,6 @@ import { trimmedOr, trimmedOrNull, usableContent } from "./utils";
 import { getConfiguration } from "../../../../../config/config";
 import { loadPeer } from "../../../../../utils/loadPeerDepend";
 
-
 type ContentPeer = typeof import("@steipete/summarize-core/content");
 
 /**

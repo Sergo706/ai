@@ -22,10 +22,8 @@ export function withRequestOptions(
       if (property !== "create") {
         return Reflect.get(target, property, receiver) as unknown;
       }
-      return (
-        body: Parameters<Create>[0],
-        options?: Parameters<Create>[1],
-      ) => target.create(body, { ...request, ...options });
+      return (body: Parameters<Create>[0], options?: Parameters<Create>[1]) =>
+        target.create(body, { ...request, ...options });
     },
   });
 

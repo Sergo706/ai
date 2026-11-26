@@ -1,4 +1,3 @@
-
 /**
  * Read a URL's protocol without throwing.
  *

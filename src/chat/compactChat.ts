@@ -1,7 +1,11 @@
 import type { ChatCompletionMessageParam } from "openai/resources";
 import { estimateMessagesTokens } from "../utils/messageTokens";
-import { Compaction, CompactionOutcome, CompactionState, HistoryMessage } from "../types/Compaction";
-
+import {
+  Compaction,
+  CompactionOutcome,
+  CompactionState,
+  HistoryMessage,
+} from "../types/Compaction";
 
 /** No compaction has ever run for this conversation. */
 export const EMPTY_COMPACTION_STATE: CompactionState = {

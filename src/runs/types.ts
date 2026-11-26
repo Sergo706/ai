@@ -124,7 +124,9 @@ export type RunHandleInit = Omit<
   RunHandle,
   "events" | "eventIds" | "subscribers" | "controller"
 > &
-  Partial<Pick<RunHandle, "events" | "eventIds" | "subscribers" | "controller">>;
+  Partial<
+    Pick<RunHandle, "events" | "eventIds" | "subscribers" | "controller">
+  >;
 
 /** Arguments for `pumpRun`. */
 export interface PumpRunArgs {
@@ -260,10 +262,7 @@ export interface RunResumer {
 
 /** Why a retry was refused. */
 export type RetryFailureReason =
-  | "not_found"
-  | "already_running"
-  | "attempts_exhausted"
-  | "no_runner";
+  "not_found" | "already_running" | "attempts_exhausted" | "no_runner";
 
 /** What `retryRun` did. */
 export type RetryOutcome =

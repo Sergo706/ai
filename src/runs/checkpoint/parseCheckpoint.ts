@@ -35,7 +35,9 @@ export function parseCheckpoint<TState, TPhase extends string>(
     version: candidate.version,
     phase: candidate.phase,
     roundsDone:
-      typeof candidate.roundsDone === "number" ? candidate.roundsDone : undefined,
+      typeof candidate.roundsDone === "number"
+        ? candidate.roundsDone
+        : undefined,
     state: candidate.state,
   };
 }

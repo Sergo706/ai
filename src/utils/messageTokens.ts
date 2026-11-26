@@ -114,6 +114,9 @@ export function estimateMessagesTokens(
  * @param CHARS_PER_TOKEN_ESTIMATE - Characters per token.
  * @returns The estimated token count, rounded up.
  */
-export function estimateTextTokens(text: string, CHARS_PER_TOKEN_ESTIMATE: number): number {
+export function estimateTextTokens(
+  text: string,
+  CHARS_PER_TOKEN_ESTIMATE: number,
+): number {
   return Math.ceil(text.length / CHARS_PER_TOKEN_ESTIMATE);
 }

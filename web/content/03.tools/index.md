@@ -17,50 +17,60 @@ Instead of global singleton handlers that leak user state across requests, each 
 Combine any mix of built-in tools, custom specs, and MCP servers inside `createAgent({ tools })` or assemble them manually with `buildToolRegistry()`.
 
 ::card-group
-  :::card
-  ---
-  icon: i-lucide-box
-  title: Built-in Tools
-  to: /tools/built-in-tools
-  ---
-  Eight ready-to-use tools covering math, currency conversion, current time, RAG search, document paging, web extraction, PDFs, and styled spreadsheets.
-  :::
+:::card
+---
 
-  :::card
-  ---
-  icon: i-lucide-code
-  title: Custom ToolSpec & Registry
-  to: /tools/custom-tools
-  ---
-  Define per-request typed tools with `ToolSpec`, per-tool caching, concurrency buckets, call caps, and SSE disclosure policies.
-  :::
+icon: i-lucide-box
+title: Built-in Tools
+to: /tools/built-in-tools
+---
 
-  :::card
-  ---
-  icon: i-lucide-plug
-  title: MCP Tools
-  to: /tools/mcp-tools
-  ---
-  Connect to Streamable HTTP Model Context Protocol servers with bearer/OAuth/header auth, namespacing, exclusions, and shared tool policies.
-  :::
+Eight ready-to-use tools covering math, currency conversion, current time, RAG search, document paging, web extraction, PDFs, and styled spreadsheets.
+:::
 
-  :::card
-  ---
-  icon: i-lucide-repeat
-  title: Low-Level executeToolLoop
-  to: /tools/tool-loop
-  ---
-  Run the streaming or non-streaming tool loop directly in your own AI client without `createAgent()`.
-  :::
+:::card
+---
 
-  :::card
-  ---
-  icon: i-lucide-chef-hat
-  title: Tool Recipes & Standalone Client
-  to: /tools/tool-recipes
-  ---
-  Full custom tool recipe (Zod, caching, Markdown serialization, sub-progress) plus a standalone `executeToolLoop()` + MCP client.
-  :::
+icon: i-lucide-code
+title: Custom ToolSpec & Registry
+to: /tools/custom-tools
+---
+
+Define per-request typed tools with `ToolSpec`, per-tool caching, concurrency buckets, call caps, and SSE disclosure policies.
+:::
+
+:::card
+---
+
+icon: i-lucide-plug
+title: MCP Tools
+to: /tools/mcp-tools
+---
+
+Connect to Streamable HTTP Model Context Protocol servers with bearer/OAuth/header auth, namespacing, exclusions, and shared tool policies.
+:::
+
+:::card
+---
+
+icon: i-lucide-repeat
+title: Low-Level executeToolLoop
+to: /tools/tool-loop
+---
+
+Run the streaming or non-streaming tool loop directly in your own AI client without `createAgent()`.
+:::
+
+:::card
+---
+
+icon: i-lucide-chef-hat
+title: Tool Recipes & Standalone Client
+to: /tools/tool-recipes
+---
+
+Full custom tool recipe (Zod, caching, Markdown serialization, sub-progress) plus a standalone `executeToolLoop()` + MCP client.
+:::
 ::
 
 ## How the tool middleware chain works
@@ -101,11 +111,13 @@ const getInvoice: ToolSpec<AppMeta> = {
   },
   cache: { ttl: 600, scoped: true },
   maxCalls: 3,
-  make: (ctx) => async ({ invoiceId }) => ({
-    invoiceId: String(invoiceId),
-    orgId: ctx.meta?.orgId,
-    amountUsd: 240,
-  }),
+  make:
+    (ctx) =>
+    async ({ invoiceId }) => ({
+      invoiceId: String(invoiceId),
+      orgId: ctx.meta?.orgId,
+      amountUsd: 240,
+    }),
 };
 
 export const agent = await createAgent<AppMeta>({
@@ -113,7 +125,8 @@ export const agent = await createAgent<AppMeta>({
     model: "gpt-4o-mini",
     tools: { maxRounds: 6, maxCalls: 15 },
   },
-  systemInstructions: "Help users inspect invoices, documents, and external tools.",
+  systemInstructions:
+    "Help users inspect invoices, documents, and external tools.",
   tools: {
     common: [
       "calculator",

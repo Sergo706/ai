@@ -20,7 +20,6 @@ async function openAiZod(): Promise<OpenAiZodPeer> {
   return openAiZodModule;
 }
 
-
 /**
  * Validate a model reply against a Zod schema, repairing it when needed.
  *
@@ -50,10 +49,9 @@ export async function llmSchemaParser<S extends z.ZodType>(
   schema: S,
   llmResponse: ChatCompletion,
   configs: ParserConfig,
-  logger?: Logger
+  logger?: Logger,
 ): Promise<z.output<S>> {
-
-  const log = logger ?? console
+  const log = logger ?? console;
   const maxRetries = configs.maxRetries ?? 2;
   const includeSchemaInPrompt = configs.includeSchemaInPrompt ?? true;
   const schemaName = configs.schemaName ?? "results";
@@ -189,7 +187,6 @@ export async function llmSchemaParser<S extends z.ZodType>(
       );
       throw failure;
     }
-
 
     const correction: ChatCompletionMessageParam[] = [...baseMessages];
 

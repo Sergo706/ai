@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { INTEGRATION_PG_URL, INTEGRATION_REDIS_URL } from "~~/test/integration.setup.js";
-import { libLog, libLogger, resetLibLogger } from "~~/test/test-utils/logger.js";
+import {
+  INTEGRATION_PG_URL,
+  INTEGRATION_REDIS_URL,
+} from "~~/test/integration.setup.js";
+import {
+  libLog,
+  libLogger,
+  resetLibLogger,
+} from "~~/test/test-utils/logger.js";
 import { loadConfig, type LoadedConfig } from "~~/test/test-utils/config.js";
 import type { ToolExecutionContext } from "~/types/ToolExecutionTypes.js";
 
@@ -57,13 +64,11 @@ beforeEach(async () => {
   await env.redis?.flushdb();
 
   mod = {
-    datetime: await import(
-      "~/tools/common-tools-handlers/getCurrentDatetime.js"
-    ),
+    datetime:
+      await import("~/tools/common-tools-handlers/getCurrentDatetime.js"),
     pdf: await import("~/tools/common-tools-handlers/pdfCreator.js"),
-    sheet: await import(
-      "~/tools/common-tools-handlers/createStyledSpreadsheet.js"
-    ),
+    sheet:
+      await import("~/tools/common-tools-handlers/createStyledSpreadsheet.js"),
     config: await import("~/config/config.js"),
   };
 });
@@ -93,18 +98,26 @@ describe("getCurrentDatetime", () => {
   });
 
   it("honours an IANA timezone", () => {
-    const result = mod.datetime.getCurrentDatetime()({
-      timezone: "Asia/Jerusalem",
-    }, ctx) as { isoUtc: string; timezone: string; formatted: string };
+    const result = mod.datetime.getCurrentDatetime()(
+      {
+        timezone: "Asia/Jerusalem",
+      },
+      ctx,
+    ) as { isoUtc: string; timezone: string; formatted: string };
 
     expect(result.timezone).toBe("Asia/Jerusalem");
     expect(result.formatted).toMatch(/GMT\+/);
     // Same instant, different wall clock.
-    expect(Math.abs(Date.parse(result.isoUtc) - Date.now())).toBeLessThan(5_000);
+    expect(Math.abs(Date.parse(result.isoUtc) - Date.now())).toBeLessThan(
+      5_000,
+    );
   });
 
   it("rejects a fixed UTC offset, which is not an IANA zone", () => {
-    const result = mod.datetime.getCurrentDatetime()({ timezone: "+02:00" }, ctx);
+    const result = mod.datetime.getCurrentDatetime()(
+      { timezone: "+02:00" },
+      ctx,
+    );
     expect(errorOf(result)).toEqual({
       code: "VALIDATION_ERROR",
       message: "Provide a valid IANA timezone.",
@@ -112,7 +125,10 @@ describe("getCurrentDatetime", () => {
   });
 
   it("rejects an unknown zone", () => {
-    const result = mod.datetime.getCurrentDatetime()({ timezone: "Mars/Olympus" }, ctx);
+    const result = mod.datetime.getCurrentDatetime()(
+      { timezone: "Mars/Olympus" },
+      ctx,
+    );
     expect(errorOf(result).code).toBe("VALIDATION_ERROR");
   });
 
@@ -122,9 +138,12 @@ describe("getCurrentDatetime", () => {
   });
 
   it("rejects a timezone longer than a hundred characters", () => {
-    const result = mod.datetime.getCurrentDatetime()({
-      timezone: "a".repeat(101),
-    }, ctx);
+    const result = mod.datetime.getCurrentDatetime()(
+      {
+        timezone: "a".repeat(101),
+      },
+      ctx,
+    );
     expect(errorOf(result).code).toBe("VALIDATION_ERROR");
   });
 
@@ -145,7 +164,9 @@ describe("getCurrentDatetime", () => {
 describe("pdfCreator", () => {
   const ONE_PAGE = {
     filename: "report.pdf",
-    pages: [{ action: "add", items: [{ type: "text", x: 20, y: 700, text: "Hi" }] }],
+    pages: [
+      { action: "add", items: [{ type: "text", x: 20, y: 700, text: "Hi" }] },
+    ],
   };
 
   it("creates a PDF, caches it and reports the download path", async () => {
@@ -176,9 +197,9 @@ describe("pdfCreator", () => {
     expect(parsed.mimeType).toBe("application/pdf");
     expect(parsed.filename).toBe("report.pdf");
     expect(parsed.sizeBytes).toBe(result.sizeBytes);
-    expect(Buffer.from(parsed.base64Data, "base64").subarray(0, 5).toString()).toBe(
-      "%PDF-",
-    );
+    expect(
+      Buffer.from(parsed.base64Data, "base64").subarray(0, 5).toString(),
+    ).toBe("%PDF-");
     // The TTL is a day by default.
     const ttl = await env.redis?.ttl(key);
     expect(ttl).toBeGreaterThan(86_000);
@@ -231,17 +252,18 @@ describe("pdfCreator", () => {
     expect(error.code).toBe("VALIDATION_ERROR");
     // The message is the serialised zod issue list.
     expect(JSON.parse(error.message)).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ path: ["filename"] }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ path: ["filename"] })]),
     );
   });
 
   it("reports a creation failure instead of throwing", async () => {
-    const result = await mod.pdf.pdfCreator()({
-      filename: "bad.pdf",
-      pages: [{ action: "modify", pageIndex: 5, items: [] }],
-    }, ctx);
+    const result = await mod.pdf.pdfCreator()(
+      {
+        filename: "bad.pdf",
+        pages: [{ action: "modify", pageIndex: 5, items: [] }],
+      },
+      ctx,
+    );
 
     expect(errorOf(result)).toEqual({
       code: "PDF_CREATION_FAILED",
@@ -278,9 +300,8 @@ describe("pdfCreator", () => {
     // deployment gets. The handler is constructed after that switch.
     const memory = await loadConfig({ dialect: "sqlite", logger: libLogger });
     try {
-      const { pdfCreator } = await import(
-        "~/tools/common-tools-handlers/pdfCreator.js"
-      );
+      const { pdfCreator } =
+        await import("~/tools/common-tools-handlers/pdfCreator.js");
       const result = await pdfCreator()(ONE_PAGE, ctx);
       expect(errorOf(result)).toEqual({
         code: "TOOL_DISABLED",
@@ -299,9 +320,12 @@ describe("createStyledSpreadsheet", () => {
   ];
 
   it("creates an xlsx, caches it and reports the download path", async () => {
-    const result = (await mod.sheet.createStyledSpreadsheet()({
-      data: DATA,
-    }, ctx)) as {
+    const result = (await mod.sheet.createStyledSpreadsheet()(
+      {
+        data: DATA,
+      },
+      ctx,
+    )) as {
       success: boolean;
       message: string;
       filename: string;
@@ -325,34 +349,46 @@ describe("createStyledSpreadsheet", () => {
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     // An xlsx is a zip.
-    expect(Buffer.from(parsed.base64Data, "base64").subarray(0, 2).toString()).toBe(
-      "PK",
-    );
+    expect(
+      Buffer.from(parsed.base64Data, "base64").subarray(0, 2).toString(),
+    ).toBe("PK");
   });
 
   it("names a csv default when the caller asks for csv", async () => {
-    const result = (await mod.sheet.createStyledSpreadsheet()({
-      data: DATA,
-      options: { format: "csv" },
-    }, ctx)) as { filename: string };
+    const result = (await mod.sheet.createStyledSpreadsheet()(
+      {
+        data: DATA,
+        options: { format: "csv" },
+      },
+      ctx,
+    )) as { filename: string };
 
     expect(result.filename).toBe("data.csv");
   });
 
   it("keeps a caller-supplied filename", async () => {
-    const result = (await mod.sheet.createStyledSpreadsheet()({
-      data: DATA,
-      options: { filename: "scores.xlsx" },
-    }, ctx)) as { filename: string };
+    const result = (await mod.sheet.createStyledSpreadsheet()(
+      {
+        data: DATA,
+        options: { filename: "scores.xlsx" },
+      },
+      ctx,
+    )) as { filename: string };
 
     expect(result.filename).toBe("scores.xlsx");
   });
 
   it("serves the cached workbook on a second identical call", async () => {
-    const first = (await mod.sheet.createStyledSpreadsheet()({ data: DATA }, ctx)) as {
+    const first = (await mod.sheet.createStyledSpreadsheet()(
+      { data: DATA },
+      ctx,
+    )) as {
       downloadUrl: string;
     };
-    const second = (await mod.sheet.createStyledSpreadsheet()({ data: DATA }, ctx)) as {
+    const second = (await mod.sheet.createStyledSpreadsheet()(
+      { data: DATA },
+      ctx,
+    )) as {
       downloadUrl: string;
     };
 
@@ -365,11 +401,15 @@ describe("createStyledSpreadsheet", () => {
 
   it("discards a corrupted cache entry and regenerates", async () => {
     const handler = mod.sheet.createStyledSpreadsheet();
-    const created = (await handler({ data: DATA }, ctx)) as { downloadUrl: string };
+    const created = (await handler({ data: DATA }, ctx)) as {
+      downloadUrl: string;
+    };
     const key = `file:${created.downloadUrl.slice("/api/files/".length)}`;
     await env.redis?.setex(key, 60, "not json at all");
 
-    const regenerated = (await handler({ data: DATA }, ctx)) as { sizeBytes: number };
+    const regenerated = (await handler({ data: DATA }, ctx)) as {
+      sizeBytes: number;
+    };
     expect(regenerated.sizeBytes).toBeGreaterThan(1_000);
     expect(libLog.warn).toHaveBeenCalledWith(
       { redisFileKey: key },
@@ -385,23 +425,27 @@ describe("createStyledSpreadsheet", () => {
 
   it("derives sizeBytes from the payload when the cache entry omits it", async () => {
     const handler = mod.sheet.createStyledSpreadsheet();
-    const created = (await handler({ data: DATA }, ctx)) as { downloadUrl: string };
+    const created = (await handler({ data: DATA }, ctx)) as {
+      downloadUrl: string;
+    };
     const key = `file:${created.downloadUrl.slice("/api/files/".length)}`;
-    const raw = JSON.parse(await readWritten(key)) as Record<
-      string,
-      unknown
-    >;
+    const raw = JSON.parse(await readWritten(key)) as Record<string, unknown>;
     delete raw.sizeBytes;
     await env.redis?.setex(key, 60, JSON.stringify(raw));
 
-    const cached = (await handler({ data: DATA }, ctx)) as { sizeBytes: number };
+    const cached = (await handler({ data: DATA }, ctx)) as {
+      sizeBytes: number;
+    };
     expect(cached.sizeBytes).toBe(
       Buffer.byteLength(raw.base64Data as string, "base64"),
     );
   });
 
   it("rejects params that fail the schema", async () => {
-    const result = await mod.sheet.createStyledSpreadsheet()({ data: "nope" }, ctx);
+    const result = await mod.sheet.createStyledSpreadsheet()(
+      { data: "nope" },
+      ctx,
+    );
     const error = errorOf(result);
     expect(error.code).toBe("VALIDATION_ERROR");
     expect(JSON.parse(error.message)).toEqual(
@@ -412,10 +456,13 @@ describe("createStyledSpreadsheet", () => {
   it("reports a generation failure instead of throwing", async () => {
     // `exceljs` refuses a worksheet name containing `[`, `]`, `:`, `*`, `?`,
     // `\` or `/`, which is a real rejection rather than a hand-made mock.
-    const result = await mod.sheet.createStyledSpreadsheet()({
-      data: DATA,
-      options: { sheetName: "a[b]:c" },
-    }, ctx);
+    const result = await mod.sheet.createStyledSpreadsheet()(
+      {
+        data: DATA,
+        options: { sheetName: "a[b]:c" },
+      },
+      ctx,
+    );
 
     const error = errorOf(result);
     expect(error.code).toBe("SPREADSHEET_CREATION_FAILED");
@@ -454,9 +501,8 @@ describe("createStyledSpreadsheet", () => {
   it("refuses to run against the in-memory store", async () => {
     const memory = await loadConfig({ dialect: "sqlite", logger: libLogger });
     try {
-      const { createStyledSpreadsheet } = await import(
-        "~/tools/common-tools-handlers/createStyledSpreadsheet.js"
-      );
+      const { createStyledSpreadsheet } =
+        await import("~/tools/common-tools-handlers/createStyledSpreadsheet.js");
       const result = await createStyledSpreadsheet()({ data: DATA }, ctx);
       expect(errorOf(result)).toEqual({
         code: "TOOL_DISABLED",

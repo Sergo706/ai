@@ -11,12 +11,12 @@ For single-agent chat, tools, MCP, RAG ingestion, and basic SSE setup, pair this
 
 ## When to Use Which Primitive
 
-| Use Case | Primary Primitive | Durable Across Reload / Crash? |
-| --- | --- | --- |
-| Iterative local + external research with evaluator, critic, and synthesis | `AgenticWorkflowLoop` | Yes, when wrapped in `runWorkflow()` with `onCheckpoint` / `resumeFrom` |
-| Long-lived agent chat that survives tab reloads and replica failover | `createAgent({ runs: { ... } })` + `streamFromRun` / `streamFromStore` | Yes (DB `runs` row + lease heartbeat + Redis Streams event log) |
-| Detached custom workflow exposed over SSE with replay & abort | `workflowStreamWithRegistry()` or `attachDetachedWorkflow()` + `runWorkflow()` | Yes, when combined with `runWorkflow()` and `registerRunResumer()` |
-| One-shot workflow SSE without DB persistence or reattach | `workflowStream()` | No (ends on response close) |
+| Use Case                                                                  | Primary Primitive                                                              | Durable Across Reload / Crash?                                          |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| Iterative local + external research with evaluator, critic, and synthesis | `AgenticWorkflowLoop`                                                          | Yes, when wrapped in `runWorkflow()` with `onCheckpoint` / `resumeFrom` |
+| Long-lived agent chat that survives tab reloads and replica failover      | `createAgent({ runs: { ... } })` + `streamFromRun` / `streamFromStore`         | Yes (DB `runs` row + lease heartbeat + Redis Streams event log)         |
+| Detached custom workflow exposed over SSE with replay & abort             | `workflowStreamWithRegistry()` or `attachDetachedWorkflow()` + `runWorkflow()` | Yes, when combined with `runWorkflow()` and `registerRunResumer()`      |
+| One-shot workflow SSE without DB persistence or reattach                  | `workflowStream()`                                                             | No (ends on response close)                                             |
 
 ## Minimal Boot Sequence for Durable Runs
 

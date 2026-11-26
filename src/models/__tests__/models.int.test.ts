@@ -89,7 +89,12 @@ async function boot(): Promise<Harness> {
     ...(await import("../searchDbDocs.js")),
     chatSemanticCache: await import("../chatSemanticCache.js"),
   };
-  return { env, db: env.mod.getDb(), models, utils: await import("~/db/utils.js") };
+  return {
+    env,
+    db: env.mod.getDb(),
+    models,
+    utils: await import("~/db/utils.js"),
+  };
 }
 
 async function seedConversation(
@@ -204,7 +209,9 @@ describe("runs on postgres", () => {
       .executeTakeFirstOrThrow();
     // On postgres this is already a parsed object; `fromJson` is a no-op here
     // and a parse on sqlite, which is exactly why the models use it.
-    expect(fromJson<{ name: string }>(row.input as { name: string } | null)).toEqual({
+    expect(
+      fromJson<{ name: string }>(row.input as { name: string } | null),
+    ).toEqual({
       name: "named",
     });
   });
@@ -215,9 +222,9 @@ describe("runs on postgres", () => {
 
     expect(await models.lease.claimRun("run-1")).toBe(true);
     expect(await models.lease.heartbeatRun("run-1")).toBe("alive");
-    expect(await models.lease.finishRun({ runId: "run-1", stopReason: "done" })).toBe(
-      true,
-    );
+    expect(
+      await models.lease.finishRun({ runId: "run-1", stopReason: "done" }),
+    ).toBe(true);
     await models.lease.releaseRun("run-1");
 
     const row = await db
@@ -242,9 +249,9 @@ describe("runs on postgres", () => {
       claimedAt: new Date().toISOString(),
     });
 
-    expect((await models.lease.findResumableRuns()).map((row) => row.id)).toEqual([
-      "dead",
-    ]);
+    expect(
+      (await models.lease.findResumableRuns()).map((row) => row.id),
+    ).toEqual(["dead"]);
     expect(await models.lease.markStaleRunsInterrupted()).toBe(1);
   });
 
@@ -374,7 +381,9 @@ describe("vector search on pgvector", () => {
           chunk_index: 1,
           chunk_text: "an unrelated chunk",
           embedding: utils.toVec(
-            Array.from({ length: DIMENSIONS }, (_, index) => (index === 0 ? 0 : 1)),
+            Array.from({ length: DIMENSIONS }, (_, index) =>
+              index === 0 ? 0 : 1,
+            ),
           ),
         },
       ])
@@ -557,10 +566,20 @@ describe("semantic cache on postgres", () => {
       .execute();
 
     expect(
-      await models.chatSemanticCache.checkChatSemanticCache(vector, 0.5, 24, []),
+      await models.chatSemanticCache.checkChatSemanticCache(
+        vector,
+        0.5,
+        24,
+        [],
+      ),
     ).toEqual({ hit: false });
     expect(
-      await models.chatSemanticCache.checkChatSemanticCache(vector, 0.5, 96, []),
+      await models.chatSemanticCache.checkChatSemanticCache(
+        vector,
+        0.5,
+        96,
+        [],
+      ),
     ).toMatchObject({ hit: true });
   });
 
@@ -618,7 +637,12 @@ describe("semantic cache on postgres", () => {
     ).toMatchObject({ hit: true, content: "alice pg answer" });
 
     expect(
-      await models.chatSemanticCache.checkChatSemanticCache(vector, 0.9, 24, []),
+      await models.chatSemanticCache.checkChatSemanticCache(
+        vector,
+        0.9,
+        24,
+        [],
+      ),
     ).toMatchObject({ hit: true, content: "alice pg answer" });
   });
 });

@@ -21,17 +21,12 @@ export async function loadConversationHistory(
   if (conversationId) {
     const existingConv = await db
       .selectFrom("conversations")
-      .select([
-        "id",
-        "compacted_summary",
-        "compacted_through_message_id",
-      ])
+      .select(["id", "compacted_summary", "compacted_through_message_id"])
       .where("id", "=", conversationId)
       .where("user_id", "=", userId)
       .limit(1)
       .executeTakeFirst();
 
-     
     if (!existingConv) {
       return {
         ok: false,

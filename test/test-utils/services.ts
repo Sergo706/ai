@@ -32,9 +32,9 @@ export async function truncateAll(
   ];
 
   if (dialect === "postgres") {
-    await sql.raw(
-      `TRUNCATE TABLE ${tables.join(", ")} RESTART IDENTITY CASCADE`,
-    ).execute(db);
+    await sql
+      .raw(`TRUNCATE TABLE ${tables.join(", ")} RESTART IDENTITY CASCADE`)
+      .execute(db);
     return;
   }
 

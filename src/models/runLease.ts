@@ -98,10 +98,7 @@ export async function claimRun(runId: string): Promise<boolean> {
     // reopen a run the user or the system already saw end.
     .where("status", "in", ["running", "interrupted", "failed"])
     .where((eb) =>
-      eb.or([
-        eb("claimed_at", "is", null),
-        eb("claimed_at", "<", staleBefore),
-      ]),
+      eb.or([eb("claimed_at", "is", null), eb("claimed_at", "<", staleBefore)]),
     )
     .returning("id")
     .executeTakeFirst();
@@ -200,9 +197,7 @@ export async function heartbeatRun(runId: string): Promise<LeaseState> {
     .limit(1)
     .executeTakeFirst();
   if (row === undefined) return "gone";
-  return row.status === "running"
-    ? "lost"
-    : classifyOwnerStatus(row.status);
+  return row.status === "running" ? "lost" : classifyOwnerStatus(row.status);
 }
 
 /**
@@ -403,10 +398,7 @@ export async function markStaleRunsInterrupted(): Promise<number> {
     .where("status", "=", "running")
     .where("checkpoint", "is", null)
     .where((eb) =>
-      eb.or([
-        eb("claimed_at", "is", null),
-        eb("claimed_at", "<", staleBefore),
-      ]),
+      eb.or([eb("claimed_at", "is", null), eb("claimed_at", "<", staleBefore)]),
     )
     .returning("id")
     .execute();

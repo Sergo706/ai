@@ -309,7 +309,11 @@ describe("loadConversationHistory", () => {
       .where("id", "=", conversationId)
       .execute();
     await insertMessage(db, { conversationId, role: "user", content: "hi" });
-    await insertMessage(db, { conversationId, role: "assistant", content: "yo" });
+    await insertMessage(db, {
+      conversationId,
+      role: "assistant",
+      content: "yo",
+    });
 
     const result = await models.loadConversationHistory(
       "u-1",
@@ -321,8 +325,18 @@ describe("loadConversationHistory", () => {
     expect(result.data).toEqual({
       existedId: conversationId,
       conversation: [
-        { id: expect.any(Number) as number, role: "user", message: "hi", trace: null },
-        { id: expect.any(Number) as number, role: "assistant", message: "yo", trace: null },
+        {
+          id: expect.any(Number) as number,
+          role: "user",
+          message: "hi",
+          trace: null,
+        },
+        {
+          id: expect.any(Number) as number,
+          role: "assistant",
+          message: "yo",
+          trace: null,
+        },
       ],
       compaction: { summary: "a summary", throughMessageId: 2 },
     });
@@ -346,9 +360,21 @@ describe("loadConversationHistory", () => {
   it("drops roles that are neither user nor assistant", async () => {
     const { db, models } = harness;
     const conversationId = await insertConversation(db);
-    await insertMessage(db, { conversationId, role: "user", content: "keep me" });
-    await insertMessage(db, { conversationId, role: "tool", content: "drop me" });
-    await insertMessage(db, { conversationId, role: "system", content: "drop me too" });
+    await insertMessage(db, {
+      conversationId,
+      role: "user",
+      content: "keep me",
+    });
+    await insertMessage(db, {
+      conversationId,
+      role: "tool",
+      content: "drop me",
+    });
+    await insertMessage(db, {
+      conversationId,
+      role: "system",
+      content: "drop me too",
+    });
 
     const result = await models.loadConversationHistory(
       "u-1",

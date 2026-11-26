@@ -76,14 +76,16 @@ const localKnowledge: LocalKnowledgeAdapter<LocalChunk> = {
 Converts evaluator `nextIntents` into candidate targets. Executed in parallel across all intents in a round.
 
 ```ts
-const externalDiscovery: ExternalDiscoveryAdapter<SearchPayload, FetchTarget> = {
-  discover: async (intent, ctx) => {
-    ctx.emit({ label: `Searching: ${intent}`, intent, addedEvidence: false });
-    return searchWeb(intent, ctx.signal);
-  },
-  extractPassiveEvidence: (_intent, payload) => payload.snippets,
-  extractCandidates: (_intent, payload) => payload.urls.map((url) => ({ url })),
-};
+const externalDiscovery: ExternalDiscoveryAdapter<SearchPayload, FetchTarget> =
+  {
+    discover: async (intent, ctx) => {
+      ctx.emit({ label: `Searching: ${intent}`, intent, addedEvidence: false });
+      return searchWeb(intent, ctx.signal);
+    },
+    extractPassiveEvidence: (_intent, payload) => payload.snippets,
+    extractCandidates: (_intent, payload) =>
+      payload.urls.map((url) => ({ url })),
+  };
 ```
 
 ### 3. `TargetExecutorAdapter<TTarget, TExternalArtifact>` (required)
@@ -94,7 +96,9 @@ Executes deduplicated targets and appends accepted evidence to `state.evidenceSe
 const targetExecutor: TargetExecutorAdapter<FetchTarget, ExtractedArtifact> = {
   getKey: (target) => target.url,
   isBlocked: (target) =>
-    target.url.endsWith(".zip") ? { blocked: true, reason: "binary archive" } : { blocked: false },
+    target.url.endsWith(".zip")
+      ? { blocked: true, reason: "binary archive" }
+      : { blocked: false },
   executeBatch: async (targets, state, ctx) => {
     let addedAny = false;
     for (const target of targets) {
@@ -105,7 +109,10 @@ const targetExecutor: TargetExecutorAdapter<FetchTarget, ExtractedArtifact> = {
         state.externalArtifacts.push(artifact);
         addedAny = true;
       }
-      ctx.emit({ label: target.url, addedEvidence: Boolean(artifact.evidence) });
+      ctx.emit({
+        label: target.url,
+        addedEvidence: Boolean(artifact.evidence),
+      });
     }
     return addedAny;
   },
@@ -124,7 +131,11 @@ const VerdictSchema = z.object({
 
 const evaluator: EvaluatorAdapter = {
   evaluate: async ({ query, evidenceText, issuedOrExhaustedIntents }, ctx) => {
-    const messages = buildEvaluatorMessages(query, evidenceText, issuedOrExhaustedIntents);
+    const messages = buildEvaluatorMessages(
+      query,
+      evidenceText,
+      issuedOrExhaustedIntents,
+    );
     const completion = await client.chat.completions.create(
       { model: "gpt-4.1-mini", messages },
       { signal: ctx.signal },
@@ -133,7 +144,10 @@ const evaluator: EvaluatorAdapter = {
       agent: "evaluator",
       messages,
       retry: (request) =>
-        client.chat.completions.create({ model: "gpt-4.1-mini", ...request }, { signal: ctx.signal }),
+        client.chat.completions.create(
+          { model: "gpt-4.1-mini", ...request },
+          { signal: ctx.signal },
+        ),
     });
   },
   transformIntent: (intent) => intent.trim(),
@@ -162,9 +176,17 @@ const critic: CriticAdapter<LocalChunk, ExtractedArtifact> = {
 Synthesizes the final structured or Markdown `report` placed on `WorkflowRunResult.report`.
 
 ```ts
-const finalAnswer: FinalAnswerAdapter<LocalChunk, ExtractedArtifact, FinalReport> = {
+const finalAnswer: FinalAnswerAdapter<
+  LocalChunk,
+  ExtractedArtifact,
+  FinalReport
+> = {
   synthesize: async (runResult, ctx) => {
-    return synthesizeReport(runResult.context, runResult.externalArtifacts, ctx.signal);
+    return synthesizeReport(
+      runResult.context,
+      runResult.externalArtifacts,
+      ctx.signal,
+    );
   },
 };
 ```

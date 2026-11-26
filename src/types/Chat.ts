@@ -1,6 +1,6 @@
 import { MessageTrace } from "../db/schema";
 import { AgentEvent } from "./ToolExecutionTypes";
-import z from 'zod'
+import z from "zod";
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface WorkflowNameRegistry {}
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -36,7 +36,6 @@ export type SseFrame = { type: string } & Record<string, unknown>;
  * would need a cast, and `streamFromRun` could not type what it replays.
  */
 export type StoredEvent = SseEvent | SseFrame;
-
 
 export const whoIsUser = z.object({
   locale: z
@@ -75,7 +74,7 @@ export const fileUploadSchema = z
     ],
     { error: "Unsupported file format" },
   );
-  
+
 /** Shape of one `/ask` request. */
 export const askSchema = z.object({
   user: whoIsUser

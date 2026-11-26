@@ -20,7 +20,9 @@ export function delta(
   extra: Record<string, unknown> = {},
 ): unknown {
   return {
-    choices: [{ index: 0, delta: { content, ...extra }, finish_reason: finish }],
+    choices: [
+      { index: 0, delta: { content, ...extra }, finish_reason: finish },
+    ],
   };
 }
 
@@ -92,15 +94,12 @@ export function streamFake(
  * Responses are consumed in order and the last one repeats, matching
  * `createFakeLlm`.
  */
-export function completionFake(
-  ...responses: unknown[]
-): StreamFake {
+export function completionFake(...responses: unknown[]): StreamFake {
   const calls: Record<string, unknown>[] = [];
 
   const create = vi.fn((body: Record<string, unknown>) => {
     calls.push(body);
-    const next =
-      responses.length > 1 ? responses.shift() : responses[0];
+    const next = responses.length > 1 ? responses.shift() : responses[0];
     return Promise.resolve(next);
   });
 

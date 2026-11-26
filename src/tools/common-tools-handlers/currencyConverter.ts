@@ -6,9 +6,9 @@ import { currencyParams } from "./schemas";
 
 /** The slice of `easy-currencies` this tool uses. */
 interface EasyCurrenciesPeer {
-  Convert: (
-    amount: number,
-  ) => { from: (code: string) => { to: (code: string) => Promise<number> } };
+  Convert: (amount: number) => {
+    from: (code: string) => { to: (code: string) => Promise<number> };
+  };
 }
 
 /**

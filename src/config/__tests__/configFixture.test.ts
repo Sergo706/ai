@@ -1,9 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  loadConfig,
-  type LoadedConfig,
-} from "~~/test/test-utils/config.js";
+import { loadConfig, type LoadedConfig } from "~~/test/test-utils/config.js";
 
 describe("config fixture", () => {
   let env: LoadedConfig | undefined;

@@ -85,7 +85,9 @@ async function seedExchange(
       conversation_id: conversation.id,
       role: "user",
       content: args.question,
-      embedding: toVec(args.embedding ?? embeddingVector(args.question, DIMENSIONS)),
+      embedding: toVec(
+        args.embedding ?? embeddingVector(args.question, DIMENSIONS),
+      ),
       ...(args.createdAt === undefined ? {} : { created_at: args.createdAt }),
     })
     .returning("id")
@@ -385,7 +387,11 @@ describe("tryCachedReply", () => {
     const { db, cache } = harness;
     const question = "a repeated question";
     const embedding = embeddingVector(question, DIMENSIONS);
-    await seedExchange(db, { question, answer: "the cached answer", embedding });
+    await seedExchange(db, {
+      question,
+      answer: "the cached answer",
+      embedding,
+    });
     const target = await db
       .insertInto("conversations")
       .values({ user_id: "u-1", title: "target" })

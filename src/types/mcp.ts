@@ -5,7 +5,6 @@ import type {
 import type { ChatCompletionFunctionTool } from "openai/resources/chat/completions";
 import type { ToolSpec } from "../tools/toolRegistry";
 
-
 export type McpAuth =
   | { type: "none" }
   | { type: "bearer"; token: string | (() => string | Promise<string>) }

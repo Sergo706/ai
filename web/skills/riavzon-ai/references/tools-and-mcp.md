@@ -4,16 +4,16 @@
 
 Enable built-in tools by name or override config in `createAgent({ tools: { common: [...] } })`, or resolve them standalone with `resolveCommonTools(entries)`.
 
-| Tool Name | Peer Dependency | Cache Backing | Notes |
-| --- | --- | --- | --- |
-| `calculator` | `mathjs` | None | Evaluates mathematical expressions safely |
-| `currencies_convertor` | `easy-currencies` | `cache` | Live FX conversion |
-| `get_current_datetime` | None | None | Returns current timestamp / timezone info |
-| `extractor` | `@steipete/summarize-core` | Memory (`MiniCache`) or Redis | Dual namespaces `ext:lim:` / `ext:full:`, sanitizes Markdown before model handoff; limits configurable via `EXTRACTOR_*` env vars |
-| `search_db` | DB vector peer | None | Tenant-scoped vector search over `document_chunks` |
-| `get_document` | DB peer | `cache` (scoped) | Reads stored document text with `DOCUMENT_*` read budgets (`readToolDocument`) |
-| `pdf_creator` | `pdf-lib`, `@pdf-lib/fontkit`, `ioredis` | Redis required | Generates PDFs and stores download bytes under `fileKey` (`AGENT_GENERATED_FILE_TTL`) |
-| `create_styled_spreadsheet` | `exceljs`, `ioredis` | Redis required | Generates styled `.xlsx` workbooks and stores download bytes under `fileKey` |
+| Tool Name                   | Peer Dependency                          | Cache Backing                 | Notes                                                                                                                             |
+| --------------------------- | ---------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `calculator`                | `mathjs`                                 | None                          | Evaluates mathematical expressions safely                                                                                         |
+| `currencies_convertor`      | `easy-currencies`                        | `cache`                       | Live FX conversion                                                                                                                |
+| `get_current_datetime`      | None                                     | None                          | Returns current timestamp / timezone info                                                                                         |
+| `extractor`                 | `@steipete/summarize-core`               | Memory (`MiniCache`) or Redis | Dual namespaces `ext:lim:` / `ext:full:`, sanitizes Markdown before model handoff; limits configurable via `EXTRACTOR_*` env vars |
+| `search_db`                 | DB vector peer                           | None                          | Tenant-scoped vector search over `document_chunks`                                                                                |
+| `get_document`              | DB peer                                  | `cache` (scoped)              | Reads stored document text with `DOCUMENT_*` read budgets (`readToolDocument`)                                                    |
+| `pdf_creator`               | `pdf-lib`, `@pdf-lib/fontkit`, `ioredis` | Redis required                | Generates PDFs and stores download bytes under `fileKey` (`AGENT_GENERATED_FILE_TTL`)                                             |
+| `create_styled_spreadsheet` | `exceljs`, `ioredis`                     | Redis required                | Generates styled `.xlsx` workbooks and stores download bytes under `fileKey`                                                      |
 
 ### Overriding Built-in Tools
 
@@ -43,14 +43,20 @@ import {
 } from "@riavzon/ai";
 
 // Reusable parameterized factory for standalone or agent handlers
-export function createInventoryHandler(deps: { tenantId: string }): ToolHandler {
+export function createInventoryHandler(deps: {
+  tenantId: string;
+}): ToolHandler {
   return async (rawArgs, ctx) => {
     const parsed = z.object({ sku: z.string().min(1) }).safeParse(rawArgs);
     if (!parsed.success) {
       return toolError("INVALID_ARGS", parsed.error.message);
     }
 
-    ctx.emit?.({ type: "agent_progress", agent: "inventory", state: "running" });
+    ctx.emit?.({
+      type: "agent_progress",
+      agent: "inventory",
+      state: "running",
+    });
     const stock = await fetchStock(deps.tenantId, parsed.data.sku);
     return { sku: parsed.data.sku, stock };
   };
@@ -75,14 +81,19 @@ export const inventoryTool: ToolSpec<{ tenantId: string }> = {
   cache: {
     ttl: 120,
     scoped: true,
-    normalizeArgs: (a) => ({ sku: String(a.sku ?? "").trim().toUpperCase() }),
+    normalizeArgs: (a) => ({
+      sku: String(a.sku ?? "")
+        .trim()
+        .toUpperCase(),
+    }),
   },
   stream: {
     emitArgs: true,
     emitResult: "preview", // "full" | "preview" | "none"
     serializeForModel: (result) => jsonToMarkdown(result),
   },
-  make: ({ meta }) => createInventoryHandler({ tenantId: meta?.tenantId ?? "default" }),
+  make: ({ meta }) =>
+    createInventoryHandler({ tenantId: meta?.tenantId ?? "default" }),
 };
 ```
 
@@ -136,7 +147,11 @@ Use `executeToolLoop()` directly for zero-DB CLI tools or custom provider pipeli
 
 ```ts
 import OpenAI from "openai";
-import { buildToolRegistry, executeToolLoop, resolveCommonTools } from "@riavzon/ai";
+import {
+  buildToolRegistry,
+  executeToolLoop,
+  resolveCommonTools,
+} from "@riavzon/ai";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const registry = buildToolRegistry(

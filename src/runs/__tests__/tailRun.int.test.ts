@@ -29,11 +29,14 @@ let env: Harness | undefined;
 
 async function bootRedis(): Promise<Harness> {
   resetLibLogger();
-  const loaded = await loadConfig({ redisUrl: INTEGRATION_REDIS_URL, logger: libLogger });
+  const loaded = await loadConfig({
+    redisUrl: INTEGRATION_REDIS_URL,
+    logger: libLogger,
+  });
   if (!loaded.redis) throw new Error("Expected a real Redis client");
 
-  const store = (await import("~/runs/eventStore/index.js"));
-  const shared = (await import("~/runs/eventStore/shared.js"));
+  const store = await import("~/runs/eventStore/index.js");
+  const shared = await import("~/runs/eventStore/shared.js");
   await loaded.redis.del(shared.streamKey(RUN));
 
   return {
@@ -50,8 +53,8 @@ async function bootRedis(): Promise<Harness> {
 async function bootMemory(): Promise<Omit<Harness, "redis">> {
   resetLibLogger();
   const loaded = await loadConfig({ logger: libLogger });
-  const store = (await import("~/runs/eventStore/index.js"));
-  const shared = (await import("~/runs/eventStore/shared.js"));
+  const store = await import("~/runs/eventStore/index.js");
+  const shared = await import("~/runs/eventStore/shared.js");
   return {
     store,
     shared,
@@ -189,7 +192,10 @@ describe("tailRun — real Redis", () => {
     // Let the replay finish, then publish the rest.
     setTimeout(() => {
       void (async () => {
-        await env?.store.appendEvent(RUN, "1000-1", { type: "chunk", text: "live" });
+        await env?.store.appendEvent(RUN, "1000-1", {
+          type: "chunk",
+          text: "live",
+        });
         await env?.store.appendEvent(RUN, "1000-2", { type: "done" });
       })();
     }, 150);
@@ -391,7 +397,11 @@ describe("memory backend branches", () => {
     await mem.store.touchStream("run-never-written");
 
     expect(await mem.store.lastStreamId("run-never-written")).toBeUndefined();
-    const page = await mem.store.readPage("run-never-written", mem.shared.FIRST_ID, 10);
+    const page = await mem.store.readPage(
+      "run-never-written",
+      mem.shared.FIRST_ID,
+      10,
+    );
     expect(page.events).toEqual([]);
   });
 
@@ -401,9 +411,7 @@ describe("memory backend branches", () => {
     await mem.store.appendEvent(RUN, "1000-0", { type: "chunk", text: "a" });
 
     // The event already exists, so this is the non-blocking path...
-    expect(
-      (await mem.store.waitForNext(RUN, "999-0"))?.events,
-    ).toHaveLength(1);
+    expect((await mem.store.waitForNext(RUN, "999-0"))?.events).toHaveLength(1);
 
     // ...and this one must block for the whole window and then give up.
     const started = Date.now();

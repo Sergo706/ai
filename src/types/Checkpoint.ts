@@ -43,7 +43,7 @@ export interface CheckpointSpec<TPhase extends string = string> {
 }
 
 /** A checkpoint that passed `parseCheckpoint`, carrying the caller's own types. */
-export type ParsedCheckpoint<
+export type ParsedCheckpoint<TState, TPhase extends string> = Checkpoint<
   TState,
-  TPhase extends string,
-> = Checkpoint<TState, TPhase>;
+  TPhase
+>;

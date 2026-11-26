@@ -45,9 +45,8 @@ vi.mock("../../models/runCheckpoint.js", () => ({
 }));
 
 const { runWorkflow } = await import("../workflowRun.js");
-const { WorkflowAbortedError: ResearchAbortedError } = await import(
-  "../../agentic-loop/executionContext.js"
-);
+const { WorkflowAbortedError: ResearchAbortedError } =
+  await import("../../agentic-loop/executionContext.js");
 
 const log = {
   trace: () => {},

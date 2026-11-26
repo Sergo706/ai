@@ -1,8 +1,4 @@
-import {
-  parseToolArguments,
-  serializeToolResult,
-  toolError,
-} from "./protocol";
+import { parseToolArguments, serializeToolResult, toolError } from "./protocol";
 import type {
   ToolCall,
   ToolExecutionContext,

@@ -39,14 +39,14 @@ interface Harness {
 async function boot(): Promise<Harness> {
   const env = await loadConfig({ logger: libLogger });
   return {
-    utils: (await import("../utils.js")),
-    client: (await import("../client.js")),
-    compose: (await import("../composeMessages.js")),
-    frames: (await import("../frames.js")),
-    tools: (await import("../tools.js")),
-    specs: (await import("../../tools/common-tools-handlers/specs.js")),
-    jsonTurn: (await import("../jsonTurn.js")),
-    prompt: (await import("../prompt.js")),
+    utils: await import("../utils.js"),
+    client: await import("../client.js"),
+    compose: await import("../composeMessages.js"),
+    frames: await import("../frames.js"),
+    tools: await import("../tools.js"),
+    specs: await import("../../tools/common-tools-handlers/specs.js"),
+    jsonTurn: await import("../jsonTurn.js"),
+    prompt: await import("../prompt.js"),
     cleanup: env.cleanup,
   };
 }
@@ -295,10 +295,13 @@ describe("withRequestOptions", () => {
       });
 
       // Caller options win over the defaults.
-      expect(create).toHaveBeenCalledWith({ messages: [] }, {
-        timeout: 5_000,
-        maxRetries: 2,
-      });
+      expect(create).toHaveBeenCalledWith(
+        { messages: [] },
+        {
+          timeout: 5_000,
+          maxRetries: 2,
+        },
+      );
     } finally {
       await env.cleanup();
     }

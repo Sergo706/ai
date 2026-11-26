@@ -8,14 +8,16 @@ import { aiClients, getConfiguration } from "../config/config";
  * @throws If the model's width differs from `embeddingConfig.dimensions`.
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const {embeddingConfig} = getConfiguration()
+  const { embeddingConfig } = getConfiguration();
   const model = await aiClients("embedding").embeddings.create({
     model: embeddingConfig.retrievalModel,
     input: text,
   });
   const res = model.data[0].embedding;
   if (res.length !== embeddingConfig.dimensions) {
-    throw new Error(`The configured dimensions is not equal to what the embedding model returned. Use ${res.length.toString()} in embeddingConfig.dimensions or a different model`)
+    throw new Error(
+      `The configured dimensions is not equal to what the embedding model returned. Use ${res.length.toString()} in embeddingConfig.dimensions or a different model`,
+    );
   }
   return res;
 }
@@ -33,7 +35,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 export async function generateMatchingEmbedding(
   text: string,
 ): Promise<number[]> {
-  const {embeddingConfig} = getConfiguration()
+  const { embeddingConfig } = getConfiguration();
   const model = await aiClients("embedding").embeddings.create({
     model: embeddingConfig.matchingModel,
     input: text,
@@ -41,7 +43,9 @@ export async function generateMatchingEmbedding(
 
   const res = model.data[0].embedding;
   if (res.length !== embeddingConfig.dimensions) {
-    throw new Error(`The configured dimensions is not equal to what the embedding model returned. Use ${res.length.toString()} in embeddingConfig.dimensions or a different model`)
+    throw new Error(
+      `The configured dimensions is not equal to what the embedding model returned. Use ${res.length.toString()} in embeddingConfig.dimensions or a different model`,
+    );
   }
   return res;
 }

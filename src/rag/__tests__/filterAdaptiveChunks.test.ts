@@ -75,7 +75,9 @@ function harnessFilter<C>(
   ...args: Parameters<
     typeof import("~/rag/filterAdaptiveChunks.js").filterAdaptiveChunks<C>
   >
-): ReturnType<typeof import("~/rag/filterAdaptiveChunks.js").filterAdaptiveChunks<C>> {
+): ReturnType<
+  typeof import("~/rag/filterAdaptiveChunks.js").filterAdaptiveChunks<C>
+> {
   return harness.filterAdaptiveChunks<C>(...args);
 }
 
@@ -96,7 +98,12 @@ describe("filterAdaptiveChunks", () => {
   }
 
   it("returns empty results for no incoming chunks", async () => {
-    const result = await harnessFilter([1, 0, 0, 0, 0, 0, 0, 0], [], [], config);
+    const result = await harnessFilter(
+      [1, 0, 0, 0, 0, 0, 0, 0],
+      [],
+      [],
+      config,
+    );
 
     expect(result).toEqual({
       acceptedChunks: [],

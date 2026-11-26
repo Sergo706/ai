@@ -17,7 +17,6 @@ interface FakeTokenizer {
   decode(tokens: number[], options?: { skip_special_tokens?: boolean }): string;
 }
 
-
 function asTokenizer(fake: FakeTokenizer): PreTrainedTokenizer {
   return fake as unknown as PreTrainedTokenizer;
 }
@@ -105,7 +104,9 @@ describe("chunkByTokens", () => {
   });
 
   it("splits an oversized single paragraph at line boundaries", () => {
-    const lines = Array.from({ length: 8 }, (_, i) => `line${String(i)}`).join("\n");
+    const lines = Array.from({ length: 8 }, (_, i) => `line${String(i)}`).join(
+      "\n",
+    );
     const chunks = chunkByTokens(lines, 3, 1);
 
     expect(chunks.length).toBeGreaterThan(1);

@@ -38,7 +38,7 @@ async function bootClient(
   extractor: Record<string, unknown> = {},
 ): Promise<Harness> {
   const env = await loadConfig({ overrides: { extractor } });
-  const client = (await import("../client.js"));
+  const client = await import("../client.js");
   return { client, cleanup: env.cleanup };
 }
 

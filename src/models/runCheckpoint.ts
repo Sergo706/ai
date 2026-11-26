@@ -55,7 +55,9 @@ export async function saveCheckpoint(args: {
  * @param runId - The run to resume.
  * @returns The snapshot, or `null` when the run has none yet.
  */
-export async function loadCheckpoint(runId: string): Promise<Checkpoint | null> {
+export async function loadCheckpoint(
+  runId: string,
+): Promise<Checkpoint | null> {
   const row = await getDb()
     .selectFrom("runs")
     .select("checkpoint")

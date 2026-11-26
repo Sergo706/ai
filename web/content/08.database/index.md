@@ -14,13 +14,13 @@ seo:
 
 The `Database` interface exports five tables covering RAG storage, chat threads, and durable runs:
 
-| Table | Purpose | Key columns |
-| --- | --- | --- |
-| `documents` | Ingested knowledge documents. | `id`, `user_id`, `title`, `raw_content`, `content_hash`, `created_at` |
-| `document_chunks` | Token-bounded embedded chunks pointing to `documents.id`. | `id`, `document_id`, `chunk_index`, `chunk_text`, `embedding`, `created_at` |
-| `conversations` | Chat threads plus rolling compaction watermarks. | `id`, `user_id`, `title`, `compacted_summary`, `compacted_through_message_id`, `created_at`, `updated_at` |
-| `messages` | Individual `"user"` and `"assistant"` turns with optional traces & embeddings. | `id`, `conversation_id`, `role`, `content`, `trace`, `embedding`, `tools_used`, `created_at` |
-| `runs` | Durable run state, SQL leases, checkpoints, and partial outputs. | `id`, `kind`, `status`, `conversation_id`, `message_id`, `query`, `user_id`, `input`, `partial`, `checkpoint`, `stop_reason`, `error`, `owner`, `claimed_at`, `attempts`, `started_at`, `updated_at`, `finished_at` |
+| Table             | Purpose                                                                        | Key columns                                                                                                                                                                                                         |
+| ----------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `documents`       | Ingested knowledge documents.                                                  | `id`, `user_id`, `title`, `raw_content`, `content_hash`, `created_at`                                                                                                                                               |
+| `document_chunks` | Token-bounded embedded chunks pointing to `documents.id`.                      | `id`, `document_id`, `chunk_index`, `chunk_text`, `embedding`, `created_at`                                                                                                                                         |
+| `conversations`   | Chat threads plus rolling compaction watermarks.                               | `id`, `user_id`, `title`, `compacted_summary`, `compacted_through_message_id`, `created_at`, `updated_at`                                                                                                           |
+| `messages`        | Individual `"user"` and `"assistant"` turns with optional traces & embeddings. | `id`, `conversation_id`, `role`, `content`, `trace`, `embedding`, `tools_used`, `created_at`                                                                                                                        |
+| `runs`            | Durable run state, SQL leases, checkpoints, and partial outputs.               | `id`, `kind`, `status`, `conversation_id`, `message_id`, `query`, `user_id`, `input`, `partial`, `checkpoint`, `stop_reason`, `error`, `owner`, `claimed_at`, `attempts`, `started_at`, `updated_at`, `finished_at` |
 
 ### Querying with your own typed `Kysely<Database>` instance
 
@@ -106,12 +106,14 @@ Because `001_init` sizes PostgreSQL vector columns from `embeddingConfig.dimensi
 ## Next steps
 
 ::card-group
-  :::card
-  ---
-  icon: i-lucide-table
-  title: Model Reference
-  to: /database/models
-  ---
-  Browse every exported data-access function for conversations, messages, semantic cache, RAG documents, runs, leases, and checkpoints.
-  :::
+:::card
+---
+
+icon: i-lucide-table
+title: Model Reference
+to: /database/models
+---
+
+Browse every exported data-access function for conversations, messages, semantic cache, RAG documents, runs, leases, and checkpoints.
+:::
 ::

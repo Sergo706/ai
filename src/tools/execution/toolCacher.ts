@@ -1,15 +1,9 @@
-import {
-  cacheGet,
-  cacheSet,
-  getConfiguration,
-} from "../../config/config";
+import { cacheGet, cacheSet, getConfiguration } from "../../config/config";
 import type {
   ToolHandler,
   ToolExecutionContext,
 } from "../../types/ToolExecutionTypes";
 import { generateHash } from "../../utils/hash";
-
-
 
 function canonicalizeArgs(obj: unknown): string {
   if (obj === null || typeof obj !== "object") return JSON.stringify(obj);
@@ -40,7 +34,6 @@ function isErrorResult(res: unknown): boolean {
 
   return false;
 }
-
 
 /**
  * Wrap a tool handler so repeated identical calls are served from the cache.
@@ -97,11 +90,13 @@ export function withToolCache(
 
     if (!isErrorResult(result)) {
       try {
-        await cacheSet(redisKey, JSON.stringify(result), ttlSeconds * 1000).catch(
-          () => {
-            log.warn({ toolName, scopeKey }, "Failed to cache tool response");
-          },
-        );
+        await cacheSet(
+          redisKey,
+          JSON.stringify(result),
+          ttlSeconds * 1000,
+        ).catch(() => {
+          log.warn({ toolName, scopeKey }, "Failed to cache tool response");
+        });
       } catch {
         log.warn({ toolName, scopeKey }, "Failed to cache tool response");
       }

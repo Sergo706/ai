@@ -12,9 +12,10 @@ import { MiniCache } from "@riavzon/utils";
  * acts on `MiniCache`; a Redis-backed suite should use a dedicated database
  * index and flush that instead.
  */
-export function clearConfiguredCache(
-  store: unknown,
-): { cleared: boolean; kind: "memory" | "redis" } {
+export function clearConfiguredCache(store: unknown): {
+  cleared: boolean;
+  kind: "memory" | "redis";
+} {
   if (store instanceof MiniCache) {
     store.clear();
     return { cleared: true, kind: "memory" };

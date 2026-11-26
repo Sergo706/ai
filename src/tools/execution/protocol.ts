@@ -1,9 +1,6 @@
 import { getConfiguration } from "../../config/config";
 
-
-
 export const log = () => getConfiguration().logger;
-
 
 /**
  * Build the error envelope a tool handler returns to the model.
@@ -57,8 +54,6 @@ export function serializeToolResult(
   );
 }
 
-
-
 export function truncateForPreview(
   value: string,
   mode: "full" | "preview" | "none",
@@ -86,4 +81,3 @@ export function validateBudgets(maxRounds: number, maxCalls: number): void {
     }
   }
 }
-

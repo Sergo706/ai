@@ -36,8 +36,7 @@ export interface CommonToolEntry<TMeta = unknown> extends Partial<
  * ```
  */
 export type CommonTools<TMeta = unknown> = readonly (
-  | CommonToolName
-  | CommonToolEntry<TMeta>
+  CommonToolName | CommonToolEntry<TMeta>
 )[];
 
 type Defaults = Omit<ToolSpec<unknown>, "name" | "definitions">;

@@ -93,9 +93,7 @@ function parse(text: string): Record<string, unknown>[] {
     .map((block) => {
       // A frame carries an `id:` line before `data:` when the event has a
       // stream id, so the payload is the data line, not the whole block.
-      const data = block
-        .split("\n")
-        .find((line) => line.startsWith("data: "));
+      const data = block.split("\n").find((line) => line.startsWith("data: "));
       if (data === undefined) {
         throw new Error(`Frame has no data line: ${block}`);
       }

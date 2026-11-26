@@ -4,8 +4,6 @@ import { toolError } from "../execution";
 import { searchDbDocs, searchParams } from "../../models/searchDbDocs";
 import { getConfiguration } from "../../config/config";
 
-
-
 /**
  * Search the indexed documents for chunks relevant to a query.
  *

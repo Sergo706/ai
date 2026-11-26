@@ -1,8 +1,8 @@
 <script setup lang="ts">
 defineProps<{
   /** Filename shown in the window chrome. */
-  filename: string
-}>()
+  filename: string;
+}>();
 </script>
 
 <template>
@@ -23,5 +23,3 @@ defineProps<{
     <slot />
   </div>
 </template>
-
-

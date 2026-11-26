@@ -5,7 +5,10 @@ import type { Kysely } from "kysely";
 
 import type { Database } from "~/db/schema.js";
 import type { SseFrame } from "~/types/Chat.js";
-import type { ToolLoopClient, ToolExecutionContext } from "~~/src/types/ToolExecutionTypes.js";
+import type {
+  ToolLoopClient,
+  ToolExecutionContext,
+} from "~~/src/types/ToolExecutionTypes.js";
 import { cacheSet } from "~/config/config.js";
 import { fileKey, readGeneratedFile } from "~/utils/generatedFile.js";
 import { framesToStream } from "~/utils/framesToStream.js";
@@ -181,7 +184,9 @@ describe("framesToStream", () => {
     expect(body).toContain("one");
     expect(body).toContain("two");
     // Two events, each terminated by a blank line.
-    expect(body.split("\n\n").filter((part) => part.trim() !== "")).toHaveLength(2);
+    expect(
+      body.split("\n\n").filter((part) => part.trim() !== ""),
+    ).toHaveLength(2);
   });
 
   it("emits a heartbeat frame while the producer is idle", async () => {
@@ -335,7 +340,11 @@ describe("buildHistoryMessages", () => {
       created: 0,
       model: "test-model",
       choices: [
-        { index: 0, finish_reason: "stop", message: { role: "assistant", content: null } },
+        {
+          index: 0,
+          finish_reason: "stop",
+          message: { role: "assistant", content: null },
+        },
       ],
     });
 
@@ -385,11 +394,13 @@ describe("createAgent", () => {
 
 describe("currenciesConvertor tool", () => {
   it("reports a validation failure for a missing currency code", async () => {
-    const { currenciesConvertor } = await import(
-      "~~/src/tools/common-tools-handlers/currencyConverter.js"
-    );
+    const { currenciesConvertor } =
+      await import("~~/src/tools/common-tools-handlers/currencyConverter.js");
 
-    const result = await currenciesConvertor()({ amount: 10, from: "USD" }, ctx);
+    const result = await currenciesConvertor()(
+      { amount: 10, from: "USD" },
+      ctx,
+    );
 
     expect(typeof result).toBe("string");
     expect(JSON.parse(result as string)).toMatchObject({
@@ -398,15 +409,17 @@ describe("currenciesConvertor tool", () => {
   });
 
   it("reports a conversion failure for an unknown currency code", async () => {
-    const { currenciesConvertor } = await import(
-      "~~/src/tools/common-tools-handlers/currencyConverter.js"
-    );
+    const { currenciesConvertor } =
+      await import("~~/src/tools/common-tools-handlers/currencyConverter.js");
 
-    const result = await currenciesConvertor()({
-      amount: 10,
-      from: "ZZZ",
-      to: "YYY",
-    }, ctx);
+    const result = await currenciesConvertor()(
+      {
+        amount: 10,
+        from: "ZZZ",
+        to: "YYY",
+      },
+      ctx,
+    );
 
     expect(typeof result).toBe("string");
     expect(JSON.parse(result as string)).toMatchObject({

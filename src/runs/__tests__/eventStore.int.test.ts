@@ -35,8 +35,8 @@ async function bootRedis(): Promise<Harness> {
   const env = await loadConfig({ redisUrl: INTEGRATION_REDIS_URL });
   if (!env.redis) throw new Error("Expected a real Redis client");
 
-  const store = (await import("../eventStore/index.js"));
-  const shared = (await import("../eventStore/shared.js"));
+  const store = await import("../eventStore/index.js");
+  const shared = await import("../eventStore/shared.js");
 
   // A previous run of this file may have left entries behind.
   await env.redis.del(shared.streamKey(RUN));
@@ -53,10 +53,14 @@ async function bootRedis(): Promise<Harness> {
 }
 
 /** Boots the memory backend (no `redisUrl`), which `MiniCache` represents. */
-async function bootMemory(): Promise<{ store: EventStore; shared: Shared; cleanup: () => Promise<void> }> {
+async function bootMemory(): Promise<{
+  store: EventStore;
+  shared: Shared;
+  cleanup: () => Promise<void>;
+}> {
   const env = await loadConfig();
-  const store = (await import("../eventStore/index.js"));
-  const shared = (await import("../eventStore/shared.js"));
+  const store = await import("../eventStore/index.js");
+  const shared = await import("../eventStore/shared.js");
   return { store, shared, cleanup: env.cleanup };
 }
 
@@ -81,7 +85,10 @@ describe("eventStore — real Redis", () => {
   it("round-trips the event payload through JSON", async () => {
     env = await bootRedis();
 
-    await env.store.appendEvent(RUN, "1000-0", { type: "chunk", text: "hello" });
+    await env.store.appendEvent(RUN, "1000-0", {
+      type: "chunk",
+      text: "hello",
+    });
 
     const page = await env.store.readPage(RUN, env.shared.FIRST_ID, 10);
     expect(page.events).toEqual([{ type: "chunk", text: "hello" }]);
@@ -95,9 +102,9 @@ describe("eventStore — real Redis", () => {
 
     const page = await env.store.readPage(RUN, "1000-1", 10);
 
-    expect(page.events.map((event) => (event as { text: string }).text)).toEqual([
-      "c",
-    ]);
+    expect(
+      page.events.map((event) => (event as { text: string }).text),
+    ).toEqual(["c"]);
     expect(page.lastId).toBe("1000-2");
   });
 
@@ -177,7 +184,9 @@ describe("eventStore — real Redis", () => {
 
   it("survives dropping a stream that is not there", async () => {
     env = await bootRedis();
-    await expect(env.store.dropStream("run-never-seen")).resolves.toBeUndefined();
+    await expect(
+      env.store.dropStream("run-never-seen"),
+    ).resolves.toBeUndefined();
   });
 
   it("wakes a waiting reader when an event is published", async () => {
@@ -223,39 +232,50 @@ describe("eventStore — real Redis", () => {
 
   it("keeps ids increasing when the caller reuses an id", async () => {
     env = await bootRedis();
-    await env.store.appendEvent(RUN, "1000-0", { type: "chunk", text: "first" });
+    await env.store.appendEvent(RUN, "1000-0", {
+      type: "chunk",
+      text: "first",
+    });
 
     // A duplicate id would be silently dropped by XADD; the backend mints a new
     // one instead so no event is ever lost.
-    await env.store.appendEvent(RUN, "1000-0", { type: "chunk", text: "second" });
+    await env.store.appendEvent(RUN, "1000-0", {
+      type: "chunk",
+      text: "second",
+    });
 
     const page = await env.store.readPage(RUN, env.shared.FIRST_ID, 10);
     expect(page.events).toHaveLength(2);
-    expect(page.events.map((event) => (event as { text: string }).text)).toEqual(
-      ["first", "second"],
-    );
+    expect(
+      page.events.map((event) => (event as { text: string }).text),
+    ).toEqual(["first", "second"]);
   });
 
   it("mints a fresh id when the caller's id would go backwards", async () => {
     env = await bootRedis();
-    await env.store.appendEvent(RUN, "1000-5", { type: "chunk", text: "later" });
+    await env.store.appendEvent(RUN, "1000-5", {
+      type: "chunk",
+      text: "later",
+    });
 
     // Redis refuses a decreasing id with "equal or smaller". Rather than lose
     // the event, the backend retries with a minted id, so the stream stays
     // monotonic *and* nothing is dropped.
-    await env.store.appendEvent(RUN, "1000-1", { type: "chunk", text: "earlier" });
+    await env.store.appendEvent(RUN, "1000-1", {
+      type: "chunk",
+      text: "earlier",
+    });
 
     const page = await env.store.readPage(RUN, env.shared.FIRST_ID, 10);
-    expect(page.events.map((event) => (event as { text: string }).text)).toEqual(
-      ["later", "earlier"],
-    );
+    expect(
+      page.events.map((event) => (event as { text: string }).text),
+    ).toEqual(["later", "earlier"]);
     // The minted id is greater than the id it replaced.
     const ids = (
-      (await env.redis.xrange(
-        env.shared.streamKey(RUN),
-        "-",
-        "+",
-      )) as [string, string[]][]
+      (await env.redis.xrange(env.shared.streamKey(RUN), "-", "+")) as [
+        string,
+        string[],
+      ][]
     ).map(([id]) => id);
     const [first, second] = ids;
     expect(env.shared.compareIds(second, first)).toBe(1);
@@ -271,9 +291,9 @@ describe("eventStore — memory backend", () => {
 
       const page = await mem.store.readPage(RUN, mem.shared.FIRST_ID, 10);
 
-      expect(page.events.map((event) => (event as { text: string }).text)).toEqual(
-        ["a", "b"],
-      );
+      expect(
+        page.events.map((event) => (event as { text: string }).text),
+      ).toEqual(["a", "b"]);
       expect(page.lastId).toBe("1000-1");
     } finally {
       await mem.store.dropStream(RUN);
@@ -292,9 +312,9 @@ describe("eventStore — memory backend", () => {
       }
 
       const page = await mem.store.readPage(RUN, "1000-1", 2);
-      expect(page.events.map((event) => (event as { text: string }).text)).toEqual(
-        ["2", "3"],
-      );
+      expect(
+        page.events.map((event) => (event as { text: string }).text),
+      ).toEqual(["2", "3"]);
     } finally {
       await mem.store.dropStream(RUN);
       await mem.cleanup();

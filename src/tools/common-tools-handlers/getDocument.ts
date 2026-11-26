@@ -32,7 +32,6 @@ export interface GetDocumentOptions {
   maxChunksPerRead?: number;
 }
 
-
 /**
  * Read one indexed document, in chunks, for the model.
  *
@@ -87,7 +86,8 @@ export function getDocument(
         maxChunksPerRead,
       );
 
-      if (!res) return toolError("NOT_FOUND", "Document not found or access denied.");
+      if (!res)
+        return toolError("NOT_FOUND", "Document not found or access denied.");
 
       return res;
     } catch (err) {

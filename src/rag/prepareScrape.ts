@@ -5,7 +5,6 @@ import { generateEmbedding } from "./embedding";
 import { getConfiguration } from "../config/config";
 import { PreparedChunk, PreparedScrape } from "../types/PrepareScrape";
 
-
 /** Tuning for {@link prepareScrape}. */
 export interface PrepareScrapeOptions<T, C> {
   /**
@@ -126,7 +125,9 @@ export async function prepareScrape<T, C = undefined>(
             chunkIndex,
             chunkText,
             embedding,
-            ...(chunkMeta ? { customFields: chunkMeta(chunkText, chunkIndex) } : {}),
+            ...(chunkMeta
+              ? { customFields: chunkMeta(chunkText, chunkIndex) }
+              : {}),
           };
         }),
       );
@@ -142,4 +143,3 @@ export async function prepareScrape<T, C = undefined>(
     chunks,
   };
 }
-

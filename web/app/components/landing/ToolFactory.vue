@@ -12,21 +12,30 @@
         >
           Typed tools, bound per turn.
         </h2>
-        <p class="mt-4 text-[0.9375rem] leading-[1.75] text-pretty text-ink-muted">
+        <p
+          class="mt-4 text-[0.9375rem] leading-[1.75] text-pretty text-ink-muted"
+        >
           A spec describes the tool once and builds a fresh handler per turn.
           That is what lets a handler capture the user, the conversation, or a
           connection that only exists for that request.
         </p>
-        <p class="mt-4 text-[0.9375rem] leading-[1.75] text-pretty text-ink-muted">
-          The type argument names your own metadata. Supply it on the agent, then
-          override any field per turn, because a turn's
-          <code class="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-[0.85em] text-ink">meta</code>
+        <p
+          class="mt-4 text-[0.9375rem] leading-[1.75] text-pretty text-ink-muted"
+        >
+          The type argument names your own metadata. Supply it on the agent,
+          then override any field per turn, because a turn's
+          <code
+            class="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-[0.85em] text-ink"
+            >meta</code
+          >
           is spread over the agent's before the factories run.
         </p>
       </div>
 
       <LandingCodeWindow filename="tools.ts" class="lg:order-1">
-<pre class="m-0 overflow-x-auto px-[1.15rem] pt-[1.1rem] pb-[1.35rem] font-mono text-[0.7825rem] leading-[1.75] text-[#c9c9c9] tab-2"><code><span class="text-code-key">import type</span> { ToolSpec } <span class="text-code-key">from</span> <span class="text-code-str">"@riavzon/ai"</span>;
+        <pre
+          class="m-0 overflow-x-auto px-[1.15rem] pt-[1.1rem] pb-[1.35rem] font-mono text-[0.7825rem] leading-[1.75] text-[#c9c9c9] tab-2"
+        ><code><span class="text-code-key">import type</span> { ToolSpec } <span class="text-code-key">from</span> <span class="text-code-str">"@riavzon/ai"</span>;
 
 <span class="text-code-key">type</span> <span class="text-code-const">RequestMeta</span> = {
   tenantId: <span class="text-code-key">string</span>;

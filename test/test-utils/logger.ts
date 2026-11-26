@@ -4,10 +4,7 @@ import type { Mock } from "vitest";
 import type { Logger } from "../../src/config/configSchema";
 
 /** The four spies a logger fixture exposes, named so emit stays portable. */
-export type LoggerSpies = Record<
-  "debug" | "info" | "warn" | "error",
-  Mock
->;
+export type LoggerSpies = Record<"debug" | "info" | "warn" | "error", Mock>;
 
 /**
  * The logger the library actually writes through.

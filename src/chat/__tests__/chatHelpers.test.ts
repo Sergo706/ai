@@ -32,8 +32,8 @@ async function boot(): Promise<Harness> {
   // `libLogger` is the shared spy instance, so the assertions below can read the
   // log lines production actually emitted.
   const env = await loadConfig({ logger: libLogger });
-  const conversation = (await import("../conversation.js"));
-  const compaction = (await import("../compaction.js"));
+  const conversation = await import("../conversation.js");
+  const compaction = await import("../compaction.js");
 
   return {
     resolveConversation: conversation.resolveConversation,
@@ -177,9 +177,7 @@ describe("makeCompactionHandler", () => {
     // shape as a dropped connection mid-request.
     await env.db.destroy();
 
-    await expect(
-      env.makeCompactionHandler(1)(update),
-    ).resolves.toBeUndefined();
+    await expect(env.makeCompactionHandler(1)(update)).resolves.toBeUndefined();
     expect(libLog.error).toHaveBeenCalledTimes(1);
   });
 
@@ -587,7 +585,10 @@ describe("parseFiles", () => {
     // Five pages is the default cap; the sixth must not appear.
     const pdf = await makePdf(["P1", "P2", "P3", "P4", "P5", "P6"]);
 
-    const result = await parseFiles([file("a.pdf", "application/pdf", pdf)], "x");
+    const result = await parseFiles(
+      [file("a.pdf", "application/pdf", pdf)],
+      "x",
+    );
 
     expect(result.message).toContain("P5");
     expect(result.message).not.toContain("P6");
@@ -695,10 +696,7 @@ describe("parseFiles", () => {
 
     await expect(
       // Not a PDF at all, so the real parser throws.
-      parseFiles(
-        [textFile("a.pdf", "application/pdf", "not a pdf")],
-        "x",
-      ),
+      parseFiles([textFile("a.pdf", "application/pdf", "not a pdf")], "x"),
     ).rejects.toThrow();
   });
 });

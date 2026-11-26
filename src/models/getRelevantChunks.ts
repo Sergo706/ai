@@ -78,9 +78,5 @@ export async function fetchRelevantChunks(
     query = query.where("d.user_id", "=", userId);
   }
 
-  return query
-    .orderBy(distance, "asc")
-    .limit(limit)
-    .offset(offset)
-    .execute();
+  return query.orderBy(distance, "asc").limit(limit).offset(offset).execute();
 }

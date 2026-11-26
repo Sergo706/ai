@@ -8,9 +8,6 @@ import { generateHash } from "../../utils/hash";
 import { SpreadsheetOptions } from "../../utils/types/SpreadsheetsManipulation";
 import { generateStyledSpreadsheet as generateSpreadsheet } from "../../utils/spreadsheetsManipulation";
 
-
-
-
 /** Redis lifetime for a generated spreadsheet, keyed by its params hash. */
 const AGENT_GENERATED_FILE_TTL = envInt("AGENT_GENERATED_FILE_TTL", 86_400, {
   min: 0,
@@ -33,24 +30,21 @@ export function createStyledSpreadsheet(
   const store = getStorage();
   const isMemoryStore = store instanceof MiniCache;
   const basePath = downloadPath.replace(/\/+$/, "");
-  
+
   return async (args) => {
     log.debug({ args }, "agent ran tool createStyledSpreadsheet");
 
     if (isMemoryStore) {
-      return toolError("TOOL_DISABLED", "This tool is currently not available")
+      return toolError("TOOL_DISABLED", "This tool is currently not available");
     }
-    
+
     const parse = spreadsheetCreatorParams.safeParse(args);
     if (!parse.success) {
       return toolError("VALIDATION_ERROR", JSON.stringify(parse.error.issues));
     }
 
-
     try {
-      const fileId = generateHash(
-        `spreadsheet:${JSON.stringify(parse.data)}`,
-      );
+      const fileId = generateHash(`spreadsheet:${JSON.stringify(parse.data)}`);
       const redisFileKey = `file:${fileId}`;
       const redis = store;
       const existingRaw = await redis.get(redisFileKey);

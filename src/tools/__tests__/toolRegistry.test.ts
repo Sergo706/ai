@@ -31,9 +31,7 @@ const definition = {
   },
 };
 
-function spec(
-  overrides: Partial<ToolSpec<unknown>> = {},
-): ToolSpec<unknown> {
+function spec(overrides: Partial<ToolSpec<unknown>> = {}): ToolSpec<unknown> {
   return {
     name: "echo",
     make: (): ToolHandler => async (args) => ({ echoed: args }),
@@ -61,10 +59,13 @@ describe("buildToolRegistry", () => {
   it("registers one handler and one definition per spec", () => {
     const registry = buildToolRegistry({ userId: "user-1" }, [
       spec({ name: "echo" }),
-      spec({ name: "echo2", definitions: {
-        ...definition,
-        function: { ...definition.function, name: "echo2" },
-      } }),
+      spec({
+        name: "echo2",
+        definitions: {
+          ...definition,
+          function: { ...definition.function, name: "echo2" },
+        },
+      }),
     ]);
 
     expect(Object.keys(registry.handlers)).toEqual(["echo", "echo2"]);
@@ -212,10 +213,13 @@ describe("buildToolRegistry — cache", () => {
     ]);
 
     await registry.handlers.echo({ q: "same" }, context);
-    await registry.handlers.echo({ q: "same" }, {
-      ...context,
-      toolCallId: "call-2",
-    });
+    await registry.handlers.echo(
+      { q: "same" },
+      {
+        ...context,
+        toolCallId: "call-2",
+      },
+    );
 
     expect(calls).toHaveLength(1);
   });
@@ -329,9 +333,15 @@ describe("buildToolRegistry — concurrency and stream policy", () => {
       spec({ cache: { ttl: 60 }, make: () => handler }),
     ]);
 
-    await registry.handlers.echo({ items: [1, "two", { b: 2, a: 1 }] }, context);
+    await registry.handlers.echo(
+      { items: [1, "two", { b: 2, a: 1 }] },
+      context,
+    );
     // Same content, keys declared in the other order.
-    await registry.handlers.echo({ items: [1, "two", { a: 1, b: 2 }] }, context);
+    await registry.handlers.echo(
+      { items: [1, "two", { a: 1, b: 2 }] },
+      context,
+    );
 
     expect(calls).toHaveLength(1);
   });
@@ -345,7 +355,9 @@ describe("buildToolRegistry — concurrency and stream policy", () => {
           attempt++;
           // The object-shaped error is what `toolError` produces once parsed;
           // the string form is covered by the test above.
-          return attempt === 1 ? { error: { code: "X", message: "y" } } : { ok: 1 };
+          return attempt === 1
+            ? { error: { code: "X", message: "y" } }
+            : { ok: 1 };
         },
       }),
     ]);
@@ -399,7 +411,10 @@ describe("buildToolRegistry — concurrency and stream policy", () => {
   it("serves the cache from the object it stored, not the string it wrote", async () => {
     // A cache hit goes through `JSON.parse`, so the caller receives a value of
     // the shape the tool returned rather than the serialized text.
-    const { handler, calls } = countingHandler({ nested: { ok: true }, list: [1, 2] });
+    const { handler, calls } = countingHandler({
+      nested: { ok: true },
+      list: [1, 2],
+    });
     const registry = buildToolRegistry({ userId: "user-1" }, [
       spec({ cache: { ttl: 60 }, make: () => handler }),
     ]);

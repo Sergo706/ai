@@ -31,7 +31,11 @@ interface RedisLike {
  * the *transport* only: the branch under test is which method `config.ts`
  * chooses and how it awaits the result, not Redis semantics.
  */
-function redisLike(): RedisLike & { writes: unknown[][]; duplicate: () => never; xadd: () => never } {
+function redisLike(): RedisLike & {
+  writes: unknown[][];
+  duplicate: () => never;
+  xadd: () => never;
+} {
   const store = new Map<string, string>();
   const writes: unknown[][] = [];
   return {
@@ -48,7 +52,8 @@ function redisLike(): RedisLike & { writes: unknown[][]; duplicate: () => never;
       store.set(key, value);
       return Promise.resolve("OK" as const);
     },
-    mget: (...keys) => Promise.resolve(keys.map((key) => store.get(key) ?? null)),
+    mget: (...keys) =>
+      Promise.resolve(keys.map((key) => store.get(key) ?? null)),
     pipeline: () => {
       const queued: unknown[][] = [];
       return {
@@ -112,7 +117,10 @@ describe("cache facade on MiniCache", () => {
 describe("cache facade on a Redis-shaped store", () => {
   it("uses setex and reads back through get", async () => {
     const redis = redisLike();
-    env = await loadConfig({ dialect: "sqlite", overrides: { redis } as never });
+    env = await loadConfig({
+      dialect: "sqlite",
+      overrides: { redis } as never,
+    });
 
     await env.mod.cacheSet("k", "v", 2_500);
 
@@ -124,7 +132,10 @@ describe("cache facade on a Redis-shaped store", () => {
 
   it("clamps a TTL that rounds down to zero seconds", async () => {
     const redis = redisLike();
-    env = await loadConfig({ dialect: "sqlite", overrides: { redis } as never });
+    env = await loadConfig({
+      dialect: "sqlite",
+      overrides: { redis } as never,
+    });
 
     await env.mod.cacheSet("k", "v", 1);
 
@@ -133,7 +144,10 @@ describe("cache facade on a Redis-shaped store", () => {
 
   it("reads many keys in one round trip", async () => {
     const redis = redisLike();
-    env = await loadConfig({ dialect: "sqlite", overrides: { redis } as never });
+    env = await loadConfig({
+      dialect: "sqlite",
+      overrides: { redis } as never,
+    });
 
     await env.mod.cacheSetMany([{ key: "a", value: "1" }], 5_000);
     expect(await env.mod.cacheGetMany(["a", "missing"])).toEqual(["1", null]);
@@ -141,7 +155,10 @@ describe("cache facade on a Redis-shaped store", () => {
 
   it("writes a batch through one pipeline", async () => {
     const redis = redisLike();
-    env = await loadConfig({ dialect: "sqlite", overrides: { redis } as never });
+    env = await loadConfig({
+      dialect: "sqlite",
+      overrides: { redis } as never,
+    });
 
     await env.mod.cacheSetMany(
       [
@@ -160,7 +177,10 @@ describe("cache facade on a Redis-shaped store", () => {
 
   it("does not open a pipeline for an empty batch", async () => {
     const redis = redisLike();
-    env = await loadConfig({ dialect: "sqlite", overrides: { redis } as never });
+    env = await loadConfig({
+      dialect: "sqlite",
+      overrides: { redis } as never,
+    });
 
     await env.mod.cacheSetMany([], 10_000);
 
@@ -178,7 +198,9 @@ describe("accessor guards before configuration", () => {
     vi.resetModules();
     const fresh = await import("../../config/config.js");
 
-    expect(() => fresh.getDb()).toThrow("DB not ready. Call configuration() first.");
+    expect(() => fresh.getDb()).toThrow(
+      "DB not ready. Call configuration() first.",
+    );
     expect(() => fresh.getStorage()).toThrow(
       "Storage not ready. Call configuration() first.",
     );

@@ -4,10 +4,12 @@ import { PDFParse } from "pdf-parse";
 import { readFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CreateOrModifyPdfParams, ReadPdfParams } from "./types/PdfManipulation";
+import {
+  CreateOrModifyPdfParams,
+  ReadPdfParams,
+} from "./types/PdfManipulation";
 import { getRoot, resolvePath } from "@riavzon/utils/server";
 import { loadPeer } from "./loadPeerDepend";
-
 
 type PdfLibPeer = typeof import("pdf-lib");
 type FontkitPeer = typeof import("@pdf-lib/fontkit");
@@ -28,7 +30,6 @@ async function fontkit(): Promise<FontkitPeer> {
   );
   return fontkitModule;
 }
-
 
 const PACKAGE_ROOT = getRoot(dirname(fileURLToPath(import.meta.url)));
 
@@ -88,7 +89,6 @@ export async function readPdf(params: ReadPdfParams): Promise<string> {
   }
 }
 
-
 /**
  * Create a PDF, or draw onto an existing one.
  *
@@ -126,7 +126,6 @@ export async function createPdf(params: CreateOrModifyPdfParams): Promise<{
   }
 
   pdfDoc.registerFontkit(fontkitModule);
-
 
   const fontPath = (name: string) =>
     resolvePath(name, ["assets", "dist/assets"], [], PACKAGE_ROOT);

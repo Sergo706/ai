@@ -2,7 +2,6 @@ import { Readable } from "stream";
 import { SpreadsheetOptions } from "./types/SpreadsheetsManipulation";
 import { loadPeer } from "./loadPeerDepend";
 
-
 type Cell = import("exceljs").Cell;
 type Worksheet = import("exceljs").Worksheet;
 type Style = import("exceljs").Style;
@@ -18,7 +17,6 @@ interface ExceljsPeer {
 }
 
 let exceljsModule: ExceljsPeer | undefined;
-
 
 async function loadExceljs(): Promise<ExceljsPeer> {
   exceljsModule ??= await loadPeer<ExceljsPeer>(
@@ -80,7 +78,9 @@ function worksheetToMarkdown(worksheet: Worksheet): string {
 export async function readXlsxToMarkdown(buffer: Buffer): Promise<string> {
   const { default: exceljs } = await loadExceljs();
   const workbook: Workbook = new exceljs.Workbook();
-  await workbook.xlsx.load(buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]);
+  await workbook.xlsx.load(
+    buffer as unknown as Parameters<typeof workbook.xlsx.load>[0],
+  );
 
   const sheets = workbook.worksheets
     .map((worksheet: Worksheet) => ({
@@ -93,7 +93,10 @@ export async function readXlsxToMarkdown(buffer: Buffer): Promise<string> {
   if (sheets.length === 1) return sheets[0].markdown;
 
   return sheets
-    .map((sheet: { name: string; markdown: string }) => `## ${sheet.name}\n\n${sheet.markdown}`)
+    .map(
+      (sheet: { name: string; markdown: string }) =>
+        `## ${sheet.name}\n\n${sheet.markdown}`,
+    )
     .join("\n");
 }
 
@@ -115,7 +118,6 @@ export async function readCsvToMarkdown(buffer: Buffer): Promise<string> {
   const worksheet: Worksheet = workbook.worksheets[0];
   return worksheetToMarkdown(worksheet);
 }
-
 
 /**
  * Build a styled spreadsheet from an array of records.

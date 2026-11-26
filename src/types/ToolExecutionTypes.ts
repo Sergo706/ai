@@ -10,7 +10,6 @@ import { StoredToolStep } from "../db/schema.js";
 import type { WorkflowAgent, WorkflowName } from "./Chat.js";
 import type { WorkflowStage } from "../agentic-loop/types.js";
 
-
 /** Sampling settings for the final answer call. */
 export interface Chat {
   /** Temperature for the answer. */

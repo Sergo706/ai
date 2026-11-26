@@ -1,6 +1,5 @@
 import { getConfiguration } from "../config/config";
 
-
 /** Tracks whether the caller aborted the request. */
 export interface RequestAbort {
   /** Pass to the turn; fires when the client disconnects. */
@@ -50,7 +49,9 @@ export function createRequestAbort(
 
   return {
     signal: controller.signal,
-    abort: () => { controller.abort(); },
+    abort: () => {
+      controller.abort();
+    },
     markFinished: () => {
       finished = true;
     },

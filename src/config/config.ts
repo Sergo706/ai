@@ -121,7 +121,6 @@ export function getStorage(): Redis | MiniCache {
   return globalCache;
 }
 
-
 /**
  * Read one cached value.
  *
@@ -135,7 +134,7 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
     const value = store.get(key) as T | null;
     return value;
   }
-  return await store.get(key) as T | null;
+  return (await store.get(key)) as T | null;
 }
 
 /**

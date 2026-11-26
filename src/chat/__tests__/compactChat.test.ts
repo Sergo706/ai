@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { EMPTY_COMPACTION_STATE, compactHistory, historyToMessages } from "~/chat/compactChat.js";
+import {
+  EMPTY_COMPACTION_STATE,
+  compactHistory,
+  historyToMessages,
+} from "~/chat/compactChat.js";
 import type { Compaction, HistoryMessage } from "~/types/Compaction.js";
 
 /**
@@ -172,7 +176,8 @@ describe("compactHistory", () => {
     expect(outcome.messages).toEqual([
       {
         role: "system",
-        content: "[System Note: Earlier conversation summary: a merged summary]",
+        content:
+          "[System Note: Earlier conversation summary: a merged summary]",
       },
       { role: "user", content: "second question" },
       { role: "assistant", content: "second answer" },

@@ -1,13 +1,11 @@
 {
   "readme": "./README.md",
-  "entryPoints": [
-    "./src/main.ts",
-  ],
+  "entryPoints": ["./src/main.ts"],
   "out": "./docs/api",
   "tsconfig": "tsconfig.json",
-  "hideGenerator": true, 
+  "hideGenerator": true,
   "includeVersion": true,
   "name": "API Reference",
   "logLevel": "Verbose",
-  "entryPointStrategy": "resolve",
+  "entryPointStrategy": "resolve"
 }

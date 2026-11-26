@@ -9,9 +9,7 @@ import { getRun } from "./runRegistry";
 import type { RetryOutcome } from "./types";
 
 function workflowName(row: StoredRun): string | undefined {
-  const parsed = fromJson<unknown>(
-    row.input,
-  );
+  const parsed = fromJson<unknown>(row.input);
   if (parsed === null || typeof parsed !== "object") return undefined;
   return (parsed as { name?: string }).name;
 }

@@ -10,11 +10,7 @@ import { getDb } from "../config/config";
  * @default offset 0
  * @returns `ok: true` with the page of conversations.
  */
-export async function getConversations(
-  userId: string,
-  limit = 50,
-  offset = 0,
-) {
+export async function getConversations(userId: string, limit = 50, offset = 0) {
   const rows = await getDb()
     .selectFrom("conversations")
     .select([

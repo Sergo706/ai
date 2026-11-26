@@ -7,7 +7,6 @@ import { generateHash } from "../../utils/hash";
 import { createPdf } from "../../utils/pdfManipulation";
 import { envInt } from "@riavzon/utils/server";
 
-
 const AGENT_GENERATED_FILE_TTL = envInt("AGENT_GENERATED_FILE_TTL", 86_400, {
   min: 0,
 });
@@ -30,9 +29,9 @@ export function pdfCreator(downloadPath = "/api/files"): ToolHandler {
 
   return async (args) => {
     log.debug({ args }, "agent ran tool pdfCreator");
-    
+
     if (isMemoryStore) {
-      return toolError("TOOL_DISABLED", "This tool is currently not available")
+      return toolError("TOOL_DISABLED", "This tool is currently not available");
     }
 
     const parse = pdfCreatorParams.safeParse(args);

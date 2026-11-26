@@ -9,7 +9,6 @@ import {
   type EventPage,
 } from "./shared";
 
-
 function wakeChannel(runId: string): string {
   return `run:wakeup:${runId}`;
 }

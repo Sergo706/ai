@@ -11,7 +11,6 @@ import type { ChatCompletionFunctionTool } from "openai/resources/chat/completio
 import type { ToolSpec } from "./toolRegistry";
 import { toolError } from "./execution/protocol";
 
-
 interface ServerTools {
   definitions: ChatCompletionFunctionTool[];
   specs: ToolSpec<unknown>[];
@@ -36,8 +35,6 @@ async function mcpClient(): Promise<McpClientPeer> {
 const MAX_NAME_LENGTH = 64;
 const UNSAFE_NAME_CHAR = /[^a-zA-Z0-9_-]/g;
 const DEFAULT_CLIENT_INFO = { name: "ai", version: "1.0.0" };
-
-
 
 function toUrl(url: string | URL): URL {
   return typeof url === "string" ? new URL(url) : url;
@@ -97,7 +94,11 @@ function formatContentBlock(block: unknown): string {
 
   if (typeof rec.text === "string") return rec.text;
 
-  if (rec.type === "resource" && rec.resource && typeof rec.resource === "object") {
+  if (
+    rec.type === "resource" &&
+    rec.resource &&
+    typeof rec.resource === "object"
+  ) {
     const resource = rec.resource as Record<string, unknown>;
     if (typeof resource.text === "string" && resource.text !== "") {
       return resource.text;
@@ -108,7 +109,8 @@ function formatContentBlock(block: unknown): string {
   if (rec.type === "resource_link") {
     const uri = typeof rec.uri === "string" ? rec.uri : "";
     const name = typeof rec.name === "string" ? rec.name : "";
-    const description = typeof rec.description === "string" ? rec.description : "";
+    const description =
+      typeof rec.description === "string" ? rec.description : "";
     const label = [name, uri].filter(Boolean).join(" ");
     if (!label && !description) return "";
     return description ? `${label}: ${description}`.trim() : label;
@@ -116,8 +118,6 @@ function formatContentBlock(block: unknown): string {
 
   return "";
 }
-
-
 
 async function readServerTools(
   config: McpServerConfig,

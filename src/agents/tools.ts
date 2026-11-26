@@ -39,7 +39,7 @@ export async function assembleTools<TMeta>(
   const specs: ToolSpec<TMeta>[] = [
     ...resolveCommonTools(options?.common ?? []),
     ...(options?.specs ?? []),
-    ...((mcp?.specs ?? [])),
+    ...(mcp?.specs ?? []),
   ];
 
   const seen = new Set<string>();
