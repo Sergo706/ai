@@ -68,6 +68,7 @@
   },
   "dependencies": {
     "@riavzon/utils": "^1.4.0",
+    "agents": "^0.34.1",
     "kysely": "0.29.9",
     "pdf-parse": "2.4.5",
     "zod": "4.6.7"
