@@ -7,11 +7,11 @@ Enable built-in tools by name or override config in `createAgent({ tools: { comm
 | Tool Name                   | Peer Dependency                          | Cache Backing                 | Notes                                                                                                                             |
 | --------------------------- | ---------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `calculator`                | `mathjs`                                 | None                          | Evaluates mathematical expressions safely                                                                                         |
-| `currencies_convertor`      | `easy-currencies`                        | `cache`                       | Live FX conversion                                                                                                                |
+| `currencies_convertor`      | `easy-currencies`                        | `redis` (memory or Redis)     | Live FX conversion                                                                                                                |
 | `get_current_datetime`      | None                                     | None                          | Returns current timestamp / timezone info                                                                                         |
 | `extractor`                 | `@steipete/summarize-core`               | Memory (`MiniCache`) or Redis | Dual namespaces `ext:lim:` / `ext:full:`, sanitizes Markdown before model handoff; limits configurable via `EXTRACTOR_*` env vars |
 | `search_db`                 | DB vector peer                           | None                          | Tenant-scoped vector search over `document_chunks`                                                                                |
-| `get_document`              | DB peer                                  | `cache` (scoped)              | Reads stored document text with `DOCUMENT_*` read budgets (`readToolDocument`)                                                    |
+| `get_document`              | DB peer                                  | `redis` (scoped)              | Reads stored document text with `DOCUMENT_*` read budgets (`readToolDocument`)                                                    |
 | `pdf_creator`               | `pdf-lib`, `@pdf-lib/fontkit`, `ioredis` | Redis required                | Generates PDFs and stores download bytes under `fileKey` (`AGENT_GENERATED_FILE_TTL`)                                             |
 | `create_styled_spreadsheet` | `exceljs`, `ioredis`                     | Redis required                | Generates styled `.xlsx` workbooks and stores download bytes under `fileKey`                                                      |
 
@@ -143,7 +143,7 @@ try {
 
 ## Standalone Tool Loop (`executeToolLoop`)
 
-Use `executeToolLoop()` directly for zero-DB CLI tools or custom provider pipelines (`buildToolRegistry` takes `(ctx, specs)`):
+Use `executeToolLoop()` directly for zero-DB CLI tools or custom provider pipelines (`buildToolRegistry` takes `(ctx, specs)`). When `emit` is omitted in `stream: true` mode, the returned `AsyncGenerator` yields all tool-round and synthesis events; passing `emit` (as shown below or with `createEventSink().push`) routes tool-round events through `emit` without double-delivering them:
 
 ```ts
 import OpenAI from "openai";
@@ -151,6 +151,7 @@ import {
   buildToolRegistry,
   executeToolLoop,
   resolveCommonTools,
+  type AgentEvent,
 } from "@riavzon/ai";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -158,6 +159,12 @@ const registry = buildToolRegistry(
   { userId: "cli_user", meta: { tenantId: "acme" } },
   [...resolveCommonTools(["calculator"]), inventoryTool],
 );
+
+const onEvent = (event: AgentEvent) => {
+  if (event.type === "chunk") process.stdout.write(event.text);
+  if (event.type === "error")
+    process.stderr.write(`\n[error] ${event.message}\n`);
+};
 
 for await (const event of executeToolLoop({
   client,
@@ -174,8 +181,9 @@ for await (const event of executeToolLoop({
   tools: { temperature: 0.1, maxTokens: 2048, maxRounds: 5, maxCalls: 15 },
   thinkingEffort: "low",
   stream: true,
+  emit: onEvent,
   signal: AbortSignal.timeout(30_000),
 })) {
-  if (event.type === "chunk") process.stdout.write(event.text);
+  onEvent(event);
 }
 ```

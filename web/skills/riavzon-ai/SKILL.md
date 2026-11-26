@@ -46,12 +46,13 @@ await configuration({
     dimensions: 1536,
     matchingModel: "text-embedding-3-small",
     retrievalModel: "text-embedding-3-small",
+    // client: new OpenAI({ ... }) // optional separate provider/endpoint for embeddings
   },
-  cache: "memory", // default "memory" (MiniCache); pass an ioredis instance for multi-replica
+  redis: "memory", // default "memory" (MiniCache); pass an ioredis instance for multi-replica
 });
 ```
 
-- `openAiConfig` accepts either a single `OpenAI` instance or `{ reasoning, general, embeddings, router? }` to route different stages to separate providers/keys.
+- `openAiConfig` accepts any OpenAI-compatible `OpenAI` client (OpenAI, OpenRouter, LiteLLM, vLLM, or Ollama). Pass `embeddingConfig.client` to route embeddings to a different provider or local model.
 - Migrations run automatically during `configuration()`, creating `conversations`, `messages`, `documents`, `document_chunks`, and `runs` (plus `sqlite-vec` virtual tables or `pgvector` HNSW indexes).
 
 ## 2. Create and Run Agents (`createAgent`)
@@ -120,8 +121,8 @@ export const supportAgent = await createAgent<{ tenantId: string }>({
 
 ### Execute Turns (`agent.chat` vs. `agent.complete`)
 
-- **Streaming (`agent.chat(input)`):** Accepts `ChatInput<TMeta>` (`{ message, userId?, conversationId?, runId?, files?, history?, signal?, model?, meta?, user? }`) and returns `{ frames: AsyncIterable<SseFrame>, done: Promise<ChatTurnResult> }`. Catches runtime errors, emits an `{ type: "error", message }` frame, and resolves `done` with `result.error`.
-- **Buffered (`agent.complete(input)`):** Returns `Promise<ChatTurnResult>` directly.
+- **Streaming (`await agent.chat(input)`):** Async method accepting `ChatInput<TMeta>` (`{ message, userId?, conversationId?, runId?, files?, history?, signal?, model?, meta?, user? }`) and resolving to `ChatStream` (`{ frames: AsyncIterable<SseFrame>, done: Promise<ChatTurnResult> }`). Catches runtime errors, emits an `{ type: "error", message }` frame, and resolves `done` with `result.error`.
+- **Buffered (`await agent.complete(input)`):** Returns `Promise<ChatTurnResult>` directly.
 - **Validated JSON (`json: { validate: true, schema }`):** Uses `llmSchemaParser` with automatic repair retries (default `maxRetries: 2`), populating `result.structured`. Unlike streaming text turns, validation failure marks any active run `failed`/`aborted` and **rethrows**.
 - **Stateless mode:** Omit `conversation` (or set `persist: false`) and pass `history: HistoryMessage[]` per turn.
 - **Semantic cache behavior:**
@@ -132,21 +133,23 @@ export const supportAgent = await createAgent<{ tenantId: string }>({
 
 | Use Case                                                                       | Helper                                                                 |
 | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| Turn `agent.chat()` frames into a Web `ReadableStream`                         | `framesToStream(frames, { signal, heartbeatMs })`                      |
-| Instant canned reply without calling an LLM                                    | `staticReplyStream(text)`                                              |
+| Turn `await agent.chat()` frames into a Web `ReadableStream`                   | `framesToStream(frames, { heartbeatMs, onCancel })`                    |
+| Instant canned reply without calling an LLM                                    | `staticReplyStream(conversationId, text)`                              |
 | Build a custom chat pipeline without `createAgent()`                           | `runAgentStream(options)`                                              |
-| Stream a non-durable workflow or background job                                | `workflowStream(fn, options)`                                          |
+| Stream a non-durable workflow or background job                                | `workflowStream({ execute, onError?, heartbeatMs? })`                  |
 | Stream a durable, reattachable run (see `riavzon-ai-workflows-and-runs` skill) | `streamFromRun()`, `streamFromStore()`, `workflowStreamWithRegistry()` |
 
-Always pair streams with `SSE_HEADERS` (`text/event-stream`, `no-cache`, `X-Accel-Buffering: no`).
+Always pair streams with `setSseHeaders()` (`text/event-stream`, `no-cache`, `X-Accel-Buffering: no`).
 
 ## Common Pitfalls & Subtle Behaviors
 
+- **`agent.chat()` is async:** Always `const { frames, done } = await agent.chat(...)` and iterate `frames` (never `turn.stream`).
+- **`executeToolLoop({ stream: true })` and `emit`:** When `emit` is omitted, the returned `AsyncGenerator` yields all tool-round and synthesis events automatically. When `emit` is provided (for example `emit: (e) => sink.push(e)` with `runAgentStream()`), tool-round events go to `emit` and only fallback synthesis/error events yield from the generator (no duplicates).
 - **`init` frame vs. `runId`:** `agent.chat()` emits `{ type: "init", conversationId }` without `runId`. Clients obtain `runId` from caller-minted `input.runId`, `ChatTurnResult.runId`, or `streamFromRun({ runId })`.
 - **`AgentConfig.embedding`:** Declared on `AgentConfig`, but `agent.ts` currently reads global `embeddingConfig` from `configuration()`.
 - **`runs` toggle:** Providing `runs` on `createAgent()` always registers a `RunHandle` in process memory.
-- **Generated file tools (`pdf_creator`, `create_styled_spreadsheet`):** Require Redis (`ioredis`) in `configuration({ cache })` to store download bytes under `fileKey`, served via `readGeneratedFile(fileKey)`.
-- **Tenant scoping in RAG:** Pass `userId` (and optionally `projectId` / `allowedDocumentIds`) into tool context / retrieval helpers so vector searches never cross tenant boundaries.
+- **Generated file tools (`pdf_creator`, `create_styled_spreadsheet`):** Require Redis (`ioredis`) in `configuration({ redis })` to store download bytes under `fileKey`, served via `readGeneratedFile(fileKey)`.
+- **Tenant scoping in RAG:** Pass `userId` into chat inputs, tool contexts, and retrieval helpers (`searchDbDocs`, `fetchRelevantChunks`, `readToolDocument`) so vector searches and document reads stay scoped to one owner.
 
 ## Deep References (Load On Demand)
 

@@ -17,7 +17,9 @@ async function copyInstall() {
   }
 }
 
-onBeforeUnmount(() => { clearTimeout(resetTimer); });
+onBeforeUnmount(() => {
+  clearTimeout(resetTimer);
+});
 </script>
 
 <template>

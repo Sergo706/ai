@@ -23,6 +23,9 @@ For single-agent chat, tools, MCP, RAG ingestion, and basic SSE setup, pair this
 Every process hosting durable runs must execute this exact order at startup and clean up on shutdown:
 
 ```ts
+import OpenAI from "openai";
+import { Pool } from "pg";
+import Redis from "ioredis";
 import {
   configuration,
   registerRunResumer,
@@ -32,9 +35,14 @@ import {
 
 // 1. Initialize @riavzon/ai with DB + Redis (Redis required for cross-replica replay)
 await configuration({
-  db: { dialect: "pg", connectionString: process.env.DATABASE_URL! },
-  cache: { driver: "redis", url: process.env.REDIS_URL! },
-  llm: { apiKey: process.env.OPENAI_API_KEY! },
+  openAiConfig: new OpenAI({ apiKey: process.env.OPENAI_API_KEY! }),
+  embeddingConfig: {
+    dimensions: 1536,
+    matchingModel: "text-embedding-3-small",
+    retrievalModel: "text-embedding-3-small",
+  },
+  db: new Pool({ connectionString: process.env.DATABASE_URL! }),
+  redis: new Redis(process.env.REDIS_URL!),
 });
 
 // 2. Register resumers BEFORE calling startRuns()
@@ -47,8 +55,8 @@ registerRunResumer({
         kind: "workflow",
         name: "market-research",
         query: row.query,
-        userId: row.userId ?? undefined,
-        conversationId: row.conversationId ?? undefined,
+        userId: row.user_id ?? undefined,
+        conversationId: row.conversation_id ?? undefined,
         resumeRunId: row.id,
       },
       async (ctx) => executeMarketResearch(row.query, ctx),
@@ -87,7 +95,7 @@ process.on("SIGTERM", () => {
 
 Enable `runs` on `createAgent()` to detach chat turns from individual HTTP sockets:
 
-- Setting `runs` **always** registers a `RunHandle` in process memory (`RunRegistry`), creates a `runs` row, appends events to the Redis Stream `eventStore`, and schedules disposal after completion.
+- Setting `runs` **always** registers a `RunHandle` in the in-process run registry (`registerRun` / `getRun`), creates a `runs` row, appends events to the Redis Streams event store (`appendEvent`), and schedules disposal after completion.
 - **Run-backed semantic cache hits:** When `semanticCache` hits on a run-enabled agent, `@riavzon/ai` still creates a finished `runs` row, publishes `{ type: "chunk", text }` + `{ type: "done" }` into `RunHandle`, and schedules disposal (skipping lease heartbeats since it settles immediately). Clients receive both instant cached responses and a replayable `runId`.
 - **Same-replica vs. cross-replica streaming:** Check `getRun(runId)` first; if present in local memory, serve `streamFromRun({ run, since, conversationId, runId, log })`. Otherwise serve `streamFromStore({ runId, since, conversationId, log, isRunAlive })`.
 - **Cross-replica cancellation:** Call `requestAbort(runId)` (DB lease flag). The owning replica's lease heartbeat detects `"aborted"` and aborts `ctx.leaseSignal` / `run.controller`.
@@ -97,7 +105,7 @@ Enable `runs` on `createAgent()` to detach chat turns from individual HTTP socke
 1. **Always register resumers before `startRuns()`:** Unregistered `(kind, name)` pairs are intentionally skipped by the recovery sweep rather than routed to the wrong runner.
 2. **Keep `RunResumer.name` exact:** Generic `"workflow"` runs match `runs.input.name`; single-runner kinds omit `name`.
 3. **Never let `onCancel` abort a detached run:** In `framesToStream()` / SSE routes for detached runs, omit `onCancel` so a browser refresh or mobile sleep detaches the socket while the run keeps running. Use an explicit `POST /runs/:id/abort` endpoint calling `requestAbort(runId)` instead.
-4. **Emit checkpoints cleanly:** `WorkflowCheckpoint` holds `completedStages`, `localSearches`, `externalRounds`, and opaque `state`. Persist via `ctx.saveCheckpoint(snapshot)` inside `onCheckpoint` and restore via `resumeFrom: await ctx.loadCheckpoint()`.
+4. **Wrap checkpoints in the `checkpoint()` envelope:** `AgenticWorkflowLoop`'s `onCheckpoint` emits a `WorkflowCheckpoint` (`completedStages`, `localSearches`, `externalRounds`, `state`). Wrap it with `checkpoint({ phase: snapshot.completedStages.at(-1) ?? "seeds", state: snapshot, roundsDone: snapshot.externalRounds })` before calling `ctx.saveCheckpoint(...)`, and restore via `parseCheckpoint<WorkflowCheckpoint, WorkflowStage>(await ctx.loadCheckpoint(), { version: 1, phases: ["seeds", "local", "external", "critic", "final"] })?.state`.
 5. **Tune `RUNS_*` env vars consistently across replicas:** Ensure lease TTL (`RUNS_LEASE_TTL_MS`) is comfortably larger than `RUNS_HEARTBEAT_INTERVAL_MS` (for example 30s lease, 5s heartbeat) so healthy replicas never lose ownership under GC pauses.
 
 ## Reference Guides

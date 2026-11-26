@@ -4,20 +4,27 @@
 
 A durable run has three cooperating layers:
 
-1. **Database `runs` & `run_checkpoints` tables:** Durable status (`running | finished | aborted | failed | interrupted`), lease owner (`INSTANCE_ID`), `leaseExpiresAt`, `abortRequestedAt`, `input`, `partial` (`RunPartial`), and latest `WorkflowCheckpoint`.
-2. **In-process `RunRegistry` (`RunHandle`):** Fast local subscriber fan-out, buffered event log, `AbortController`, and timed post-completion disposal (`scheduleDisposal`).
-3. **Redis Streams `eventStore` (`appendEvent`, `readEvents`, `tailRun`):** Cross-replica ordered event log keyed by `runId` with stream IDs (`FIRST_ID = "0-0"`), enabling clients to reconnect via `Last-Event-ID` even when routed to a different replica.
+1. **Database `runs` table:** Durable `status` (`running | finished | aborted | failed | interrupted`), lease columns (`owner` using `INSTANCE_ID`, `claimed_at`), `attempts`, `input`, `partial` (`RunPartial`), and latest `checkpoint` (`Checkpoint<TState, TPhase>` JSON column).
+2. **In-process run registry (`registerRun`, `getRun`, `publish`, `RunHandle`):** Fast local subscriber fan-out, buffered event log, `AbortController`, and timed post-completion disposal (`scheduleDisposal`).
+3. **Redis Streams event store (`appendEvent`, `readPage`, `tailRun`, `waitForNext`):** Cross-replica ordered event log keyed by `runId` with stream IDs (`FIRST_ID = "0-0"`), enabling clients to reconnect via `Last-Event-ID` even when routed to a different replica.
 
 ## Connecting a Detached Workflow to SSE (`workflowStreamWithRegistry`)
 
-Combine `workflowStreamWithRegistry()` with `runWorkflow()` so the initial HTTP request streams live events while keeping the run registered, replayable, and decoupled from socket disconnects:
+Combine `workflowStreamWithRegistry()`, `runProgressFrames()`, and `runWorkflow()` so the initial HTTP request streams live events while keeping the run registered, replayable, and decoupled from socket disconnects:
 
 ```ts
 import {
   workflowStreamWithRegistry,
+  runProgressFrames,
   runWorkflow,
-  SSE_HEADERS,
+  setSseHeaders,
 } from "@riavzon/ai";
+
+declare module "@riavzon/ai" {
+  interface WorkflowNameRegistry {
+    "market-research": true;
+  }
+}
 
 export async function POST(req: Request) {
   const { query, userId } = await req.json();
@@ -30,6 +37,11 @@ export async function POST(req: Request) {
     heartbeatMs: 15_000,
     onError: (err) => logger.error({ err, runId }, "Workflow failed"),
     execute: async ({ emit, signal }) => {
+      const progress = runProgressFrames(emit, {
+        query,
+        workflow: "market-research",
+      });
+
       const payload = await runWorkflow<FinalReport, { urls: string[] }>(
         {
           kind: "workflow",
@@ -38,20 +50,8 @@ export async function POST(req: Request) {
           query,
           userId,
           signal,
-          onProgress: (ev) =>
-            emit({
-              type: "workflow_progress",
-              runId,
-              workflow: ev.workflow,
-              stage: ev.stage,
-              label: ev.label,
-              addedEvidence: ev.addedEvidence,
-              round: ev.round,
-              intent: ev.intent,
-              custom: ev.custom,
-              callIndex: 0,
-              callTotal: 0,
-            }),
+          onRunStarted: progress.onRunStarted,
+          onProgress: progress.onProgress,
         },
         async (ctx) => {
           const result = await executeMarketResearch(query, ctx);
@@ -61,26 +61,28 @@ export async function POST(req: Request) {
             source: result.source,
             isSufficient: result.isSufficient,
             missingIntents: result.missingIntents,
-            meta: { urls: result.externalArtifacts.map((a) => a.url) },
+            meta: {
+              urls: result.externalArtifacts.map((a: { url: string }) => a.url),
+            },
           };
         },
         logger,
       );
 
-      // Return the final SseFrame pushed to both the response and RunRegistry
+      // Return the final SseFrame pushed to both the response and the in-process run registry
       return { type: "chunk", text: JSON.stringify(payload) };
     },
   });
 
   return new Response(stream, {
-    headers: { ...SSE_HEADERS, "X-Run-Id": runId },
+    headers: { ...setSseHeaders(), "X-Run-Id": runId },
   });
 }
 ```
 
 ## Reattach Route (`GET /api/runs/:id/stream`)
 
-Handle both **same-replica** (in-memory `RunRegistry`) and **cross-replica** (Redis Streams `eventStore`) seamlessly using `Last-Event-ID` (defaulting to `FIRST_ID`):
+Handle both **same-replica** (in-process run registry via `getRun` / `streamFromRun`) and **cross-replica** (Redis Streams event store via `streamFromStore`) seamlessly using `Last-Event-ID` (defaulting to `FIRST_ID`):
 
 ```ts
 import {
@@ -89,7 +91,7 @@ import {
   streamFromRun,
   streamFromStore,
   FIRST_ID,
-  SSE_HEADERS,
+  setSseHeaders,
 } from "@riavzon/ai";
 
 export async function GET(
@@ -113,7 +115,7 @@ export async function GET(
       log: logger,
       heartbeatMs: 10_000,
     });
-    return new Response(stream, { headers: SSE_HEADERS });
+    return new Response(stream, { headers: setSseHeaders() });
   }
 
   // Cross-replica or completed-run replay path via Redis Streams
@@ -123,7 +125,7 @@ export async function GET(
   const stream = streamFromStore({
     runId,
     since,
-    conversationId: row.conversationId ?? undefined,
+    conversationId: row.conversation_id ?? undefined,
     log: logger,
     heartbeatMs: 10_000,
     isRunAlive: async () => {
@@ -132,7 +134,7 @@ export async function GET(
     },
   });
 
-  return new Response(stream, { headers: SSE_HEADERS });
+  return new Response(stream, { headers: setSseHeaders() });
 }
 ```
 
@@ -168,7 +170,7 @@ When a replica dies mid-run, its lease expires after `RUNS_LEASE_TTL_MS`. Any su
 | `RUNS_MAX_ADOPT_PER_SWEEP`   | Maximum stale runs adopted per recovery sweep tick                                            |
 | `RUNS_MAX_RESUME_ATTEMPTS`   | Maximum crash-recovery resume attempts before permanently failing a run                       |
 | `RUNS_UNCLAIMED_GRACE_MS`    | Grace window before an unclaimed `running` row is considered stale                            |
-| `RUNS_RETAIN_FINISHED_MS`    | How long completed `RunHandle`s remain cached in `RunRegistry` before disposal                |
+| `RUNS_RETAIN_FINISHED_MS`    | How long completed `RunHandle`s remain cached in the in-process run registry before disposal  |
 | `RUNS_STREAM_TTL_SECONDS`    | Redis Streams TTL for stored run events                                                       |
 | `RUNS_STREAM_MAX_LEN`        | Maximum event cap trimmed per Redis Stream                                                    |
 | `RUNS_STREAM_BLOCK_MS`       | Redis `XREAD` block timeout for live `tailRun` readers                                        |

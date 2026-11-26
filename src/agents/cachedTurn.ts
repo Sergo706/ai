@@ -1,7 +1,7 @@
 import { tryCachedReply } from "../chat/semanticCacheReply";
-import { generateMatchingEmbedding } from "../rag/embedding";
 import type { Logger } from "../config/configSchema";
 import { createRun, updateRun } from "../models/runs";
+import { generateMatchingEmbedding } from "../rag";
 import { publish, scheduleDisposal } from "../runs/runRegistry";
 import type { RunHandle } from "../runs/types";
 import type { SseFrame } from "../types/Chat";
@@ -25,6 +25,7 @@ export async function cachedTurn<TStructured>(args: {
   userId?: string;
   hasFiles: boolean;
   message: string;
+  embedding?: number[];
   log: Logger;
   run?: RunHandle;
   runName?: string;
@@ -42,7 +43,9 @@ export async function cachedTurn<TStructured>(args: {
   if (options === undefined || conversationId === undefined) return null;
   if (hasFiles) return null;
 
-  const embedding = await generateMatchingEmbedding(message);
+  const embedding =
+    args.embedding ?? (await generateMatchingEmbedding(message));
+
   const cached = await tryCachedReply(
     [...(options.poisonTools ?? [])],
     {

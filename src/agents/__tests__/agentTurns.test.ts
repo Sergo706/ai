@@ -555,6 +555,96 @@ describe("runStreamTurn", () => {
           "reached my internal processing limit",
         ),
       });
+      expect(finish).toHaveBeenCalledWith("failed", {
+        error: expect.stringContaining("reached my internal processing limit"),
+      });
+    } finally {
+      await env.cleanup();
+    }
+  });
+
+  it("streams chunks and tool events when availableTools is non-empty", async () => {
+    const env = await boot();
+    try {
+      const fake = streamFake([]);
+
+      fake.client.chat.completions.create
+        .mockResolvedValueOnce(
+          (async function* () {
+            yield {
+              choices: [
+                {
+                  index: 0,
+                  delta: {
+                    tool_calls: [
+                      {
+                        index: 0,
+                        id: "call_1",
+                        type: "function",
+                        function: { name: "probe", arguments: '{"x":1}' },
+                      },
+                    ],
+                  },
+                  finish_reason: "tool_calls",
+                },
+              ],
+            };
+          })(),
+        )
+        .mockResolvedValueOnce(
+          (async function* () {
+            yield {
+              choices: [
+                {
+                  index: 0,
+                  delta: { content: "Result: 42" },
+                  finish_reason: "stop",
+                },
+              ],
+            };
+          })(),
+        );
+
+      const emitted: unknown[] = [];
+      const trace = new env.TraceCollector();
+      const finish = vi.fn(() => Promise.resolve({} as never));
+
+      const seen = await drain(
+        env.streamTurn.runStreamTurn({
+          loopOptions: loopOptions(fake as never, {
+            availableTools: [
+              {
+                type: "function",
+                function: {
+                  name: "probe",
+                  description: "",
+                  parameters: {
+                    type: "object",
+                    properties: { x: { type: "number" } },
+                  },
+                },
+              },
+            ],
+            handlers: { probe: () => ({ ok: true }) },
+            emit: (event: unknown) => emitted.push(event),
+          }),
+          trace,
+          finish,
+          conversationId: 1,
+          stopHeartbeat: undefined,
+          eager: false,
+        }),
+      );
+
+      expect(seen).toContainEqual(
+        expect.objectContaining({ type: "tool_start", name: "probe" }),
+      );
+      expect(seen).toContainEqual(
+        expect.objectContaining({ type: "tool_end", name: "probe", ok: true }),
+      );
+      expect(seen).toContainEqual({ type: "chunk", text: "Result: 42" });
+      expect(trace.fullResponse).toBe("Result: 42");
+      expect(emitted).toContainEqual({ type: "chunk", text: "Result: 42" });
       expect(finish).toHaveBeenCalledWith("finished", {});
     } finally {
       await env.cleanup();

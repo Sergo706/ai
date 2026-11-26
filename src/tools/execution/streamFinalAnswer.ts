@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import type {
   AgentEvent,
   ToolLoopOptions,
@@ -17,7 +18,57 @@ export async function* streamFinalAnswer(
   options: ToolLoopOptions,
 ): AsyncGenerator<AgentEvent> {
   try {
-    const { answerStreamed, finalRequest } = await runToolRounds(options);
+    let roundResult!: Awaited<ReturnType<typeof runToolRounds>>;
+
+    if (options.emit === undefined) {
+      const buffer: AgentEvent[] = [];
+      let notify: (() => void) | undefined;
+      let done = false;
+      let roundError: unknown;
+
+      const push = (event: AgentEvent) => {
+        buffer.push(event);
+        const wake = notify;
+        notify = undefined;
+        wake?.();
+      };
+
+      const roundsPromise = runToolRounds({ ...options, emit: push })
+        .then((res) => {
+          roundResult = res;
+        })
+        .catch((err: unknown) => {
+          roundError = err;
+        })
+        .finally(() => {
+          done = true;
+          const wake = notify;
+          notify = undefined;
+          wake?.();
+        });
+
+      while (!done || buffer.length > 0) {
+        if (buffer.length > 0) {
+          const next = buffer.shift();
+          if (next !== undefined) yield next;
+        } else {
+          await new Promise<void>((resolve) => {
+            notify = resolve;
+          });
+        }
+      }
+
+      await roundsPromise;
+      if (roundError !== undefined) {
+        throw roundError instanceof Error
+          ? roundError
+          : new Error(serializeUnknownError(roundError));
+      }
+    } else {
+      roundResult = await runToolRounds(options);
+    }
+
+    const { answerStreamed, finalRequest } = roundResult;
 
     if (answerStreamed) return;
 
@@ -72,7 +123,25 @@ export async function* streamFinalAnswer(
     yield {
       type: "error",
       message:
-        "I have gathered some information, but reached my internal processing limit before I could finish analyzing it. Please try asking a more specific question, And i will be happy to help.",
+        "I have gathered some information, but reached my internal processing limit before I could finish analyzing it. Please try asking a more specific question, and i will be happy to help.",
     };
+  }
+}
+
+function serializeUnknownError(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value === null) return "null";
+  if (value === undefined) return "undefined";
+  if (
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value) ?? "[unserializable error]";
+  } catch {
+    return "[unserializable error]";
   }
 }

@@ -15,28 +15,33 @@ seo:
 ```text [Pipeline Overview]
 Raw Markdown / Files
   │
-  ├─► prepareScrape()               Token-aware chunking + retrieval embeddings
+  ├─► prepareScrape()               Token-aware chunking + retrievalModel embeddings
   │     └─► saveUploadedScrappedFile()  SHA-256 content-hash dedupe + batch SQL insert
   │
-  └─► User Query
-        └─► generateMatchingEmbedding()  Asymmetric query vector
-              ├─► fetchRelevantChunks()  Top-K cosine distance query (SQL)
-              ├─► searchDbDocs()         High-level Zod-validated search wrapper
-              └─► filterAdaptiveChunks() Coverage + near-duplicate filtering for live scrapes
+  ├─► Document Search
+  │     ├─► searchDbDocs()          Zod-validated search (embeds query with retrievalModel)
+  │     └─► fetchRelevantChunks()   Top-K cosine distance query (SQL)
+  │
+  └─► Matching & Deduplication
+        └─► generateMatchingEmbedding()  matchingModel vectors
+              ├─► filterAdaptiveChunks() Coverage + near-duplicate filtering for live scrapes
+              └─► tryCachedReply()       Semantic cache lookup against persisted user messages
 ```
 
-## Two-model asymmetric embedding support
+## Two-model embedding support
 
-Many modern embedding families (such as Nomic, BGE, Cohere, and Voyage) distinguish between document embeddings and query embeddings. Configure `embeddingConfig` once in `configuration()`:
+Many modern embedding families (such as Jina v5, Nomic, BGE, Cohere, and Voyage) separate retrieval embeddings from text-matching/similarity embeddings. Configure `embeddingConfig` once in `configuration()`:
 
 ```ts [src/ai-config.ts]
+import OpenAI from "openai";
 import { configuration } from "@riavzon/ai";
 
 await configuration({
-  // ...db & openAiConfig
+  openAiConfig: new OpenAI({ apiKey: process.env.OPENAI_API_KEY! }),
+  db: "./app.sqlite",
   embeddingConfig: {
-    retrievalModel: "text-embedding-3-small", // Used when embedding document chunks
-    matchingModel: "text-embedding-3-small", // Used when embedding queries & dedupe vectors
+    retrievalModel: "text-embedding-3-small", // Used by generateEmbedding() (prepareScrape, searchDbDocs)
+    matchingModel: "text-embedding-3-small", // Used by generateMatchingEmbedding() (filterAdaptiveChunks, semantic cache, user messages)
     dimensions: 1536, // Verified at runtime on every call
   },
 });

@@ -39,11 +39,21 @@ Worker Crash ──► Replica B Recovery Sweep
 Register your custom workflow resumers first, then call `startRuns()` **once per process** after `configuration()` completes. (Chat runs are intentionally never auto-resumed — see [Leases, Recovery & Retries](/runs/leases-and-recovery).)
 
 ```ts [src/boot.ts]
+import OpenAI from "openai";
+import { Pool } from "pg";
+import Redis from "ioredis";
 import { configuration, registerRunResumer, startRuns } from "@riavzon/ai";
 
 // 1. Initialize database, Redis, and AI clients
 await configuration({
-  // ...db, redis, openAiConfig, embeddingConfig
+  openAiConfig: new OpenAI({ apiKey: process.env.OPENAI_API_KEY! }),
+  embeddingConfig: {
+    retrievalModel: "text-embedding-3-small",
+    matchingModel: "text-embedding-3-small",
+    dimensions: 1536,
+  },
+  db: new Pool({ connectionString: process.env.DATABASE_URL! }),
+  redis: new Redis(process.env.REDIS_URL!),
 });
 
 // 2. Register all custom workflow resumers before starting recovery
@@ -103,7 +113,7 @@ title: Event Store & Reattachment
 to: /runs/event-store-and-reattach
 ---
 
-Use Redis Streams (`appendEvent`, `tailRun`, `streamFromStore`) and the in-process `RunRegistry` (`streamFromRun`, `workflowStreamWithRegistry`) for seamless SSE reconnection.
+Use Redis Streams (`appendEvent`, `tailRun`, `streamFromStore`) and the in-process run registry (`registerRun`, `streamFromRun`, `workflowStreamWithRegistry`) for seamless SSE reconnection.
 :::
 
 :::card

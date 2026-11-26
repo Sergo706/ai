@@ -2,7 +2,7 @@
 
 ## `SseFrame` / `SseEvent` Wire Protocol
 
-Every SSE event is encoded with `encodeSseFrame(frame)` and sent with `SSE_HEADERS`.
+Every SSE event is encoded with `frame(payload, id?)` + `encode(text)` and sent with `setSseHeaders()`.
 
 | Event `type`                           | Emitted When                                         | Key Fields                                                                                                                       |
 | -------------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
@@ -11,7 +11,7 @@ Every SSE event is encoded with `encodeSseFrame(frame)` and sent with `SSE_HEADE
 | `tool_start`                           | Tool invocation begins                               | `id`, `name`, `args?` (governed by `ToolStreamPolicy.emitArgs`), `callIndex`, `callTotal`                                        |
 | `tool_end`                             | Tool invocation finishes                             | `id`, `name`, `ok`, `durationMs`, `preview` (governed by `ToolStreamPolicy.emitResult`)                                          |
 | `chunk`                                | Assistant answer token arrives                       | `text`                                                                                                                           |
-| `workflow_start` / `workflow_progress` | `AgenticWorkflowLoop` or `workflowStream()` progress | `workflow`, `stage`, `label?`, `round?`, `intent?`, `custom?`                                                                    |
+| `workflow_start` / `workflow_progress` | `AgenticWorkflowLoop` or `workflowStream()` progress | `workflow`, `label?`, `addedEvidence`, `round?`, `intent?`, `custom?`                                                            |
 | `agent_progress`                       | Custom `ctx.emit(...)` sub-progress inside tools     | `agent`, `state` (`"running" \| "done" \| "failed"`)                                                                             |
 | `error`                                | Recoverable/terminal turn error                      | `message`                                                                                                                        |
 | `done`                                 | Stream closes cleanly                                | Terminal frame                                                                                                                   |
@@ -19,14 +19,14 @@ Every SSE event is encoded with `encodeSseFrame(frame)` and sent with `SSE_HEADE
 ## Web Standard HTTP Adapter (Next.js / Hono / Nitro / Bun)
 
 ```ts
-import { framesToStream, SSE_HEADERS } from "@riavzon/ai";
+import { framesToStream, setSseHeaders } from "@riavzon/ai";
 import { supportAgent } from "./agent";
 
 export async function POST(req: Request) {
   const { message, conversationId, userId, tenantId } = await req.json();
 
   const controller = new AbortController();
-  const { frames } = supportAgent.chat({
+  const { frames } = await supportAgent.chat({
     message,
     conversationId,
     userId,
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     onCancel: () => controller.abort(),
   });
 
-  return new Response(stream, { headers: SSE_HEADERS });
+  return new Response(stream, { headers: setSseHeaders() });
 }
 ```
 
@@ -50,7 +50,7 @@ Use `createRequestAbort({ onDisconnect })` so client disconnects cleanly abort n
 ```ts
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
-import { createRequestAbort, framesToStream, SSE_HEADERS } from "@riavzon/ai";
+import { createRequestAbort, framesToStream, setSseHeaders } from "@riavzon/ai";
 import { supportAgent } from "./agent";
 
 export async function handleChat(
@@ -67,14 +67,14 @@ export async function handleChat(
     },
   });
 
-  const { frames, done } = supportAgent.chat({
+  const { frames, done } = await supportAgent.chat({
     message: body.message,
     userId: body.userId,
     meta: { tenantId: body.tenantId },
     signal: abort.signal,
   });
 
-  res.writeHead(200, SSE_HEADERS);
+  res.writeHead(200, setSseHeaders());
   const webStream = framesToStream(frames, {
     heartbeatMs: 15_000,
     onCancel: () => abort.abort(),

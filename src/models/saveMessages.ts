@@ -7,7 +7,7 @@ import { toJson, toVec } from "../db/utils";
  *
  * @param conversationId - Conversation the message belongs to.
  * @param content - The message text.
- * @param embedding - Vector from `generateEmbedding`.
+ * @param embedding - Vector from `generateMatchingEmbedding`.
  */
 export async function saveUserMessage(
   conversationId: number,

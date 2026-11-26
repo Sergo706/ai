@@ -43,7 +43,31 @@ export async function checkChatSemanticCache(
     .select(similarityScore.as("similarity"))
     .where("m.role", "=", "user")
     .where("m.embedding", "is not", null)
-    .where(withinWindow);
+    .where(withinWindow)
+    .where((eb) =>
+      eb.exists(
+        eb
+          .selectFrom("messages as a")
+          .select("a.id")
+          .whereRef("a.conversation_id", "=", "m.conversation_id")
+          .where("a.role", "=", "assistant")
+          .whereRef("a.id", ">", "m.id")
+          .where("a.content", "!=", "")
+          .where((eb2) =>
+            eb2.not(
+              eb2.exists(
+                eb2
+                  .selectFrom("messages as u")
+                  .select("u.id")
+                  .whereRef("u.conversation_id", "=", "m.conversation_id")
+                  .where("u.role", "=", "user")
+                  .whereRef("u.id", ">", "m.id")
+                  .whereRef("u.id", "<", "a.id"),
+              ),
+            ),
+          ),
+      ),
+    );
 
   const matchedUserMsg = await (
     userId !== undefined

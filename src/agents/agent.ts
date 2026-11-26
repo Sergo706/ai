@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { generateEmbedding } from "../rag/embedding";
+import { generateMatchingEmbedding } from "../rag/embedding";
 import { parseFiles } from "../chat/attachments";
 import { resolveConversation } from "../chat/conversation";
 import { TraceCollector } from "../chat/traceCollector";
@@ -111,20 +111,25 @@ export async function buildAgent<TMeta = unknown>(
         })
       : undefined;
 
+    const embedding =
+      conversationId !== undefined
+        ? await generateMatchingEmbedding(input.message)
+        : undefined;
+
     const cacheHit = await cachedTurn<Output<S>>({
       options: config.semanticCache,
       conversationId,
       userId: input.userId,
       hasFiles: attachments.hasFiles,
       message: attachments.message,
+      embedding,
       log,
       run,
       runName: config.runs?.name,
     });
     if (cacheHit !== null) return cacheHit;
 
-    if (conversationId !== undefined) {
-      const embedding = await generateEmbedding(input.message);
+    if (conversationId !== undefined && embedding !== undefined) {
       await saveUserMessage(conversationId, attachments.message, embedding);
     }
 

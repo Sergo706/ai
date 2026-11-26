@@ -64,6 +64,12 @@ export default defineNuxtConfig({
             href: "/getting-started/installation",
           },
           {
+            title: "AI & LLM Integrations",
+            description:
+              "Connect coding assistants and autonomous agents to @riavzon/ai docs via downloadable Agent Skills (`/.well-known/skills/`), the live MCP server (`/mcp`), `llms.txt`, `llms-full.txt`, raw Markdown (`/raw/*.md`), and `/openapi.json`.",
+            href: "/getting-started/ai-integrations",
+          },
+          {
             title: "Agents",
             description:
               "An agent is built once with `createAgent()` and reused. Construction resolves the model, validates the config, connects MCP servers, and assembles the tool registry, so a mistake fails at startup rather than on the first user request. `agent.chat()` returns a stream of typed frames; `agent.complete()` drains the same stream and resolves with the final result.",

@@ -23,8 +23,8 @@ export interface RelevantChunk {
 /**
  * Find the document chunks nearest to a query vector.
  *
- * @param queryVector - Embedding to compare against, e.g. from
- * `generateMatchingEmbedding`.
+ * @param queryVector - Embedding to compare against, from `generateEmbedding`
+ *   (matching `prepareScrape` / `searchDbDocs`).
  * @param limit - Maximum chunks to return.
  * @default limit 10
  * @param offset - Rows to skip, for paging.

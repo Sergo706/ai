@@ -5,6 +5,7 @@ import type { TraceCollector } from "../chat/traceCollector";
 import type { TerminalStatus } from "../runs/types";
 import { FrameQueue } from "./frames";
 import type { ChatStream, ChatTurnResult } from "./types";
+import type { AgentEvent } from "../types/ToolExecutionTypes";
 
 /**
  * The streaming turn, for a caller that consumes frames.
@@ -43,13 +44,23 @@ export function runStreamTurn<TStructured>(args: {
       let status: TerminalStatus = "finished";
       let error: string | undefined;
 
+      const forward = (event: AgentEvent) => {
+        if (event.type === "error") {
+          status = "failed";
+          error ??= event.message;
+        }
+        trace.apply(event);
+        queue.push(event);
+        loopOptions.emit?.(event);
+      };
+
       try {
         for await (const event of executeToolLoop({
           ...loopOptions,
+          emit: forward,
           stream: true,
         })) {
-          trace.apply(event);
-          queue.push(event);
+          forward(event);
         }
       } catch (err) {
         if (err instanceof RequestAbortedError || loopOptions.signal?.aborted) {
@@ -57,10 +68,12 @@ export function runStreamTurn<TStructured>(args: {
         } else {
           status = "failed";
           error = err instanceof Error ? err.message : String(err);
-          queue.push({
+          const errorFrame: AgentEvent = {
             type: "error",
             message: "The agent encountered an error and could not complete.",
-          });
+          };
+          queue.push(errorFrame);
+          loopOptions.emit?.(errorFrame);
         }
       } finally {
         queue.push({ type: "done" });

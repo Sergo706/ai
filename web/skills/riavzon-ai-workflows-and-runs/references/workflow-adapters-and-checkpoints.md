@@ -10,13 +10,24 @@ Only `targetExecutor` and `evaluator` are required; `localKnowledge`, `externalD
 ```ts
 import {
   AgenticWorkflowLoop,
-  llmSchemaParser,
+  checkpoint,
+  parseCheckpoint,
   type AgenticWorkflowConfig,
   type WorkflowBudgets,
+  type WorkflowCheckpoint,
+  type WorkflowStage,
 } from "@riavzon/ai";
 
+const STAGES: readonly WorkflowStage[] = [
+  "seeds",
+  "local",
+  "external",
+  "critic",
+  "final",
+];
+
 const budgets: WorkflowBudgets = {
-  maxLocalSearches: 4,
+  maxLocalRounds: 4,
   localBatchSize: 10,
   maxExternalRounds: 3,
   maxIntentsPerRound: 3,
@@ -28,8 +39,13 @@ const budgets: WorkflowBudgets = {
   maxDiscoveryFailuresPerIntent: 2,
 };
 
+const restored = parseCheckpoint<WorkflowCheckpoint, WorkflowStage>(
+  await ctx.loadCheckpoint(),
+  { version: 1, phases: STAGES },
+);
+
 const config: AgenticWorkflowConfig<
-  LocalChunk,
+  RelevantChunk,
   SearchPayload,
   FetchTarget,
   ExtractedArtifact,
@@ -39,16 +55,23 @@ const config: AgenticWorkflowConfig<
   query: "Compare enterprise pricing for Acme and Globex.",
   budgets,
   seedTargets: initialTargets,
-  localKnowledge,
-  externalDiscovery,
-  targetExecutor,
-  evaluator,
-  critic,
-  finalAnswer,
+  localKnowledge: localKnowledgeAdapter, // optional — defined in section 1 below
+  externalDiscovery: externalDiscoveryAdapter, // optional — defined in section 2 below
+  targetExecutor: targetExecutorAdapter, // required — defined in section 3 below
+  evaluator: evaluatorAdapter, // required — defined in section 4 below
+  critic: criticAdapter, // optional — defined in section 5 below
+  finalAnswer: finalAnswerAdapter, // optional — defined in section 6 below
   signal: ctx.leaseSignal,
   onProgress: (ev) => ctx.emitProgress(ev),
-  onCheckpoint: (snapshot) => ctx.saveCheckpoint(snapshot),
-  resumeFrom: restoredCheckpoint,
+  onCheckpoint: (snapshot) =>
+    ctx.saveCheckpoint(
+      checkpoint({
+        phase: snapshot.completedStages.at(-1) ?? "seeds",
+        state: snapshot,
+        roundsDone: snapshot.externalRounds,
+      }),
+    ),
+  resumeFrom: restored?.state,
 };
 
 const loop = new AgenticWorkflowLoop(config);
@@ -62,12 +85,19 @@ const result = await loop.run();
 Pages already-indexed data before hitting external sources. Omit or set `skipLocal: true` for external-only workflows.
 
 ```ts
-const localKnowledge: LocalKnowledgeAdapter<LocalChunk> = {
+import {
+  fetchRelevantChunks,
+  type LocalKnowledgeAdapter,
+  type RelevantChunk,
+} from "@riavzon/ai";
+
+const localKnowledge: LocalKnowledgeAdapter<RelevantChunk> = {
   fetchBatch: (offset, limit, _state, _ctx) =>
     fetchRelevantChunks(queryVector, limit, offset, 0.3, userId),
   getId: (chunk) => chunk.id,
-  getScore: (chunk) => chunk.score,
-  formatEvidence: (chunk) => `[doc:${chunk.documentId}] ${chunk.content}`,
+  getScore: (chunk) => chunk.similarity,
+  formatEvidence: (chunk) =>
+    `[doc:${String(chunk.documentId)}] ${chunk.chunkText}`,
 };
 ```
 
@@ -159,7 +189,7 @@ const evaluator: EvaluatorAdapter = {
 Reviews gathered evidence before synthesis. Returning `{ approved: false, followUpIntents: [...] }` triggers bounded follow-up rounds.
 
 ```ts
-const critic: CriticAdapter<LocalChunk, ExtractedArtifact> = {
+const critic: CriticAdapter<RelevantChunk, ExtractedArtifact> = {
   review: async (state, ctx) => {
     const verdict = await reviewEvidence(state.evidenceSet, ctx.signal);
     return {
@@ -177,7 +207,7 @@ Synthesizes the final structured or Markdown `report` placed on `WorkflowRunResu
 
 ```ts
 const finalAnswer: FinalAnswerAdapter<
-  LocalChunk,
+  RelevantChunk,
   ExtractedArtifact,
   FinalReport
 > = {
@@ -206,7 +236,7 @@ interface WorkflowCheckpoint {
 
 When resuming via `runWorkflow({ ..., resumeRunId: row.id })`:
 
-1. Call `const checkpoint = await ctx.loadCheckpoint();`.
-2. Pass `resumeFrom: checkpoint ?? undefined` into `AgenticWorkflowConfig`.
-3. Pass `onCheckpoint: (snapshot) => ctx.saveCheckpoint(snapshot)` so future progress persists incrementally.
+1. Call `const raw = await ctx.loadCheckpoint();` and validate the envelope with `parseCheckpoint<WorkflowCheckpoint, WorkflowStage>(raw, { version: 1, phases: ["seeds", "local", "external", "critic", "final"] })`.
+2. Pass `resumeFrom: parsed?.state` into `AgenticWorkflowConfig`.
+3. In `onCheckpoint`, wrap the `WorkflowCheckpoint` in `checkpoint({ phase: snapshot.completedStages.at(-1) ?? "seeds", state: snapshot, roundsDone: snapshot.externalRounds })` before calling `ctx.saveCheckpoint(...)`.
 4. Return `{ data, stopReason, source, isSufficient, missingIntents, meta }` from `runWorkflow`'s `execute` callback.

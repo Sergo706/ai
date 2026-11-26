@@ -831,7 +831,11 @@ describe("buildAgent — option plumbing", () => {
       );
       expect(frames[1]?.message).not.toContain("provider exploded");
       expect(result.text).toBe("");
-      expect(result.error).toBeUndefined();
+      expect(result.error).toBeInstanceOf(Error);
+      expect(result.error?.message).toContain(
+        "reached my internal processing limit",
+      );
+      expect(result.error?.message).not.toContain("provider exploded");
 
       await agent.close();
     } finally {
