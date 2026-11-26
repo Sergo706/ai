@@ -41,8 +41,10 @@ export default defineNuxtConfig({
       },
 
   sitemap: {
+    exclude: ['/sitemap.xml'],
     zeroRuntime: true,
   },
+  telemetry: false,
 
   llms: {
     domain: 'https://ai.riavzon.com',
