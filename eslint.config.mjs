@@ -15,6 +15,9 @@ export default [
       "**/*.mjs",
       "**/*.cjs",
       "**/dist/**",
+      "web/.nuxt/**",
+      "web/.data/**",
+      "web/.node_modules/**",
     ],
   }),
   {

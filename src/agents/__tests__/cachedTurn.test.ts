@@ -246,6 +246,7 @@ describe("cachedTurn", () => {
     const reader = replayStream.getReader();
     const decoder = new TextDecoder();
     let sse = "";
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;

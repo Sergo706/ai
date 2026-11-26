@@ -1,8 +1,8 @@
 import { type Kysely, sql, type CreateTableBuilder } from "kysely";
 import { Migration, Migrator } from "kysely/migration";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createLibMigrator(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: Kysely<any>,
   isPg: boolean,
   dimensions: number,

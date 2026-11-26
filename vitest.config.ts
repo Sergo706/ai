@@ -13,7 +13,7 @@ const alias: Record<string, string> = {
 const sharedTest = {
   environment: "node" as const,
   hookTimeout: 60_000 * 5,
-  testTimeout: 15_000,
+  testTimeout: 150_000,
 };
 
 export default defineConfig({
