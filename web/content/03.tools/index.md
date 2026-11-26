@@ -4,8 +4,8 @@ description: Give agents capabilities from built-in tools, custom per-request To
 navigation:
   icon: i-lucide-wrench
 seo:
-  title: Tools — Riavzon AI
-  description: Overview of the @riavzon/ai tool subsystem: built-in common tools, ToolSpec factories, buildToolRegistry(), MCP servers, caching, concurrency limits, and executeToolLoop().
+  title: Tools, Registry & Tool Execution — Riavzon AI
+  description: "Overview of @riavzon/ai tools: built-in common tools, ToolSpec factories, buildToolRegistry(), MCP servers, caching, concurrency limits, and executeToolLoop()."
 ---
 
 Tools in `@riavzon/ai` follow one uniform contract — `ToolSpec<TMeta>` — regardless of whether a tool comes from the built-in catalog, your own application code, or a remote MCP server.
@@ -76,7 +76,7 @@ When `buildToolRegistry(ctx, specs)` builds handlers for a turn, wrappers apply 
 Because `withToolCache` wraps `limitTool`, repeated cached calls still stay bounded and failed calls (`toolError(...)`, `{ ok: false }`, or `{ error: ... }`) never pollute the cache.
 ::
 
-## Combining all three sources in `createAgent()`
+## Combine all three sources in `createAgent()`
 
 ```ts [src/tools-combined.ts]
 import { createAgent, searchDb, type ToolSpec } from "@riavzon/ai";

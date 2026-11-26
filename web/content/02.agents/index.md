@@ -4,15 +4,15 @@ description: Build reusable, strongly typed AI agents with createAgent() that co
 navigation:
   icon: i-lucide-bot
 seo:
-  title: Agents — Riavzon AI
-  description: Learn how to create and run reusable agents with createAgent(), configure ModelOptions, stream turns with agent.chat(), buffer turns with agent.complete(), and clean up MCP connections.
+  title: Agents & createAgent() Runtime — Riavzon AI
+  description: Create reusable AI agents with createAgent(), configure ModelOptions, stream turns with agent.chat(), buffer turns with agent.complete(), and close MCP cleanly.
 ---
 
 `createAgent()` is the primary high-level abstraction in `@riavzon/ai`. You define an agent once at startup — its model settings, system instructions, built-in and custom tools, MCP servers, conversation persistence, compaction, semantic cache, and optional run-system integration — and execute turns against it across requests.
 
 Static setup happens inside `createAgent()`: built-in tool specs resolve, MCP servers connect, duplicate tool names fail fast, and inconsistent configuration (such as enabling `runs` or `compaction` without `conversation: { persist: true }`) throws immediately at construction rather than on the first user request.
 
-## Creating an agent
+## Create an agent
 
 Pass an `AgentConfig<TMeta>` object to `createAgent<TMeta>()`. The optional `TMeta` generic types request-scoped metadata passed into your custom tool factories.
 
@@ -111,7 +111,7 @@ Configure only the subsystems your agent needs. Omitting `conversation` creates 
   :::
 ::
 
-## Running turns: `chat()` vs. `complete()`
+## Run turns: `chat()` vs. `complete()`
 
 Every `Agent<TMeta>` exposes two execution methods plus `close()` and `readonly config`.
 
@@ -216,7 +216,7 @@ Error handling intentionally differs between streaming turns and validated JSON 
 - **Streaming turns** (`agent.chat()` without `json.validate`, or `agent.complete()`): unexpected failures are caught inside the turn, emitted as a terminal `{ type: "error", message }` frame, recorded on the `runs` row when `runs` is enabled, and surfaced on `ChatTurnResult.error` so SSE responses terminate cleanly.
 - **Validated JSON turns** (`json: { validate: true, schema }`): if parsing, schema validation, or the provider fails after all repair retries, the turn marks any active run `aborted` or `failed` and **rethrows** so callers never receive unvalidated data typed as `z.output<S>`.
 
-## Releasing resources with `agent.close()`
+## Release resources with `agent.close()`
 
 When an agent configures `tools.mcp`, `createAgent()` opens live MCP client connections. Always call `await agent.close()` during graceful shutdown to disconnect every MCP server cleanly. An agent cannot be used after `close()` completes.
 
@@ -229,7 +229,7 @@ process.on("SIGTERM", async () => {
 });
 ```
 
-## Escaping the abstraction (`agent.config`)
+## Escape the abstraction (`agent.config`)
 
 Every agent exposes `readonly config: AgentConfig<TMeta>` so you can inspect the resolved configuration or drop down to `executeToolLoop()`, `buildToolRegistry()`, and `runAgentStream()` directly whenever a route needs custom orchestration.
 

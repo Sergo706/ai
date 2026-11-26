@@ -4,8 +4,8 @@ description: Standalone schema repair, reasoning stripping, token accounting, JS
 navigation:
   icon: i-lucide-wrench
 seo:
-  title: Utilities — Riavzon AI
-  description: Standalone utility functions exported from @riavzon/ai for structured output parsing, token counting, PDF & Excel generation, URL validation, and cosine similarity.
+  title: Standalone Utilities & Helpers — Riavzon AI
+  description: Standalone utilities exported by @riavzon/ai for structured output parsing, token counting, PDF and Excel generation, URL validation, and cosine similarity.
 ---
 
 Even if you never use `createAgent()` or `AgenticWorkflowLoop`, `@riavzon/ai` exports its core utility toolkit at the package root so you can reuse battle-tested AI building blocks inside any OpenAI-compatible client or Node.js backend.

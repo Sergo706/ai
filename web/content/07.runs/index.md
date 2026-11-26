@@ -4,8 +4,8 @@ description: Execute durable, crash-resilient, multi-replica agent turns and lon
 navigation:
   icon: i-lucide-activity
 seo:
-  title: Run System — Riavzon AI
-  description: Architecture and lifecycle guide for @riavzon/ai's Run System — detached execution, lease heartbeats, cross-replica SSE reattachment, checkpoints, and automatic recovery.
+  title: Durable Run System & Leases — Riavzon AI
+  description: "Architecture guide for @riavzon/ai Run System: detached execution, lease heartbeats, cross-replica SSE reattachment, checkpoints, and automatic recovery."
 ---
 
 Browser tabs reload, mobile connections drop, and container orchestrators restart pods mid-generation. `@riavzon/ai` includes a production-ready **Run System** that decouples AI execution from individual HTTP connections:
@@ -34,7 +34,7 @@ Worker Crash ──► Replica B Recovery Sweep
                    └─ Atomically re-claims row via `claimRun()` & resumes from checkpoint
 ```
 
-## Booting the Run System (`startRuns`)
+## Boot the Run System (`startRuns`)
 
 Register your custom workflow resumers first, then call `startRuns()` **once per process** after `configuration()` completes. (Chat runs are intentionally never auto-resumed — see [Leases, Recovery & Retries](/runs/leases-and-recovery).)
 

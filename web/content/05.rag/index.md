@@ -48,7 +48,7 @@ Both `generateEmbedding()` and `generateMatchingEmbedding()` validate that the p
 If your database already contains embeddings and you change `embeddingConfig.dimensions`, you must recreate the vector columns (`document_chunks.embedding`, `messages.embedding`) and re-embed existing records.
 ::
 
-## Connecting RAG to an agent
+## Connect RAG to an agent
 
 Enable the built-in `search_db` and `get_document` tools on any `createAgent()` instance so the model can search ingested documents and read complete files by `documentId`:
 

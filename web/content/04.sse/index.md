@@ -4,8 +4,8 @@ description: Stream agent turns and long-running workflows over Server-Sent Even
 navigation:
   icon: i-lucide-radio
 seo:
-  title: Streaming & SSE — Riavzon AI
-  description: Learn how to encode SSE frames, set streaming response headers, convert agent frames with framesToStream(), and stream long workflows with workflowStream() in @riavzon/ai.
+  title: SSE Streaming & Frame Helpers — Riavzon AI
+  description: Encode SSE frames, set streaming response headers, convert agent turns with framesToStream(), and stream long workflows with workflowStream() in @riavzon/ai.
 ---
 
 Because `@riavzon/ai` never mounts HTTP routes or assumes a web framework, streaming primitives return standard Web API `ReadableStream<Uint8Array>` bodies and plain header objects. You can hand them directly to `new Response(...)` in Next.js, Nuxt/Nitro, Hono, Fastify, Express, or Bun.
@@ -58,7 +58,7 @@ Every streaming turn emits a discriminated union of typed frames on `data:`:
 | `error` | `message: string` | Terminal error message safe to display to end users. |
 | `done` | *(none)* | Terminal frame signaling a completed stream. |
 
-## Choosing the right streaming helper
+## Choose the right streaming helper
 
 `@riavzon/ai` provides seven streaming builders covering everything from simple chat routes to cross-replica crash-resumable workflows:
 
@@ -159,7 +159,7 @@ Pick the streaming builder that matches your use case — from high-level `agent
   :::
 ::
 
-## Typing custom workflow and sub-agent names
+## Type custom workflow and sub-agent names
 
 `WorkflowName` and `WorkflowAgent` support TypeScript declaration merging through the empty `WorkflowNameRegistry` and `WorkflowAgentRegistry` interfaces. Augment them once in your project to get strict autocomplete across `runProgressFrames()` and `AgentEvent` frames:
 

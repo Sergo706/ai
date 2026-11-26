@@ -126,7 +126,7 @@ export default defineNuxtConfig({
           {
             title: 'API Reference',
             description:
-              'Full api reference of the library',
+              'Complete root export index for @riavzon/ai covering every function, class, constant, Zod schema, and TypeScript type.',
             href: '/api-reference',
           },
         ],

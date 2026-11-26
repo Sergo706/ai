@@ -4,7 +4,7 @@ description: Initialize @riavzon/ai once at startup with configuration(), wire d
 navigation:
   icon: i-lucide-settings
 seo:
-  title: Configuration — Riavzon AI
+  title: Runtime Configuration & Setup — Riavzon AI
   description: Complete reference for configuration(), ConfigurationInput, Configuration, getConfiguration(), and consoleLogger() in @riavzon/ai.
 ---
 
@@ -146,7 +146,7 @@ Configure defaults for the built-in `extractor` (`extractor()`) tool:
 
 Defaults for leases, in-memory retention, Redis Streams, and crash recovery. Every field can also be overridden at deploy time via its matching `RUNS_*` [environment variable](/configuration/environment-variables).
 
-## Reading active config (`getConfiguration`)
+## Read active config (`getConfiguration`)
 
 Access the validated, defaulted `Configuration` object anywhere after startup:
 

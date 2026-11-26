@@ -4,8 +4,8 @@ description: Build bounded, resumable multi-stage research and investigation pip
 navigation:
   icon: i-lucide-git-branch
 seo:
-  title: Workflow Agents — Riavzon AI
-  description: Orchestrate multi-stage AI workflows across local knowledge, external discovery, execution, evaluation, critique, and final synthesis with AgenticWorkflowLoop in @riavzon/ai.
+  title: Workflow Agents & Agentic Loops — Riavzon AI
+  description: Orchestrate multi-stage AI workflows across local knowledge, discovery, execution, evaluation, critique, and synthesis with AgenticWorkflowLoop in @riavzon/ai.
 ---
 
 Standard single-prompt tool loops are great for interactive chat, but deep research, competitive analysis, or multi-source audits require explicit stages, deduplicated intent tracking, hard termination guarantees, and durable mid-run checkpoints. `AgenticWorkflowLoop` is a typed, budget-enforced state machine built specifically for those workflows.
@@ -144,7 +144,7 @@ export async function runResearch(query: string, signal?: AbortSignal) {
 | `errors` | `string[]` | Recoverable errors collected during discovery or execution. |
 | `report` | `TReport \| undefined` | Output returned by `finalAnswer.synthesize()`, if configured. |
 
-## Streaming workflow progress over SSE
+## Stream workflow progress over SSE
 
 Connect `onProgress` directly to `runProgressFrames()` inside `workflowStream()` (or `workflowStreamWithRegistry()` for resumable runs) so frontend clients see every stage and target live:
 
