@@ -2,13 +2,22 @@
   "name": "ai",
   "scripts": {
     "dev": "nuxt dev",
-    "build": "nuxt build"
+    "build": "nuxt build",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "better-sqlite3": "^12.11.1",
     "agents": "^0.34.1",
+    "better-sqlite3": "^12.11.1",
     "docus": "latest",
     "nuxt": "^4.6.4",
     "nuxt-studio": "^1.8.2"
+  },
+  "devDependencies": {
+    "@riavzon/utils": "^1.4.0",
+    "eslint": "10.15.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-vue": "^10.8.0",
+    "prettier": "3.10.1"
   }
 }

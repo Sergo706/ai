@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/multi-word-component-names -->
 <script setup lang="ts">
 const installCommand = landingInstallCommand;
 const repoUrl = landingRepoUrl;
@@ -16,7 +17,7 @@ async function copyInstall() {
   }
 }
 
-onBeforeUnmount(() => clearTimeout(resetTimer));
+onBeforeUnmount(() => { clearTimeout(resetTimer); });
 </script>
 
 <template>

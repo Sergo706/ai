@@ -17,7 +17,7 @@ const iconOverrides: Record<string, string> = {
 };
 
 const links = computed<FooterLink[]>(() => {
-  const socialLinks = Object.entries(appConfig.socials || {}).flatMap(
+  const socialLinks = Object.entries(appConfig.socials).flatMap(
     ([key, url]) => {
       if (typeof url !== "string" || !url) {
         return [];

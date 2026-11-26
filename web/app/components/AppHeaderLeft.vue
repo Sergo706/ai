@@ -1,9 +1,8 @@
 <script setup lang="ts">
 const appConfig = useAppConfig();
-const site = useSiteConfig();
 const { localePath } = useDocusI18n();
 
-const ariaLabel = appConfig.header?.title || site.name;
+const ariaLabel = appConfig.header.title;
 </script>
 
 <template>
