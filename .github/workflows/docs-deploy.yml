@@ -54,7 +54,7 @@ jobs:
 
       - name: Install & Build
         env:
-         NODE_OPTIONS: --max-old-space-size=4096
+          NODE_OPTIONS: --max-old-space-size=4096
         run: |
           npm ci
           npm run build
