@@ -3,7 +3,6 @@ const isDev = process.env.NODE_ENV === "development";
 export default defineNuxtConfig({
   extends: ["docus"],
   modules: ["nuxt-studio"],
-
   studio: {
     route: "/_studio",
     repository: {
@@ -14,7 +13,6 @@ export default defineNuxtConfig({
       rootDir: "web",
     },
   },
-
   site: {
     url: "https://ai.riavzon.com",
     name: "Riavzon AI",
@@ -278,6 +276,13 @@ export default defineNuxtConfig({
       nodeCompat: true,
       wrangler: {
         name: "ai",
+        d1_databases: [
+          {
+            binding: "DB",
+            database_name: "ai",
+            database_id: "9c6e953e-a90d-45ac-825d-493b07fb2f3e",
+          },
+        ],
       },
     },
   },

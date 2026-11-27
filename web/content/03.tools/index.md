@@ -91,7 +91,7 @@ During normal tool-calling rounds that finish within budget, `@riavzon/ai` injec
 
 - **Tool-loop fallback synthesis & `maxCalls` overflow:** `executeToolLoop()` appends a trailing `{ role: "system" }` synthesis prompt when budgets exhaust or no tools are configured, and injects `CALL_LIMIT_EXCEEDED` `role: "tool"` messages for skipped calls (see [Injected prompts and error messages](/tools/tool-loop#injected-prompts-and-error-messages)).
 - **Per-tool call cap (`limitTool`):** Exceeding `ToolSpec.maxCalls` injects a `TOOL_LIMIT_REACHED` `role: "tool"` steering message telling the model not to call the tool again (see [Wire error codes & troubleshooting](/tools/custom-tools#wire-error-codes-troubleshooting)).
-::
+  ::
 
 ## Combine all three sources in `createAgent()`
 

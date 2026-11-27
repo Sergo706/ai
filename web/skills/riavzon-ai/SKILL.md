@@ -16,20 +16,20 @@ description: Build AI agents, custom and MCP tools, hybrid RAG pipelines, and SS
 
 ## Optional Peer Dependency Matrix
 
-| Feature                                                        | Packages to Install            |
-| -------------------------------------------------------------- | ------------------------------ |
-| Core runtime (always required)                                 | `@riavzon/ai`, `openai`        |
-| SQLite + vector search                                         | `better-sqlite3`, `sqlite-vec` |
-| PostgreSQL + vector search                                     | `pg`, `@types/pg`              |
-| Redis cache / cross-replica runs / file tools                  | `ioredis`                      |
-| Built-in `calculator`                                          | `mathjs`                       |
-| Built-in `currencies_convertor`                                | `easy-currencies`              |
-| Built-in `create_styled_spreadsheet` / XLSX & CSV readers      | `exceljs`                      |
-| Built-in `pdf_creator` / `createPdf()`                         | `pdf-lib`, `@pdf-lib/fontkit`  |
-| Built-in `extractor` / `extractWithSummarize()` / `extractManyWithSummarize()` / `summarizeWithLlm()` / `withLlmSummary()` | `@steipete/summarize-core` |
-| Built-in `get_current_datetime` / `search_db` / `get_document` | Core + DB peer only            |
-| MCP client (`tools.mcp` / `createMcpToolset()`)                | `@modelcontextprotocol/client` |
-| Exact tokenizer chunking (`PreTrainedTokenizer`)               | `@huggingface/transformers`    |
+| Feature                                                                                                                    | Packages to Install            |
+| -------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| Core runtime (always required)                                                                                             | `@riavzon/ai`, `openai`        |
+| SQLite + vector search                                                                                                     | `better-sqlite3`, `sqlite-vec` |
+| PostgreSQL + vector search                                                                                                 | `pg`, `@types/pg`              |
+| Redis cache / cross-replica runs / file tools                                                                              | `ioredis`                      |
+| Built-in `calculator`                                                                                                      | `mathjs`                       |
+| Built-in `currencies_convertor`                                                                                            | `easy-currencies`              |
+| Built-in `create_styled_spreadsheet` / XLSX & CSV readers                                                                  | `exceljs`                      |
+| Built-in `pdf_creator` / `createPdf()`                                                                                     | `pdf-lib`, `@pdf-lib/fontkit`  |
+| Built-in `extractor` / `extractWithSummarize()` / `extractManyWithSummarize()` / `summarizeWithLlm()` / `withLlmSummary()` | `@steipete/summarize-core`     |
+| Built-in `get_current_datetime` / `search_db` / `get_document`                                                             | Core + DB peer only            |
+| MCP client (`tools.mcp` / `createMcpToolset()`)                                                                            | `@modelcontextprotocol/client` |
+| Exact tokenizer chunking (`PreTrainedTokenizer`)                                                                           | `@huggingface/transformers`    |
 
 ## 1. Runtime Initialization (`configuration`)
 

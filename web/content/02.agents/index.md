@@ -66,17 +66,17 @@ export async function createSupportAgent() {
 Configure only the subsystems your agent needs. Omitting `conversation` creates a stateless agent that accepts caller-supplied `history` on each turn.
 
 ::field-group
-  :::field{name="systemInstructions" type="string" required}
-  System prompt prepended to every turn ahead of conversation history.
-  :::
+:::field{name="systemInstructions" type="string" required}
+System prompt prepended to every turn ahead of conversation history.
+:::
 
-  :::field{name="meta" type="TMeta"}
-  Default host-defined metadata merged with per-turn `input.meta` before calling each tool's `make(ctx)` factory.
-  :::
+:::field{name="meta" type="TMeta"}
+Default host-defined metadata merged with per-turn `input.meta` before calling each tool's `make(ctx)` factory.
+:::
 
-  :::field{name="trace" type="readonly TraceExtension<Record<string, unknown>>[]"}
-  Custom trace extensions that observe every `AgentEvent` and merge extra fields into `ChatTurnResult.trace`.
-  :::
+:::field{name="trace" type="readonly TraceExtension<Record<string, unknown>>[]"}
+Custom trace extensions that observe every `AgentEvent` and merge extra fields into `ChatTurnResult.trace`.
+:::
 ::
 
 ### `model` (`ModelOptions`, required)
@@ -84,10 +84,10 @@ Configure only the subsystems your agent needs. Omitting `conversation` creates 
 Provider model, answer and tool-round sampling, reasoning effort, request body overrides, and SDK transport options.
 
 ::collapsible{name="ModelOptions properties"}
-  :::field-group
-    ::::field{name="model" type="string" required}
-    Provider model ID, for example `"gpt-4o-mini"`.
-    ::::
+:::field-group
+::::field{name="model" type="string" required}
+Provider model ID, for example `"gpt-4o-mini"`.
+::::
 
     ::::field{name="temperature" type="number"}
     Sampling temperature for the final answer call. Default: `0.4`.
@@ -104,7 +104,8 @@ Provider model, answer and tool-round sampling, reasoning effort, request body o
     ::::field{name="request" type="ModelRequestOptions"}
     Agent-wide OpenAI SDK transport options (`timeout`, `maxRetries`, `headers`, etc.) bound once at construction. Cannot be overridden per turn via `input.model`.
     ::::
-  :::
+
+:::
 ::
 
 #### `model.tools`
@@ -112,10 +113,10 @@ Provider model, answer and tool-round sampling, reasoning effort, request body o
 Separate sampling and execution budgets during tool-decision rounds, independent from the final answer call.
 
 ::collapsible{name="model.tools properties"}
-  :::field-group
-    ::::field{name="temperature" type="number"}
-    Sampling temperature for tool-decision rounds. Default: `0.1`.
-    ::::
+:::field-group
+::::field{name="temperature" type="number"}
+Sampling temperature for tool-decision rounds. Default: `0.1`.
+::::
 
     ::::field{name="maxTokens" type="number"}
     Token cap for tool-decision rounds. Default: `4096`.
@@ -128,7 +129,8 @@ Separate sampling and execution budgets during tool-decision rounds, independent
     ::::field{name="maxCalls" type="number"}
     Maximum attempted tool calls across all rounds (not per round). Default: `20`.
     ::::
-  :::
+
+:::
 ::
 
 #### `model.body` (`ModelBodyOptions`)
@@ -136,10 +138,10 @@ Separate sampling and execution budgets during tool-decision rounds, independent
 Optional OpenAI chat completion body fields spread into every request made by the agent.
 
 ::collapsible{name="ModelBodyOptions properties"}
-  :::field-group
-    ::::field{name="top_p" type="number | null"}
-    Nucleus sampling cutoff.
-    ::::
+:::field-group
+::::field{name="top_p" type="number | null"}
+Nucleus sampling cutoff.
+::::
 
     ::::field{name="presence_penalty" type="number | null"}
     Penalty for tokens that already appear in the text so far.
@@ -172,7 +174,8 @@ Optional OpenAI chat completion body fields spread into every request made by th
     ::::field{name="service_tier" type="ChatCompletionCreateParamsBase['service_tier']"}
     Provider service tier preference.
     ::::
-  :::
+
+:::
 ::
 
 ### `tools` (`ToolOptions<TMeta>`)
@@ -180,10 +183,10 @@ Optional OpenAI chat completion body fields spread into every request made by th
 Built-in tools, custom per-request `ToolSpec<TMeta>[]` definitions, and remote MCP server connections exposed to the model.
 
 ::collapsible{name="ToolOptions properties"}
-  :::field-group
-    ::::field{name="common" type="CommonTools<TMeta>"}
-    Built-in tool names (such as `"calculator"` or `"get_current_datetime"`) or per-tool override objects that tune `cache`, `maxCalls`, `concurrency`, `stream`, or `make`.
-    ::::
+:::field-group
+::::field{name="common" type="CommonTools<TMeta>"}
+Built-in tool names (such as `"calculator"` or `"get_current_datetime"`) or per-tool override objects that tune `cache`, `maxCalls`, `concurrency`, `stream`, or `make`.
+::::
 
     ::::field{name="specs" type="readonly ToolSpec<TMeta>[]"}
     Custom per-request tool definitions with their own JSON Schema, cache, call cap, concurrency, and stream policy.
@@ -192,7 +195,8 @@ Built-in tools, custom per-request `ToolSpec<TMeta>[]` definitions, and remote M
     ::::field{name="mcp" type="readonly McpServerConfig[]"}
     Remote MCP server configurations whose tools are exposed under each server's namespace.
     ::::
-  :::
+
+:::
 ::
 
 ### `conversation` (`ConversationOptions`)
@@ -200,11 +204,11 @@ Built-in tools, custom per-request `ToolSpec<TMeta>[]` definitions, and remote M
 Enables persisted threads in the `conversations` and `messages` tables. Omit to keep the agent stateless.
 
 ::collapsible{name="ConversationOptions properties"}
-  :::field-group
-    ::::field{name="persist" type="boolean"}
-    Persist user and assistant messages automatically. Default: `true` when `conversation` is provided; omit `conversation` to keep the agent stateless.
-    ::::
-  :::
+:::field-group
+::::field{name="persist" type="boolean"}
+Persist user and assistant messages automatically. Default: `true` when `conversation` is provided; omit `conversation` to keep the agent stateless.
+::::
+:::
 ::
 
 ### `runs` (`RunOptions`)
@@ -212,10 +216,10 @@ Enables persisted threads in the `conversations` and `messages` tables. Omit to 
 Routes every turn through the durable run system (`runs` table, lease heartbeats, and Redis event log). Requires `conversation: { persist: true }`.
 
 ::collapsible{name="RunOptions properties"}
-  :::field-group
-    ::::field{name="kind" type="RunKind"}
-    Run kind written to `runs.kind` for each turn. Default: `"chat"`.
-    ::::
+:::field-group
+::::field{name="kind" type="RunKind"}
+Run kind written to `runs.kind` for each turn. Default: `"chat"`.
+::::
 
     ::::field{name="name" type="string"}
     Optional agent name stored in `runs.input.name` to distinguish multiple agents sharing one `kind`.
@@ -224,7 +228,8 @@ Routes every turn through the durable run system (`runs` table, lease heartbeats
     ::::field{name="registry" type="boolean"}
     Declared option in `RunOptions` for in-process replay. Currently, `createAgent()` always registers the run in the in-process registry whenever `runs` is configured.
     ::::
-  :::
+
+:::
 ::
 
 ### `compaction` (`CompactionOptions`)
@@ -232,10 +237,10 @@ Routes every turn through the durable run system (`runs` table, lease heartbeats
 Summarizes older messages into a rolling `compacted_summary` once estimated history tokens exceed `tokenThreshold`. Requires `conversation`.
 
 ::collapsible{name="CompactionOptions properties"}
-  :::field-group
-    ::::field{name="temperature" type="number" required}
-    Sampling temperature for the summarization call.
-    ::::
+:::field-group
+::::field{name="temperature" type="number" required}
+Sampling temperature for the summarization call.
+::::
 
     ::::field{name="maxTokens" type="number" required}
     Token cap for the summarization call.
@@ -256,7 +261,8 @@ Summarizes older messages into a rolling `compacted_summary` once estimated hist
     ::::field{name="attempts" type="number"}
     Write attempts when persisting the updated summary watermark; a failed write never fails the turn. Default: `2`.
     ::::
-  :::
+
+:::
 ::
 
 ### `semanticCache` (`SemanticCacheOptions`)
@@ -264,10 +270,10 @@ Summarizes older messages into a rolling `compacted_summary` once estimated hist
 Checks recent stored exchanges by cosine similarity and reuses a near-identical reply before calling the model.
 
 ::collapsible{name="SemanticCacheOptions properties"}
-  :::field-group
-    ::::field{name="similarity" type="number"}
-    Minimum cosine similarity required for a cached reply hit. Default: `0.9`.
-    ::::
+:::field-group
+::::field{name="similarity" type="number"}
+Minimum cosine similarity required for a cached reply hit. Default: `0.9`.
+::::
 
     ::::field{name="windowHours" type="number"}
     Lookback window in hours when searching earlier exchanges. Default: `24`.
@@ -280,7 +286,8 @@ Checks recent stored exchanges by cosine similarity and reuses a near-identical 
     ::::field{name="skipEvaluator" type="(conversationId: number, message: string) => boolean"}
     Optional predicate; return `true` to bypass semantic cache lookup and call the model for the turn.
     ::::
-  :::
+
+:::
 ::
 
 ### `attachments` (`AttachmentOptions`)
@@ -288,10 +295,10 @@ Checks recent stored exchanges by cosine similarity and reuses a near-identical 
 Validation and extraction limits applied when `input.files` are passed on a turn. Only extracted text from supported formats (PDF, CSV, XLSX, and `text/*`) is forwarded into the user prompt; binary files such as images, audio, and video are not supported.
 
 ::collapsible{name="AttachmentOptions properties"}
-  :::field-group
-    ::::field{name="maxFiles" type="number"}
-    Maximum number of files accepted per turn. Default: `3`.
-    ::::
+:::field-group
+::::field{name="maxFiles" type="number"}
+Maximum number of files accepted per turn. Default: `3`.
+::::
 
     ::::field{name="maxBytes" type="number"}
     Maximum size of a single file in bytes. Default: `10485760` (10 MB).
@@ -304,7 +311,8 @@ Validation and extraction limits applied when `input.files` are passed on a turn
     ::::field{name="maxPdfPages" type="number"}
     Maximum number of PDF pages extracted before text is truncated. Default: `5`.
     ::::
-  :::
+
+:::
 ::
 
 ### `embedding` (`EmbeddingOptions`)
@@ -312,10 +320,10 @@ Validation and extraction limits applied when `input.files` are passed on a turn
 Reserved per-agent embedding override shape preserved on `agent.config`. Currently, agent turns use the global `embeddingConfig` supplied to `configuration()`.
 
 ::collapsible{name="EmbeddingOptions properties"}
-  :::field-group
-    ::::field{name="retrievalModel" type="string"}
-    Embedding model ID for document chunks.
-    ::::
+:::field-group
+::::field{name="retrievalModel" type="string"}
+Embedding model ID for document chunks.
+::::
 
     ::::field{name="matchingModel" type="string"}
     Embedding model ID for semantic message matching.
@@ -324,7 +332,8 @@ Reserved per-agent embedding override shape preserved on `agent.config`. Current
     ::::field{name="dimensions" type="number"}
     Vector dimension count.
     ::::
-  :::
+
+:::
 ::
 
 ## Run turns: `chat()` vs. `complete()`
@@ -332,58 +341,60 @@ Reserved per-agent embedding override shape preserved on `agent.config`. Current
 Every `Agent<TMeta>` exposes two execution methods plus `close()` and `readonly config`.
 
 ::tabs
-  :::tabs-item{icon="i-lucide-radio" label="agent.chat() (Streaming)"}
-  `agent.chat(input)` returns `{ frames, done }`:
-  
-  - **`frames`**: an `AsyncIterable<SseFrame>` yielding live events (`init`, `chunk`, `reasoning`, `tool_start`, `tool_end`, `error`, `done`).
-  - **`done`**: a `Promise<ChatTurnResult>` that resolves when the turn finishes, aborts, or fails.
-  
-  ```ts [src/stream-turn.ts]
-  const stream = await agent.chat({
-    message: "Summarize our latest Q4 billing report.",
-    userId: "user_123",
-    conversationId: 7,
-    meta: { tenantId: "acme", plan: "enterprise" },
-    user: {
-      locale: "en-US",
-      timezone: "America/New_York",
-      currentDate: "2026-03-15",
-    },
-  });
-  
-  for await (const event of stream.frames) {
-    if (event.type === "chunk") {
-      process.stdout.write(String(event.text));
-    }
+:::tabs-item{icon="i-lucide-radio" label="agent.chat() (Streaming)"}
+`agent.chat(input)` returns `{ frames, done }`:
+
+- **`frames`**: an `AsyncIterable<SseFrame>` yielding live events (`init`, `chunk`, `reasoning`, `tool_start`, `tool_end`, `error`, `done`).
+- **`done`**: a `Promise<ChatTurnResult>` that resolves when the turn finishes, aborts, or fails.
+
+```ts [src/stream-turn.ts]
+const stream = await agent.chat({
+  message: "Summarize our latest Q4 billing report.",
+  userId: "user_123",
+  conversationId: 7,
+  meta: { tenantId: "acme", plan: "enterprise" },
+  user: {
+    locale: "en-US",
+    timezone: "America/New_York",
+    currentDate: "2026-03-15",
+  },
+});
+
+for await (const event of stream.frames) {
+  if (event.type === "chunk") {
+    process.stdout.write(String(event.text));
   }
-  
-  const result = await stream.done;
-  console.log("\nTools used:", result.toolsUsed);
-  ```
-  
+}
+
+const result = await stream.done;
+console.log("\nTools used:", result.toolsUsed);
+```
+
     ::::warning
     When `runs` is **not** configured, the tool loop starts lazily when the first frame is pulled from `stream.frames`. If you never iterate `stream.frames`, `stream.done` will never resolve. Use `agent.complete()` whenever you only need the final result.
     ::::
-  :::
 
-  :::tabs-item{icon="i-lucide-check-circle" label="agent.complete() (Buffered)"}
-  `agent.complete(input)` drains the turn internally and resolves directly with `ChatTurnResult`:
-  
-  ```ts [src/buffered-turn.ts]
-  const result = await agent.complete({
-    message: "What is 15% of 2,400?",
-    userId: "user_123",
-    model: {
-      temperature: 0,
-    },
-  });
-  
-  console.log(result.text);
-  console.log(result.conversationId);
-  console.log(result.cached);
-  console.log(result.trace);
-  ```
-  :::
+:::
+
+:::tabs-item{icon="i-lucide-check-circle" label="agent.complete() (Buffered)"}
+`agent.complete(input)` drains the turn internally and resolves directly with `ChatTurnResult`:
+
+```ts [src/buffered-turn.ts]
+const result = await agent.complete({
+  message: "What is 15% of 2,400?",
+  userId: "user_123",
+  model: {
+    temperature: 0,
+  },
+});
+
+console.log(result.text);
+console.log(result.conversationId);
+console.log(result.cached);
+console.log(result.trace);
+```
+
+:::
 ::
 
 ### Per-turn overrides (`ChatInput`)
@@ -391,10 +402,10 @@ Every `Agent<TMeta>` exposes two execution methods plus `close()` and `readonly 
 Every call to `agent.chat()` or `agent.complete()` accepts these request-scoped fields:
 
 ::collapsible{name="ChatInput properties"}
-  :::field-group
-    ::::field{name="message" type="string" required}
-    The user prompt for this turn.
-    ::::
+:::field-group
+::::field{name="message" type="string" required}
+The user prompt for this turn.
+::::
 
     ::::field{name="userId" type="string"}
     Owning user ID. Required whenever `conversation` is configured so database rows stay scoped to the owning user.
@@ -427,7 +438,8 @@ Every call to `agent.chat()` or `agent.complete()` accepts these request-scoped 
     ::::field{name="meta" type="Partial<TMeta>"}
     Partial metadata shallow-merged over `AgentConfig.meta` for this turn's tool factories.
     ::::
-  :::
+
+:::
 ::
 
 #### `ChatInput.user`
@@ -435,10 +447,10 @@ Every call to `agent.chat()` or `agent.complete()` accepts these request-scoped 
 Optional context about the person asking, formatted and appended to `systemInstructions` when any field is populated.
 
 ::collapsible{name="ChatInput.user properties"}
-  :::field-group
-    ::::field{name="locale" type="string"}
-    Locale hint, for example `"en-US"`.
-    ::::
+:::field-group
+::::field{name="locale" type="string"}
+Locale hint, for example `"en-US"`.
+::::
 
     ::::field{name="timezone" type="string"}
     Timezone hint, for example `"America/New_York"`.
@@ -455,7 +467,8 @@ Optional context about the person asking, formatted and appended to `systemInstr
     ::::field{name="other" type="readonly string[]"}
     Additional facts included as a JSON array when non-empty.
     ::::
-  :::
+
+:::
 ::
 
 ::note
@@ -478,10 +491,10 @@ Only populated fields are included; if `input.user` has no populated fields, not
 Requests raw JSON mode (`response_format: { type: "json_object" }`) or Zod-validated structured output with automatic repair retries.
 
 ::collapsible{name="JsonOptions properties"}
-  :::field-group
-    ::::field{name="validate" type="boolean"}
-    When `false` or omitted, streams raw JSON text in `ChatTurnResult.text` with no extra validation call. When `true`, validates against `schema`, runs repair retries on mismatch, and populates `ChatTurnResult.structured` (non-streaming). Default: `false`.
-    ::::
+:::field-group
+::::field{name="validate" type="boolean"}
+When `false` or omitted, streams raw JSON text in `ChatTurnResult.text` with no extra validation call. When `true`, validates against `schema`, runs repair retries on mismatch, and populates `ChatTurnResult.structured` (non-streaming). Default: `false`.
+::::
 
     ::::field{name="schema" type="S extends z.ZodType"}
     Zod schema the answer must satisfy. Required when `validate: true`.
@@ -498,7 +511,8 @@ Requests raw JSON mode (`response_format: { type: "json_object" }`) or Zod-valid
     ::::field{name="includeSchemaInPrompt" type="boolean"}
     Whether to include the rendered schema in each repair prompt. Default: `true`.
     ::::
-  :::
+
+:::
 ::
 
 ### Stream handle (`ChatStream<TStructured>`)
@@ -506,15 +520,16 @@ Requests raw JSON mode (`response_format: { type: "json_object" }`) or Zod-valid
 Live stream handle returned by `agent.chat()`.
 
 ::collapsible{name="ChatStream properties"}
-  :::field-group
-    ::::field{name="frames" type="AsyncIterable<SseFrame>"}
-    Live event stream yielding `init`, `chunk`, `reasoning`, `tool_start`, `tool_end`, `error`, and `done` frames (plus any mid-call `agent_progress` or `workflow_progress` events emitted by tools).
-    ::::
+:::field-group
+::::field{name="frames" type="AsyncIterable<SseFrame>"}
+Live event stream yielding `init`, `chunk`, `reasoning`, `tool_start`, `tool_end`, `error`, and `done` frames (plus any mid-call `agent_progress` or `workflow_progress` events emitted by tools).
+::::
 
     ::::field{name="done" type="Promise<ChatTurnResult<TStructured>>"}
     Resolves with the final `ChatTurnResult` when the turn finishes, aborts, or fails.
     ::::
-  :::
+
+:::
 ::
 
 ### Turn output (`ChatTurnResult<TStructured>`)
@@ -522,10 +537,10 @@ Live stream handle returned by `agent.chat()`.
 Resolved by `stream.done` (from `agent.chat()`) and returned directly by `agent.complete()`.
 
 ::collapsible{name="ChatTurnResult properties"}
-  :::field-group
-    ::::field{name="runId" type="string"}
-    Present when `runs` is enabled.
-    ::::
+:::field-group
+::::field{name="runId" type="string"}
+Present when `runs` is enabled.
+::::
 
     ::::field{name="conversationId" type="number"}
     Present when `conversation` persistence is enabled.
@@ -554,7 +569,8 @@ Resolved by `stream.done` (from `agent.chat()`) and returned directly by `agent.
     ::::field{name="error" type="Error"}
     Set when a streaming turn failed.
     ::::
-  :::
+
+:::
 ::
 
 ### Transport-level request options (`model.request`)
@@ -607,23 +623,23 @@ Every agent exposes `readonly config: AgentConfig<TMeta>` so you can inspect the
 ## Explore agent capabilities
 
 ::card-group
-  :::card{icon="i-lucide-messages-square" title="Conversations & Compaction" to="/agents/conversations-and-compaction"}
-  Persist multi-turn threads, replay tool traces across turns, and keep long histories inside token budgets.
-  :::
+:::card{icon="i-lucide-messages-square" title="Conversations & Compaction" to="/agents/conversations-and-compaction"}
+Persist multi-turn threads, replay tool traces across turns, and keep long histories inside token budgets.
+:::
 
-  :::card{icon="i-lucide-braces" title="Structured Output" to="/agents/structured-output"}
-  Request raw JSON mode or Zod-validated objects with automatic repair retries.
-  :::
+:::card{icon="i-lucide-braces" title="Structured Output" to="/agents/structured-output"}
+Request raw JSON mode or Zod-validated objects with automatic repair retries.
+:::
 
-  :::card{icon="i-lucide-paperclip" title="Attachments & Semantic Cache" to="/agents/attachments-and-caching"}
-  Parse uploaded PDFs, spreadsheets, and text files, and serve near-identical repeated questions from the semantic cache.
-  :::
+:::card{icon="i-lucide-paperclip" title="Attachments & Semantic Cache" to="/agents/attachments-and-caching"}
+Parse uploaded PDFs, spreadsheets, and text files, and serve near-identical repeated questions from the semantic cache.
+:::
 
-  :::card{icon="i-lucide-shield-check" title="Durable Agent Runs" to="/agents/agent-runs"}
-  Back every agent turn with a database lease, Redis event stream, and client reattach support.
-  :::
+:::card{icon="i-lucide-shield-check" title="Durable Agent Runs" to="/agents/agent-runs"}
+Back every agent turn with a database lease, Redis event stream, and client reattach support.
+:::
 
-  :::card{icon="i-lucide-layers" title="Production Agent & Streaming Recipes" to="/agents/production-agent-and-streaming"}
-  End-to-end kitchen-sink agent plus complete CLI, Web/Node HTTP server, and frontend SSE client consumers.
-  :::
+:::card{icon="i-lucide-layers" title="Production Agent & Streaming Recipes" to="/agents/production-agent-and-streaming"}
+End-to-end kitchen-sink agent plus complete CLI, Web/Node HTTP server, and frontend SSE client consumers.
+:::
 ::

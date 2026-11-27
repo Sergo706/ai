@@ -81,13 +81,13 @@ Calling `startRuns()` before `configuration()` throws because database access is
 
 ## Run statuses & kinds
 
-| Status        | Meaning                                                                             | Eligible for automatic recovery?                  | Eligible for `retryRun()`?      |
-| ------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------- |
-| `running`     | Actively claimed by a live process (or awaiting stale-lease detection after crash). | Yes, once `claimed_at` expires past `leaseTtlMs`. | No (returns `already_running`). |
-| `interrupted` | Worker stopped or transient error occurred while a checkpoint existed.              | Yes, while attempts remain below `maxResumeAttempts`. | Yes.                        |
-| `finished`    | Completed normally.                                                                 | No.                                               | No.                             |
-| `aborted`     | Cancelled by user (`requestAbort()` / `AbortSignal`).                               | No.                                               | Yes (explicit user retry).      |
-| `failed`      | Ended with a non-transient error or exhausted attempts.                             | No.                                               | Yes (explicit user retry).      |
+| Status        | Meaning                                                                             | Eligible for automatic recovery?                      | Eligible for `retryRun()`?      |
+| ------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------- |
+| `running`     | Actively claimed by a live process (or awaiting stale-lease detection after crash). | Yes, once `claimed_at` expires past `leaseTtlMs`.     | No (returns `already_running`). |
+| `interrupted` | Worker stopped or transient error occurred while a checkpoint existed.              | Yes, while attempts remain below `maxResumeAttempts`. | Yes.                            |
+| `finished`    | Completed normally.                                                                 | No.                                                   | No.                             |
+| `aborted`     | Cancelled by user (`requestAbort()` / `AbortSignal`).                               | No.                                                   | Yes (explicit user retry).      |
+| `failed`      | Ended with a non-transient error or exhausted attempts.                             | No.                                                   | Yes (explicit user retry).      |
 
 Run kinds (`RunKind`) default to `"chat"` (used by `createAgent()` detached turns) and `"workflow"` (used by `runWorkflow()` and custom multi-stage pipelines), and can be extended via `declare module "@riavzon/ai" { interface RunKindRegistry { ... } }`. Because multiple workflows often share `kind: "workflow"`, each distinguishes itself with `name` (stored at `runs.input.name`).
 

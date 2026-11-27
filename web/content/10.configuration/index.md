@@ -128,20 +128,20 @@ Any logger implementing `{ debug, info, warn, error, child }` — a `pino` insta
 
 Configure defaults for the built-in `extractor` tool and standalone URL summarization helpers:
 
-| Field                  | Type                                             | Default     | Description                                                                                                       |
-| ---------------------- | ------------------------------------------------ | ----------- | ----------------------------------------------------------------------------------------------------------------- |
-| `ytDlpBin`             | `string`                                         | `undefined` | Custom path to `yt-dlp` binary for media extraction.                                                              |
-| `whisperCppBin`        | `string`                                         | `undefined` | Custom path to `whisper.cpp` binary for local transcription.                                                      |
-| `whisperCppModelPath`  | `string`                                         | `undefined` | Path to a local Whisper model file.                                                                               |
-| `disableLocalWhisper`  | `boolean`                                        | `false`     | Disables local Whisper transcription fallback.                                                                    |
-| `minContentCharacters` | `number`                                         | `80`        | Bodies shorter than this count as empty and fall through.                                                         |
-| `timeoutMs`            | `number`                                         | `120_000`   | Per-URL HTTP/extraction timeout in milliseconds.                                                                  |
-| `deadlineMs`           | `number`                                         | `0`         | Hard wall-clock cap per URL including transcription (`0` disables).                                               |
-| `maxCharacters`        | `number`                                         | `Infinity`  | Maximum characters passed downstream.                                                                             |
-| `llmMinCharacters`     | `number`                                         | `4_000`     | Minimum characters before `summarizeWithLlm()` calls the model (shorter bodies pass through untouched).           |
-| `llmTemperature`       | `number`                                         | `0.2`       | Sampling temperature for `summarizeWithLlm()` calls (`0`–`2`).                                                    |
-| `llmModel`             | `string`                                         | `undefined` | Default model ID for `summarizeWithLlm()` when `options.model` is omitted.                                        |
-| `llmLength`            | `"short" \| "medium" \| "long" \| "xl" \| "xxl"` | `"medium"`  | Default summary length preset for `summarizeWithLlm()`.                                                           |
+| Field                  | Type                                             | Default     | Description                                                                                             |
+| ---------------------- | ------------------------------------------------ | ----------- | ------------------------------------------------------------------------------------------------------- |
+| `ytDlpBin`             | `string`                                         | `undefined` | Custom path to `yt-dlp` binary for media extraction.                                                    |
+| `whisperCppBin`        | `string`                                         | `undefined` | Custom path to `whisper.cpp` binary for local transcription.                                            |
+| `whisperCppModelPath`  | `string`                                         | `undefined` | Path to a local Whisper model file.                                                                     |
+| `disableLocalWhisper`  | `boolean`                                        | `false`     | Disables local Whisper transcription fallback.                                                          |
+| `minContentCharacters` | `number`                                         | `80`        | Bodies shorter than this count as empty and fall through.                                               |
+| `timeoutMs`            | `number`                                         | `120_000`   | Per-URL HTTP/extraction timeout in milliseconds.                                                        |
+| `deadlineMs`           | `number`                                         | `0`         | Hard wall-clock cap per URL including transcription (`0` disables).                                     |
+| `maxCharacters`        | `number`                                         | `Infinity`  | Maximum characters passed downstream.                                                                   |
+| `llmMinCharacters`     | `number`                                         | `4_000`     | Minimum characters before `summarizeWithLlm()` calls the model (shorter bodies pass through untouched). |
+| `llmTemperature`       | `number`                                         | `0.2`       | Sampling temperature for `summarizeWithLlm()` calls (`0`–`2`).                                          |
+| `llmModel`             | `string`                                         | `undefined` | Default model ID for `summarizeWithLlm()` when `options.model` is omitted.                              |
+| `llmLength`            | `"short" \| "medium" \| "long" \| "xl" \| "xxl"` | `"medium"`  | Default summary length preset for `summarizeWithLlm()`.                                                 |
 
 ::note
 The `llm*` fields (`llmMinCharacters`, `llmTemperature`, `llmModel`, `llmLength`) apply only to the standalone `summarizeWithLlm()` and `withLlmSummary()` helpers. The built-in `extractor()` tool does not run LLM summarization. See [Extract and summarize URLs directly](/tools/built-in-tools#extract-and-summarize-urls-directly).
