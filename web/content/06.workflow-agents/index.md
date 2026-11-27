@@ -25,6 +25,10 @@ Every `AgenticWorkflowLoop` run progresses through six deterministic steps, stop
 
 Each stage records progress into `WorkflowState`, emits structured `WorkflowProgressEvent` updates via `onProgress`, and snapshots resumable `WorkflowCheckpoint` payloads via `onCheckpoint`.
 
+::warning
+**No built-in human-in-the-loop (HITL).** `AgenticWorkflowLoop` is a fully autonomous, non-interactive state machine. Once `loop.run()` starts, it executes all configured stages to completion until `evaluator` marks evidence sufficient, a budget reaches its limit, no new sources remain, or `signal` aborts. There is no built-in pause, approval gate, or interactive user-input step between stages. If your workflow requires human approval before continuing or performing side effects, split it into separate runs gated by your application layer (and optionally persist intermediate outputs in your own database or run checkpoint).
+::
+
 ## Quick example
 
 Define typed domain objects and pass your adapters + budgets to `new AgenticWorkflowLoop(config)`:

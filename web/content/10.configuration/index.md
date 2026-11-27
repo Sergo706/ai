@@ -67,10 +67,6 @@ await configuration({
     timeoutMs: 120_000,
     deadlineMs: 0,
     maxCharacters: Number.POSITIVE_INFINITY,
-    llmMinCharacters: 4_000,
-    llmTemperature: 0.2,
-    llmModel: "gpt-4o-mini",
-    llmLength: "medium",
     disableLocalWhisper: false,
   },
   runs: {
@@ -86,7 +82,7 @@ await configuration({
       replayBatch: 500,
     },
     recovery: {
-      sweepIntervalMs: 0, // 0 derives max(1000, floor(leaseTtlMs / 2))
+      sweepIntervalMs: 0, // 0 derives half of leaseTtlMs (minimum 1000 ms)
       maxAdoptPerSweep: 3,
       maxResumeAttempts: 5,
       unclaimedGraceMs: 600_000,
@@ -116,11 +112,11 @@ Any `openai`-compatible SDK client (`chat.completions.create`) used for chat com
 - `dimensions: number` — Vector width; verified at runtime on every embedding call and used by the initial migration.
 - `retrievalModel: string` — Model name for `generateEmbedding()` (document chunks).
 - `matchingModel: string` — Model name for `generateMatchingEmbedding()` (queries, semantic cache, adaptive dedupe).
-- `client?: OpenAI` — Optional separate OpenAI-compatible client for embeddings. Falls back to `openAiConfig` when omitted.
+- `client?: OpenAI` — Optional separate OpenAI-compatible client for embeddings. Falls back to your main OpenAI client when omitted.
   :::
 
 :::field{name="redis" type="Redis | 'memory'" default="'memory'"}
-Pass an `ioredis` client for multi-replica Redis Streams, generated file downloads (`pdf_creator`, `create_styled_spreadsheet`), and shared caching. Defaults to an in-process `MiniCache`.
+Pass an `ioredis` client for multi-replica Redis Streams, generated file downloads (`pdf_creator`, `create_styled_spreadsheet`), and shared caching. Defaults to an in-memory cache.
 :::
 
 :::field{name="logger" type="Logger" default="consoleLogger()"}
@@ -130,22 +126,26 @@ Any logger implementing `{ debug, info, warn, error, child }` — a `pino` insta
 
 ### `extractor` options (optional)
 
-Configure defaults for the built-in `extractor` (`extractor()`) tool:
+Configure defaults for the built-in `extractor` tool and standalone URL summarization helpers:
 
-| Field                  | Type                                             | Default     | Description                                                         |
-| ---------------------- | ------------------------------------------------ | ----------- | ------------------------------------------------------------------- |
-| `ytDlpBin`             | `string`                                         | `undefined` | Custom path to `yt-dlp` binary for media extraction.                |
-| `whisperCppBin`        | `string`                                         | `undefined` | Custom path to `whisper.cpp` binary for local transcription.        |
-| `whisperCppModelPath`  | `string`                                         | `undefined` | Path to a local Whisper model file.                                 |
-| `disableLocalWhisper`  | `boolean`                                        | `false`     | Disables local Whisper transcription fallback.                      |
-| `minContentCharacters` | `number`                                         | `80`        | Bodies shorter than this count as empty and fall through.           |
-| `timeoutMs`            | `number`                                         | `120_000`   | Per-URL HTTP/extraction timeout in milliseconds.                    |
-| `deadlineMs`           | `number`                                         | `0`         | Hard wall-clock cap per URL including transcription (`0` disables). |
-| `maxCharacters`        | `number`                                         | `Infinity`  | Maximum characters passed downstream.                               |
-| `llmMinCharacters`     | `number`                                         | `4_000`     | Bodies shorter than this skip optional LLM summarization.           |
-| `llmTemperature`       | `number`                                         | `0.2`       | Sampling temperature for summarization calls (`0`–`2`).             |
-| `llmModel`             | `string`                                         | `undefined` | Optional model ID used to summarize extracted pages.                |
-| `llmLength`            | `"short" \| "medium" \| "long" \| "xl" \| "xxl"` | `"medium"`  | Default summary length preset.                                      |
+| Field                  | Type                                             | Default     | Description                                                                                                       |
+| ---------------------- | ------------------------------------------------ | ----------- | ----------------------------------------------------------------------------------------------------------------- |
+| `ytDlpBin`             | `string`                                         | `undefined` | Custom path to `yt-dlp` binary for media extraction.                                                              |
+| `whisperCppBin`        | `string`                                         | `undefined` | Custom path to `whisper.cpp` binary for local transcription.                                                      |
+| `whisperCppModelPath`  | `string`                                         | `undefined` | Path to a local Whisper model file.                                                                               |
+| `disableLocalWhisper`  | `boolean`                                        | `false`     | Disables local Whisper transcription fallback.                                                                    |
+| `minContentCharacters` | `number`                                         | `80`        | Bodies shorter than this count as empty and fall through.                                                         |
+| `timeoutMs`            | `number`                                         | `120_000`   | Per-URL HTTP/extraction timeout in milliseconds.                                                                  |
+| `deadlineMs`           | `number`                                         | `0`         | Hard wall-clock cap per URL including transcription (`0` disables).                                               |
+| `maxCharacters`        | `number`                                         | `Infinity`  | Maximum characters passed downstream.                                                                             |
+| `llmMinCharacters`     | `number`                                         | `4_000`     | Minimum characters before `summarizeWithLlm()` calls the model (shorter bodies pass through untouched).           |
+| `llmTemperature`       | `number`                                         | `0.2`       | Sampling temperature for `summarizeWithLlm()` calls (`0`–`2`).                                                    |
+| `llmModel`             | `string`                                         | `undefined` | Default model ID for `summarizeWithLlm()` when `options.model` is omitted.                                        |
+| `llmLength`            | `"short" \| "medium" \| "long" \| "xl" \| "xxl"` | `"medium"`  | Default summary length preset for `summarizeWithLlm()`.                                                           |
+
+::note
+The `llm*` fields (`llmMinCharacters`, `llmTemperature`, `llmModel`, `llmLength`) apply only to the standalone `summarizeWithLlm()` and `withLlmSummary()` helpers. The built-in `extractor()` tool does not run LLM summarization. See [Extract and summarize URLs directly](/tools/built-in-tools#extract-and-summarize-urls-directly).
+::
 
 ### `runs` options (optional)
 
@@ -184,6 +184,6 @@ title: Cache & AI Clients
 to: /configuration/cache-and-clients
 ---
 
-Reuse the configured OpenAI clients (`aiClients()`) and Redis/`MiniCache` helpers (`cacheGet`, `cacheSet`, `cacheGetMany`, `cacheSetMany`) in your own code.
+Reuse the configured OpenAI clients (`aiClients()`) and shared cache helpers (`cacheGet`, `cacheSet`, `cacheGetMany`, `cacheSetMany`) in your own code.
 :::
 ::

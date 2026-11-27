@@ -78,12 +78,19 @@ Full custom tool recipe (Zod, caching, Markdown serialization, sub-progress) plu
 When `buildToolRegistry(ctx, specs)` builds handlers for a turn, wrappers apply in a strict order so every policy behaves predictably:
 
 1. **Base handler (`spec.make(ctx)`)**: captures the current `userId`, `conversationId`, and host `meta`.
-2. **Call cap (`limitTool`)**: if `spec.maxCalls` is set, rejects calls past the cap with a `TOOL_LIMIT_REACHED` envelope instructing the model to synthesize its final answer from existing results.
-3. **Cache (`withToolCache`)**: if `spec.cache` is set, computes a canonicalized SHA-256 hash of `(toolName, scopeKey, normalizeArgs(args))` and reads/writes `toolcache:<toolName>:<hash>`. Error payloads are never cached.
-4. **Usage tracker (`trackTool`)**: records the tool name in `registry.usedTools` so `ChatTurnResult.toolsUsed` and semantic-cache `poisonTools` always see every tool the model invoked — even on cache hits.
+2. **Call cap (`limitTool`)**: when `spec.maxCalls` is set, rejects calls past the cap with a `TOOL_LIMIT_REACHED` envelope instructing the model to answer from existing results.
+3. **Cache (`withToolCache`)**: when `spec.cache` is set, hashes the tool name, scope, and normalized arguments to read and write cached responses. Error payloads are never cached.
+4. **Usage tracker (`trackTool`)**: records the tool name in `registry.usedTools` so `ChatTurnResult.toolsUsed` and semantic-cache `poisonTools` see every tool the model invoked, including cache hits.
 
 ::note
 Because `withToolCache` wraps `limitTool`, repeated cached calls still stay bounded and failed calls (`toolError(...)`, `{ ok: false }`, or `{ error: ... }`) never pollute the cache.
+::
+
+::note
+During normal tool-calling rounds that finish within budget, `@riavzon/ai` injects **no** hidden `system` prompts — only your tool definitions and tool results are sent, and none of the built-in tools run secondary LLM calls. Hidden prompts or steering instructions are injected only in two places:
+
+- **Tool-loop fallback synthesis & `maxCalls` overflow:** `executeToolLoop()` appends a trailing `{ role: "system" }` synthesis prompt when budgets exhaust or no tools are configured, and injects `CALL_LIMIT_EXCEEDED` `role: "tool"` messages for skipped calls (see [Injected prompts and error messages](/tools/tool-loop#injected-prompts-and-error-messages)).
+- **Per-tool call cap (`limitTool`):** Exceeding `ToolSpec.maxCalls` injects a `TOOL_LIMIT_REACHED` `role: "tool"` steering message telling the model not to call the tool again (see [Wire error codes & troubleshooting](/tools/custom-tools#wire-error-codes-troubleshooting)).
 ::
 
 ## Combine all three sources in `createAgent()`

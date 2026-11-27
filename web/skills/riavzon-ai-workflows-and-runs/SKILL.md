@@ -102,11 +102,12 @@ Enable `runs` on `createAgent()` to detach chat turns from individual HTTP socke
 
 ## Critical Rules & Constraints
 
-1. **Always register resumers before `startRuns()`:** Unregistered `(kind, name)` pairs are intentionally skipped by the recovery sweep rather than routed to the wrong runner.
-2. **Keep `RunResumer.name` exact:** Generic `"workflow"` runs match `runs.input.name`; single-runner kinds omit `name`.
-3. **Never let `onCancel` abort a detached run:** In `framesToStream()` / SSE routes for detached runs, omit `onCancel` so a browser refresh or mobile sleep detaches the socket while the run keeps running. Use an explicit `POST /runs/:id/abort` endpoint calling `requestAbort(runId)` instead.
-4. **Wrap checkpoints in the `checkpoint()` envelope:** `AgenticWorkflowLoop`'s `onCheckpoint` emits a `WorkflowCheckpoint` (`completedStages`, `localSearches`, `externalRounds`, `state`). Wrap it with `checkpoint({ phase: snapshot.completedStages.at(-1) ?? "seeds", state: snapshot, roundsDone: snapshot.externalRounds })` before calling `ctx.saveCheckpoint(...)`, and restore via `parseCheckpoint<WorkflowCheckpoint, WorkflowStage>(await ctx.loadCheckpoint(), { version: 1, phases: ["seeds", "local", "external", "critic", "final"] })?.state`.
-5. **Tune `RUNS_*` env vars consistently across replicas:** Ensure lease TTL (`RUNS_LEASE_TTL_MS`) is comfortably larger than `RUNS_HEARTBEAT_INTERVAL_MS` (for example 30s lease, 5s heartbeat) so healthy replicas never lose ownership under GC pauses.
+1. **No built-in human-in-the-loop (HITL):** `AgenticWorkflowLoop` is fully autonomous and runs to completion (`sufficient`, `budget_exhausted`, `no_new_sources`, or `aborted`). Checkpoints (`onCheckpoint` / `resumeFrom`) are strictly for crash recovery and run adoption — not for pausing mid-run to wait for human approval. Gate human approval between separate runs in your application layer.
+2. **Always register resumers before `startRuns()`:** Unregistered `(kind, name)` pairs are intentionally skipped by the recovery sweep rather than routed to the wrong runner.
+3. **Keep `RunResumer.name` exact:** Generic `"workflow"` runs match `runs.input.name`; single-runner kinds omit `name`.
+4. **Never let `onCancel` abort a detached run:** In `framesToStream()` / SSE routes for detached runs, omit `onCancel` so a browser refresh or mobile sleep detaches the socket while the run keeps running. Use an explicit `POST /runs/:id/abort` endpoint calling `requestAbort(runId)` instead.
+5. **Wrap checkpoints in the `checkpoint()` envelope:** `AgenticWorkflowLoop`'s `onCheckpoint` emits a `WorkflowCheckpoint` (`completedStages`, `localSearches`, `externalRounds`, `state`). Wrap it with `checkpoint({ phase: snapshot.completedStages.at(-1) ?? "seeds", state: snapshot, roundsDone: snapshot.externalRounds })` before calling `ctx.saveCheckpoint(...)`, and restore via `parseCheckpoint<WorkflowCheckpoint, WorkflowStage>(await ctx.loadCheckpoint(), { version: 1, phases: ["seeds", "local", "external", "critic", "final"] })?.state`.
+6. **Tune `RUNS_*` env vars consistently across replicas:** Ensure lease TTL (`RUNS_LEASE_TTL_MS`) is comfortably larger than `RUNS_HEARTBEAT_INTERVAL_MS` (for example 30s lease, 5s heartbeat) so healthy replicas never lose ownership under GC pauses.
 
 ## Reference Guides
 

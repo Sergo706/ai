@@ -106,7 +106,7 @@ export const inventoryTool: ToolSpec<{ tenantId: string }> = {
 
 ## MCP Servers (`tools.mcp` & `createMcpToolset`)
 
-Requires `@modelcontextprotocol/client`. Connects to Streamable HTTP MCP endpoints, converts each MCP tool into an OpenAI function definition + live `ToolSpec`, supports namespacing and exclusion lists, and extracts text blocks, text `resource` entries, `resource_link`, and `structuredContent` (ignoring binary image/audio payloads).
+Requires `@modelcontextprotocol/client`. Connects to Streamable HTTP MCP endpoints, converts each MCP tool into an OpenAI function definition + live `ToolSpec`, supports namespacing and exclusion lists, and extracts `text` blocks, text `resource` entries (`resource.text`), `resource_link`, and `structuredContent`. **Binary MCP returns (`image`, `audio`, and `resource.blob` blocks) are omitted and are never provided to the model** (returning only binary blocks with no `structuredContent` yields `""`).
 
 ```ts
 import { createAgent, createMcpToolset } from "@riavzon/ai";
@@ -140,6 +140,15 @@ try {
   await mcp.close();
 }
 ```
+
+## Standalone URL Extraction & Summarization
+
+Requires optional peer `@steipete/summarize-core`. Unlike the built-in `extractor()` tool handler (which sanitizes Markdown, caches per URL, and never invokes an LLM), these standalone helpers expose raw extraction and opt-in LLM condensation directly:
+
+- `extractWithSummarize(url, options?)` → `Promise<SummarizeExtraction>` (defaults from `configuration({ extractor })`; rejects on non-HTML payloads, bodies below `minCharacters`, or `deadlineMs` timeouts).
+- `extractManyWithSummarize(urls, options?)` → `Promise<SummarizeOutcome[]>` (concurrent via `Promise.all`; isolates failures into `{ url, ok: false, error }`).
+- `summarizeWithLlm(extraction, log, options?)` → `Promise<LlmSummary>` (uses `openAiConfig`, `options.model ?? config.extractor.llmModel`, `options.minCharactersToSummarize ?? config.extractor.llmMinCharacters ?? 4_000`, `options.length ?? config.extractor.llmLength ?? "medium"`, and `config.extractor.llmTemperature ?? 0.2`; returns `passthrough: true` without calling the model when shorter than threshold or if the model replies empty; throws on blank content or missing model).
+- `withLlmSummary(extraction, log, options?)` → `Promise<SummarizeExtraction & { summary: LlmSummary }>` (replaces `content`/`characters` in place while preserving metadata).
 
 ## Standalone Tool Loop (`executeToolLoop`)
 

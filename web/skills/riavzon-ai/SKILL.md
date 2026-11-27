@@ -26,7 +26,7 @@ description: Build AI agents, custom and MCP tools, hybrid RAG pipelines, and SS
 | Built-in `currencies_convertor`                                | `easy-currencies`              |
 | Built-in `create_styled_spreadsheet` / XLSX & CSV readers      | `exceljs`                      |
 | Built-in `pdf_creator` / `createPdf()`                         | `pdf-lib`, `@pdf-lib/fontkit`  |
-| Built-in `extractor`                                           | `@steipete/summarize-core`     |
+| Built-in `extractor` / `extractWithSummarize()` / `extractManyWithSummarize()` / `summarizeWithLlm()` / `withLlmSummary()` | `@steipete/summarize-core` |
 | Built-in `get_current_datetime` / `search_db` / `get_document` | Core + DB peer only            |
 | MCP client (`tools.mcp` / `createMcpToolset()`)                | `@modelcontextprotocol/client` |
 | Exact tokenizer chunking (`PreTrainedTokenizer`)               | `@huggingface/transformers`    |
@@ -146,9 +146,12 @@ Always pair streams with `setSseHeaders()` (`text/event-stream`, `no-cache`, `X-
 - **`agent.chat()` is async:** Always `const { frames, done } = await agent.chat(...)` and iterate `frames` (never `turn.stream`).
 - **`executeToolLoop({ stream: true })` and `emit`:** When `emit` is omitted, the returned `AsyncGenerator` yields all tool-round and synthesis events automatically. When `emit` is provided (for example `emit: (e) => sink.push(e)` with `runAgentStream()`), tool-round events go to `emit` and only fallback synthesis/error events yield from the generator (no duplicates).
 - **`init` frame vs. `runId`:** `agent.chat()` emits `{ type: "init", conversationId }` without `runId`. Clients obtain `runId` from caller-minted `input.runId`, `ChatTurnResult.runId`, or `streamFromRun({ runId })`.
-- **`AgentConfig.embedding`:** Declared on `AgentConfig`, but `agent.ts` currently reads global `embeddingConfig` from `configuration()`.
+- **`AgentConfig.embedding`:** Declared on `AgentConfig`, but `createAgent()` currently reads global `embeddingConfig` from `configuration()`.
 - **`runs` toggle:** Providing `runs` on `createAgent()` always registers a `RunHandle` in process memory.
 - **Generated file tools (`pdf_creator`, `create_styled_spreadsheet`):** Require Redis (`ioredis`) in `configuration({ redis })` to store download bytes under `fileKey`, served via `readGeneratedFile(fileKey)`.
+- **File attachments (`input.files`) are text-only:** Binary files (images, audio, video, `.docx`, raw binaries) are rejected by `parseFiles()`. Supported PDF/CSV/XLSX/`text/*` files are extracted as plain text/Markdown and prepended directly into the `{ role: "user" }` content as `[USER UPLOADED FILES FOR CONTEXT]\n--- START FILE: <name> ---\n...\n--- END FILE ---\n\n[USER MESSAGE]\n<message>` (never sent as multimodal/image parts).
+- **MCP binary returns are omitted:** `createMcpToolset()` / `tools.mcp` extracts only `text`, text `resource.text`, `resource_link`, and `structuredContent`. Binary `image`, `audio`, and `resource.blob` blocks are skipped silently and never provided to the model.
+- **Hidden prompt injections to know when debugging:** `createAgent()` appends `Information about the user:` lines to `systemInstructions` when `input.user` is set; compaction sends an internal summarizer prompt and injects a second `{ role: "system", content: "[System Note: Earlier conversation summary: ...]" }` message; `executeToolLoop()` appends a trailing synthesis `{ role: "system" }` message only when tool budgets exhaust or no tools run; `limitTool()` returns `TOOL_LIMIT_REACHED` telling the model not to call the tool again; `llmSchemaParser()` appends a correction `{ role: "user" }` message on validation retries.
 - **Tenant scoping in RAG:** Pass `userId` into chat inputs, tool contexts, and retrieval helpers (`searchDbDocs`, `fetchRelevantChunks`, `readToolDocument`) so vector searches and document reads stay scoped to one owner.
 
 ## Deep References (Load On Demand)

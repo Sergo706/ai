@@ -29,7 +29,7 @@ Client Reconnects ──► Replica B (with Last-Event-ID)
                    └─ Owned by another replica?  ──► `streamFromStore()` (tails Redis Stream)
 
 Worker Crash ──► Replica B Recovery Sweep
-                   ├─ Finds stale/interrupted rows (`claimed_at < now - leaseTtlMs`)
+                   ├─ Finds expired/interrupted rows
                    ├─ Routes `(row.kind, row.input.name)` to `findRunResumer()`
                    └─ Atomically re-claims row via `claimRun()` & resumes from checkpoint
 ```
@@ -84,7 +84,7 @@ Calling `startRuns()` before `configuration()` throws because database access is
 | Status        | Meaning                                                                             | Eligible for automatic recovery?                  | Eligible for `retryRun()`?      |
 | ------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------- |
 | `running`     | Actively claimed by a live process (or awaiting stale-lease detection after crash). | Yes, once `claimed_at` expires past `leaseTtlMs`. | No (returns `already_running`). |
-| `interrupted` | Worker stopped or transient error occurred while a checkpoint existed.              | Yes, until `attempts >= maxResumeAttempts`.       | Yes.                            |
+| `interrupted` | Worker stopped or transient error occurred while a checkpoint existed.              | Yes, while attempts remain below `maxResumeAttempts`. | Yes.                        |
 | `finished`    | Completed normally.                                                                 | No.                                               | No.                             |
 | `aborted`     | Cancelled by user (`requestAbort()` / `AbortSignal`).                               | No.                                               | Yes (explicit user retry).      |
 | `failed`      | Ended with a non-transient error or exhausted attempts.                             | No.                                               | Yes (explicit user retry).      |

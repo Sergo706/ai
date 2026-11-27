@@ -212,6 +212,7 @@ export default defineNuxtConfig({
       },
       langs: [
         "ts",
+        "tsx",
         "js",
         "mjs",
         "mts",

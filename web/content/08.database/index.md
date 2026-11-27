@@ -8,7 +8,7 @@ seo:
   description: Explore @riavzon/ai's Kysely Database schema (documents, document_chunks, conversations, messages, runs), dialect helpers, and standalone model functions.
 ---
 
-`@riavzon/ai` manages persistence through [Kysely](https://kysely.dev) with a single strongly typed `Database` schema that runs identically on **PostgreSQL** (`pgvector`) and **SQLite** (`sqlite-vec`). When you call `await configuration(...)`, the package connects to your database, configures SQLite pragmas (`WAL`, `synchronous = NORMAL`, `foreign_keys = ON`, `sqlite-vec`) when given a file path, and automatically runs its built-in migrations (`001_init`, tracked in `@riavzon/ai_migrations`).
+`@riavzon/ai` manages persistence through [Kysely](https://kysely.dev) with one strongly typed `Database` schema that runs on both **PostgreSQL** (`pgvector`) and **SQLite** (`sqlite-vec`). Calling `await configuration(...)` connects to your database, applies SQLite pragmas (`WAL`, `synchronous = NORMAL`, `foreign_keys = ON`, `sqlite-vec`) when given a file path, and runs the built-in schema migrations automatically.
 
 ## Schema overview
 
@@ -97,10 +97,13 @@ const oneHourAgoIso = timestamp(-60 * 60 * 1000);
 
 ## Automatic migrations
 
-`configuration()` runs Kysely's `migrateToLatest()` automatically on startup and records applied versions in `@riavzon/ai_migrations` so subsequent boots are fast no-ops. On PostgreSQL, the initial migration (`001_init`) enables `CREATE EXTENSION IF NOT EXISTS vector`, creates vector columns sized to `embeddingConfig.dimensions`, and builds HNSW cosine indexes (`vector_cosine_ops`, `m = 16`, `ef_construction = 64`) on `document_chunks.embedding` and `messages.embedding`. Across both dialects, `001_init` also creates four B-tree indexes (`document_chunks_document_id_chunk_index_idx`, `runs_conversation_idx`, `runs_status_idx`, and `runs_lease_idx`).
+`configuration()` runs migrations automatically on startup and records applied versions in `@riavzon/ai_migrations`, so later boots skip already-applied migrations:
+
+- **PostgreSQL**: Enables the `vector` extension, sizes vector columns from `embeddingConfig.dimensions`, and creates HNSW cosine indexes on `document_chunks.embedding` and `messages.embedding`.
+- **Both dialects**: Creates B-tree indexes on document chunks and run lookup columns (`conversation_id`, `status`, and lease timestamps).
 
 ::warning
-Because `001_init` sizes PostgreSQL vector columns from `embeddingConfig.dimensions` on first boot, set the exact vector dimensions of your chosen embedding model before running `configuration()` against a fresh database.
+PostgreSQL vector column widths are set from `embeddingConfig.dimensions` during the initial migration. Configure the exact dimensions of your chosen embedding model before running `configuration()` against a fresh database.
 ::
 
 ## Next steps
