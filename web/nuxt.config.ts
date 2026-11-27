@@ -13,6 +13,9 @@ export default defineNuxtConfig({
       rootDir: "web",
     },
   },
+  $production: {
+    studio: false,
+  },
   site: {
     url: "https://ai.riavzon.com",
     name: "Riavzon AI",
